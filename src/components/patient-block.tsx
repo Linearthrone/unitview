@@ -13,7 +13,7 @@ import {
   CalendarCheck,
   AlertTriangle,
   ShieldAlert,
-  Ban, // Replaced HandCuffs with Ban
+  Ban, 
   HeartHandshake,
   type LucideIcon
 } from 'lucide-react';
@@ -39,13 +39,13 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
 
   const getCardColors = () => {
     if (patient.isComfortCareDNR) {
-      return "bg-purple-100 dark:bg-purple-900 border-purple-300 dark:border-purple-700";
+      return "bg-purple-200 dark:bg-purple-800 border-purple-400 dark:border-purple-600";
     }
     if (patient.gender === 'Male') {
-      return "bg-sky-100 dark:bg-sky-800 border-sky-300 dark:border-sky-700";
+      return "bg-sky-200 dark:bg-sky-800 border-sky-400 dark:border-sky-600";
     }
     if (patient.gender === 'Female') {
-      return "bg-pink-100 dark:bg-pink-800 border-pink-300 dark:border-pink-700";
+      return "bg-pink-200 dark:bg-pink-800 border-pink-400 dark:border-pink-600";
     }
     return "bg-card border-border"; // Default card colors
   };
@@ -58,7 +58,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
     alerts.push({ IconComponent: ShieldAlert, colorClass: 'text-accent', tooltipText: 'Isolation Precautions' });
   }
   if (patient.isInRestraints) {
-    alerts.push({ IconComponent: Ban, colorClass: 'text-destructive', tooltipText: 'Restraints' }); // Used Ban icon
+    alerts.push({ IconComponent: Ban, colorClass: 'text-destructive', tooltipText: 'Restraints' }); 
   }
   if (patient.isComfortCareDNR) {
     alerts.push({ IconComponent: HeartHandshake, colorClass: 'text-purple-600 dark:text-purple-400', tooltipText: 'Comfort Care / DNR' });
