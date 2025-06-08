@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Patient } from '@/types/patient';
 import PatientBlock from './patient-block';
 import { generateInitialPatients } from '@/lib/initial-patients';
@@ -27,6 +27,11 @@ const PatientGrid: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [isMeasuring, setIsMeasuring] = useState(false);
 
   useEffect(() => {
     const initialPatientsData = generateInitialPatients();
@@ -48,7 +53,6 @@ const PatientGrid: React.FC = () => {
       }
     } catch (error) {
       console.error("Error loading patient layout from localStorage:", error);
-      // Fallback to initial data if localStorage is corrupt or inaccessible
     }
     
     setPatients(finalPatientsData);
@@ -56,7 +60,7 @@ const PatientGrid: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isInitialized || patients.length === 0) return; // Don't save during initial load or if patients array is empty
+    if (!isInitialized || patients.length === 0) return;
 
     try {
       const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
@@ -69,6 +73,57 @@ const PatientGrid: React.FC = () => {
       console.error("Error saving patient layout to localStorage:", error);
     }
   }, [patients, isInitialized]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const calculateAndSetScale = () => {
+      if (viewportRef.current && gridRef.current) {
+        setIsMeasuring(true);
+
+        requestAnimationFrame(() => {
+          if (!viewportRef.current || !gridRef.current) {
+            setIsMeasuring(false);
+            return;
+          }
+          const viewportWidth = viewportRef.current.offsetWidth;
+          const viewportHeight = viewportRef.current.offsetHeight;
+          
+          const naturalGridWidth = gridRef.current.offsetWidth;
+          const naturalGridHeight = gridRef.current.offsetHeight;
+
+          setIsMeasuring(false);
+
+          if (naturalGridWidth === 0 || naturalGridHeight === 0 || viewportWidth === 0 || viewportHeight === 0) {
+            return;
+          }
+
+          const scaleX = viewportWidth / naturalGridWidth;
+          const scaleY = viewportHeight / naturalGridHeight;
+          const newScale = Math.min(scaleX, scaleY);
+
+          if (isFinite(newScale) && newScale > 0.01) {
+            setScale(newScale);
+          }
+        });
+      }
+    };
+
+    calculateAndSetScale();
+
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(calculateAndSetScale, 150);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
+  }, [isInitialized]);
 
 
   const handleDragStart = (
@@ -128,12 +183,13 @@ const PatientGrid: React.FC = () => {
           <div
             key={`${r}-${c}`}
             className={cn(
-              "border border-border/30 min-h-[10rem] rounded-md",
+              "border border-border/30 min-h-[10rem] rounded-md", // min-h might be overridden by grid row height but good for structure
               "flex items-stretch justify-stretch p-0.5", 
               draggingPatientInfo && "hover:bg-secondary/50 transition-colors"
             )}
             onDragOver={handleDragOverCell}
             onDrop={() => handleDropOnCell(r, c)}
+            // style={{ minHeight: '10rem' }} // Explicit min-height for cells
           >
             {patientInCell && (
               <div
@@ -141,7 +197,7 @@ const PatientGrid: React.FC = () => {
                 onDragStart={(e) => handleDragStart(e, patientInCell.id, patientInCell.gridRow, patientInCell.gridColumn)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "cursor-grab w-full h-full",
+                  "cursor-grab w-full h-full", // Ensure PatientBlock takes full cell space
                   draggingPatientInfo?.id === patientInCell.id && "opacity-50"
                 )}
                 data-patient-id={patientInCell.id}
@@ -156,18 +212,22 @@ const PatientGrid: React.FC = () => {
     return cells;
   };
 
-  if (!isInitialized && !draggingPatientInfo) {
+  if (!isInitialized && !draggingPatientInfo) { // Keep simple loading state
       return <div className="text-center p-8">Initializing patient grid...</div>;
   }
 
   return (
-    <div className="flex-grow overflow-auto">
+    <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden">
       <div
-        className="grid gap-2 p-4"
+        ref={gridRef}
+        className="grid gap-2 p-4" // p-4 contributes to natural size and will be scaled
         style={{
           gridTemplateColumns: `repeat(${NUM_COLS}, minmax(10rem, 1fr))`,
-          gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`,
+          gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`, // 'auto' allows content height, '10rem' for fixed square cells before scaling
           alignContent: 'start', 
+          transform: `scale(${isMeasuring ? 1 : scale})`,
+          transformOrigin: 'center center',
+          // transition: isMeasuring ? 'none' : 'transform 0.2s ease-out', // Optional: smooth transition for scale changes
         }}
       >
         {renderGridCells()}
