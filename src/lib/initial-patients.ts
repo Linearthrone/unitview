@@ -2,11 +2,31 @@
 import type { Patient, MobilityStatus } from '@/types/patient';
 
 const MOBILITY_STATUSES: MobilityStatus[] = ['Bed Rest', 'Assisted', 'Independent'];
-const NUM_COLS_GRID = 22; // Define number of columns for initial layout
+const NUM_COLS_GRID = 22;
+const NUM_ROWS_GRID = 12;
 
 export const generateInitialPatients = (): Patient[] => {
   const patients: Patient[] = [];
   const today = new Date();
+
+  const perimeterCells: { row: number; col: number }[] = [];
+
+  // Top row (left to right)
+  for (let c = 1; c <= NUM_COLS_GRID; c++) {
+    perimeterCells.push({ row: 1, col: c });
+  }
+  // Right column (top to bottom, skipping already added top-right corner)
+  for (let r = 2; r <= NUM_ROWS_GRID; r++) {
+    perimeterCells.push({ row: r, col: NUM_COLS_GRID });
+  }
+  // Bottom row (right to left, skipping already added bottom-right corner)
+  for (let c = NUM_COLS_GRID - 1; c >= 1; c--) {
+    perimeterCells.push({ row: NUM_ROWS_GRID, col: c });
+  }
+  // Left column (bottom to top, skipping already added bottom-left and top-left corners)
+  for (let r = NUM_ROWS_GRID - 1; r >= 2; r--) {
+    perimeterCells.push({ row: r, col: 1 });
+  }
 
   for (let i = 0; i < 48; i++) {
     const admitDate = new Date(today);
@@ -15,9 +35,11 @@ export const generateInitialPatients = (): Patient[] => {
     const dischargeDate = new Date(admitDate);
     dischargeDate.setDate(admitDate.getDate() + Math.floor(Math.random() * 14) + 1);
 
+    const position = perimeterCells[i % perimeterCells.length]; // Ensure we don't go out of bounds if more patients than perimeter cells
+
     patients.push({
       id: `patient-${i + 1}`,
-      bedNumber: i + 1, 
+      bedNumber: i + 1,
       name: `Patient ${String.fromCharCode(65 + (i % 26))}${Math.floor(i / 26) || ''}`,
       admitDate: admitDate,
       dischargeDate: dischargeDate,
@@ -25,8 +47,8 @@ export const generateInitialPatients = (): Patient[] => {
       isFallRisk: Math.random() > 0.7,
       isIsolation: Math.random() > 0.8,
       notes: Math.random() > 0.75 ? `Additional note for patient ${i + 1}. Lorem ipsum dolor sit amet.` : undefined,
-      gridRow: Math.floor(i / NUM_COLS_GRID) + 1,
-      gridColumn: (i % NUM_COLS_GRID) + 1,
+      gridRow: position.row,
+      gridColumn: position.col,
     });
   }
   return patients;
