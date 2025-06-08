@@ -13,9 +13,9 @@ import {
   CalendarCheck,
   AlertTriangle,
   ShieldAlert,
-  HandCuffs, // New icon for restraints
-  HeartHandshake, // New icon for comfort care/DNR
-  LucideIcon
+  Ban, // Replaced HandCuffs with Ban
+  HeartHandshake,
+  type LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,7 +58,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
     alerts.push({ IconComponent: ShieldAlert, colorClass: 'text-accent', tooltipText: 'Isolation Precautions' });
   }
   if (patient.isInRestraints) {
-    alerts.push({ IconComponent: HandCuffs, colorClass: 'text-destructive', tooltipText: 'Restraints' });
+    alerts.push({ IconComponent: Ban, colorClass: 'text-destructive', tooltipText: 'Restraints' }); // Used Ban icon
   }
   if (patient.isComfortCareDNR) {
     alerts.push({ IconComponent: HeartHandshake, colorClass: 'text-purple-600 dark:text-purple-400', tooltipText: 'Comfort Care / DNR' });

@@ -1,12 +1,17 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppHeader from '@/components/app-header';
 import PatientGrid from '@/components/patient-grid';
 
 export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const toggleLayoutLock = () => {
     setIsLayoutLocked(prev => !prev);
@@ -24,7 +29,7 @@ export default function Home() {
         <PatientGrid isLayoutLocked={isLayoutLocked} />
       </main>
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
-        UnitView &copy; {new Date().getFullYear()}
+        UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}
       </footer>
     </div>
   );
