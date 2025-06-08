@@ -97,7 +97,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
           gridRef.current.style.transform = 'scale(1)';
           const naturalGridWidth = gridRef.current.offsetWidth;
           const naturalGridHeight = gridRef.current.offsetHeight;
-          gridRef.current.style.transform = currentGridTransform; // Restore previous transform before recalculating
+          gridRef.current.style.transform = currentGridTransform; 
 
           setIsMeasuring(false);
 
@@ -110,19 +110,19 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
           let newScale = Math.min(scaleX, scaleY);
           
           if (!isFinite(newScale) || newScale <= 0.01) {
-            newScale = 0.01; // Set a minimum scale to prevent issues
+            newScale = 0.01; 
           }
           setScale(newScale);
         });
       }
     };
 
-    calculateAndSetScale(); // Initial calculation
+    calculateAndSetScale(); 
 
     let resizeTimeout: NodeJS.Timeout;
     const handleResize = () => {
       clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(calculateAndSetScale, 150); // Debounce resize
+      resizeTimeout = setTimeout(calculateAndSetScale, 150); 
     };
 
     window.addEventListener('resize', handleResize);
@@ -232,7 +232,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
   }
 
   return (
-    <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden p-1">
+    <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden">
       <div
         ref={gridRef}
         className="grid gap-1" 

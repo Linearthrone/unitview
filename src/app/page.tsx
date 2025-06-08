@@ -25,7 +25,7 @@ export default function Home() {
         isLayoutLocked={isLayoutLocked}
         onToggleLayoutLock={toggleLayoutLock}
       />
-      <main className="flex-grow flex flex-col p-1 overflow-hidden">
+      <main className="flex-grow flex flex-col overflow-hidden">
         <PatientGrid isLayoutLocked={isLayoutLocked} />
       </main>
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
