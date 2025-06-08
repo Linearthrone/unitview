@@ -93,8 +93,13 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
           const viewportWidth = viewportRef.current.offsetWidth;
           const viewportHeight = viewportRef.current.offsetHeight;
           
+          // Temporarily set scale to 1 to measure natural dimensions
+          gridRef.current.style.transform = 'scale(1)';
           const naturalGridWidth = gridRef.current.offsetWidth;
           const naturalGridHeight = gridRef.current.offsetHeight;
+          // Restore current scale or the new scale will be applied
+          gridRef.current.style.transform = `scale(${scale})`;
+
 
           setIsMeasuring(false);
 
@@ -105,9 +110,11 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
           const scaleX = viewportWidth / naturalGridWidth;
           const scaleY = viewportHeight / naturalGridHeight;
           const newScale = Math.min(scaleX, scaleY);
-
+          
           if (isFinite(newScale) && newScale > 0.01) {
             setScale(newScale);
+          } else if (isFinite(newScale) && newScale <= 0.01) {
+            setScale(0.01); // Set a minimum scale to prevent issues
           }
         });
       }
@@ -123,11 +130,15 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
 
     window.addEventListener('resize', handleResize);
 
+    // Add a small delay for initial measurement after patients are loaded
+    const initialMeasureTimeout = setTimeout(calculateAndSetScale, 100);
+
     return () => {
       window.removeEventListener('resize', handleResize);
       clearTimeout(resizeTimeout);
+      clearTimeout(initialMeasureTimeout);
     };
-  }, [isInitialized]);
+  }, [isInitialized, patients]); // Re-run if patients change, as this might affect initial grid size if some cells are empty vs full.
 
 
   const handleDragStart = (
@@ -195,7 +206,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
             className={cn(
               "border border-border/30 min-h-[10rem] rounded-md",
               "flex items-stretch justify-stretch p-0.5", 
-              draggingPatientInfo && !isLayoutLocked && "hover:bg-secondary/50 transition-colors"
+              draggingPatientInfo && !isLayoutLocked && "hover:bg-secondary/50 transition-colors",
+              !patientInCell && "bg-card" // White background for empty cells
             )}
             onDragOver={!isLayoutLocked ? handleDragOverCell : undefined}
             onDrop={!isLayoutLocked ? () => handleDropOnCell(r, c) : undefined}
@@ -222,21 +234,24 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
     return cells;
   };
 
-  if (!isInitialized && !draggingPatientInfo) {
+  // If using isMeasuring to prevent render during measurement, ensure loading state
+   if (!isInitialized && !draggingPatientInfo && !isMeasuring) {
       return <div className="text-center p-8">Initializing patient grid...</div>;
   }
 
   return (
-    <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden">
+    <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden p-1">
       <div
         ref={gridRef}
-        className="grid gap-2 p-4"
+        className="grid gap-1" // Reduced gap for tighter packing when scaled
         style={{
           gridTemplateColumns: `repeat(${NUM_COLS}, minmax(10rem, 1fr))`,
           gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`,
           alignContent: 'start', 
-          transform: `scale(${isMeasuring ? 1 : scale})`,
+          transform: `scale(${isMeasuring ? 1 : scale})`, // Use 1 during measurement, then actual scale
           transformOrigin: 'center center',
+          willChange: 'transform', // Performance hint for transform animations
+          transition: isMeasuring ? 'none' : 'transform 0.2s ease-out', // Smooth transition for scale changes
         }}
       >
         {renderGridCells()}

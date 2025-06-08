@@ -1,7 +1,8 @@
 
-import type { Patient, MobilityStatus } from '@/types/patient';
+import type { Patient, MobilityStatus, PatientGender } from '@/types/patient';
 
 const MOBILITY_STATUSES: MobilityStatus[] = ['Bed Rest', 'Assisted', 'Independent'];
+const GENDERS: PatientGender[] = ['Male', 'Female'];
 const NUM_COLS_GRID = 22;
 const NUM_ROWS_GRID = 12;
 
@@ -35,7 +36,7 @@ export const generateInitialPatients = (): Patient[] => {
     const dischargeDate = new Date(admitDate);
     dischargeDate.setDate(admitDate.getDate() + Math.floor(Math.random() * 14) + 1);
 
-    const position = perimeterCells[i % perimeterCells.length]; // Ensure we don't go out of bounds if more patients than perimeter cells
+    const position = perimeterCells[i % perimeterCells.length]; 
 
     patients.push({
       id: `patient-${i + 1}`,
@@ -44,8 +45,11 @@ export const generateInitialPatients = (): Patient[] => {
       admitDate: admitDate,
       dischargeDate: dischargeDate,
       mobility: MOBILITY_STATUSES[i % MOBILITY_STATUSES.length],
+      gender: GENDERS[i % GENDERS.length],
       isFallRisk: Math.random() > 0.7,
       isIsolation: Math.random() > 0.8,
+      isInRestraints: Math.random() > 0.9, // Approx 10%
+      isComfortCareDNR: Math.random() > 0.85, // Approx 15%
       notes: Math.random() > 0.75 ? `Additional note for patient ${i + 1}. Lorem ipsum dolor sit amet.` : undefined,
       gridRow: position.row,
       gridColumn: position.col,
