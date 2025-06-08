@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -80,27 +81,29 @@ const PatientGrid: React.FC = () => {
   }
 
   return (
-    <div 
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 p-4"
-      onDragOver={handleDragOver}
-      onDrop={handleDrop} // Add onDrop to the grid container
-    >
-      {patients.map((patient) => (
-        <div
-          key={patient.id}
-          draggable
-          onDragStart={(e) => handleDragStart(e, patient.id)}
-          onDragEnter={(e) => handleDragEnter(e, patient.id)}
-          onDragEnd={handleDragEnd}
-          className={cn(
-            "cursor-grab transition-opacity duration-150",
-            draggingPatientId === patient.id && "opacity-50"
-          )}
-          data-patient-id={patient.id} // To help identify the element
-        >
-          <PatientBlock patient={patient} isDragging={draggingPatientId === patient.id} />
-        </div>
-      ))}
+    <div className="overflow-x-auto">
+      <div 
+        className="grid grid-cols-[repeat(22,minmax(10rem,auto))] grid-rows-[repeat(12,minmax(10rem,auto))] gap-4 p-4"
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        {patients.map((patient) => (
+          <div
+            key={patient.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, patient.id)}
+            onDragEnter={(e) => handleDragEnter(e, patient.id)}
+            onDragEnd={handleDragEnd}
+            className={cn(
+              "cursor-grab transition-opacity duration-150",
+              draggingPatientId === patient.id && "opacity-50"
+            )}
+            data-patient-id={patient.id} // To help identify the element
+          >
+            <PatientBlock patient={patient} isDragging={draggingPatientId === patient.id} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
