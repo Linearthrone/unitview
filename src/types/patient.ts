@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 
 export type MobilityStatus = 'Bed Rest' | 'Assisted' | 'Independent';
@@ -12,7 +13,8 @@ export interface Patient {
   isFallRisk: boolean;
   isIsolation: boolean;
   notes?: string;
-  order: number; // Used for drag-and-drop reordering
+  gridRow: number; // 1-indexed
+  gridColumn: number; // 1-indexed
 }
 
 export interface AlertDisplayInfo {
