@@ -161,7 +161,7 @@ const PatientGrid: React.FC = () => {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="flex-grow overflow-auto">
       <div
         className="grid gap-2 p-4"
         style={{
