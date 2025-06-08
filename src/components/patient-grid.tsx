@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Patient } from '@/types/patient';
 import PatientBlock from './patient-block';
 import { generateInitialPatients } from '@/lib/initial-patients';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 const NUM_COLS = 22;
 const NUM_ROWS = 12;
+const LOCALSTORAGE_KEY_PATIENT_LAYOUT = 'patientGridLayout';
 
 interface DraggingPatientInfo {
   id: string;
@@ -16,14 +17,59 @@ interface DraggingPatientInfo {
   originalGridColumn: number;
 }
 
+interface StoredPatientPosition {
+  id: string;
+  gridRow: number;
+  gridColumn: number;
+}
+
 const PatientGrid: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const initialPatientsData = generateInitialPatients();
-    setPatients(initialPatientsData);
+    let finalPatientsData = initialPatientsData;
+
+    try {
+      const savedLayoutJSON = localStorage.getItem(LOCALSTORAGE_KEY_PATIENT_LAYOUT);
+      if (savedLayoutJSON) {
+        const savedPositions = JSON.parse(savedLayoutJSON) as StoredPatientPosition[];
+        const positionMap = new Map(savedPositions.map(p => [p.id, p]));
+
+        finalPatientsData = initialPatientsData.map(p => {
+          const savedPos = positionMap.get(p.id);
+          if (savedPos) {
+            return { ...p, gridRow: savedPos.gridRow, gridColumn: savedPos.gridColumn };
+          }
+          return p;
+        });
+      }
+    } catch (error) {
+      console.error("Error loading patient layout from localStorage:", error);
+      // Fallback to initial data if localStorage is corrupt or inaccessible
+    }
+    
+    setPatients(finalPatientsData);
+    setIsInitialized(true);
   }, []);
+
+  useEffect(() => {
+    if (!isInitialized || patients.length === 0) return; // Don't save during initial load or if patients array is empty
+
+    try {
+      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
+        id: p.id,
+        gridRow: p.gridRow,
+        gridColumn: p.gridColumn,
+      }));
+      localStorage.setItem(LOCALSTORAGE_KEY_PATIENT_LAYOUT, JSON.stringify(positionsToSave));
+    } catch (error) {
+      console.error("Error saving patient layout to localStorage:", error);
+    }
+  }, [patients, isInitialized]);
+
 
   const handleDragStart = (
     e: React.DragEvent<HTMLDivElement>,
@@ -33,17 +79,17 @@ const PatientGrid: React.FC = () => {
   ) => {
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
-    e.dataTransfer.effectAllowed = 'move'; // Indicate that a move operation is allowed
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); 
     if (draggingPatientInfo) {
-      e.dataTransfer.dropEffect = 'move'; // Indicate that a move operation will occur on drop
+      e.dataTransfer.dropEffect = 'move';
     }
   };
 
-  const handleDropOnCell = (targetRow: number, targetCol: number) => {
+  const handleDropOnCell = useCallback((targetRow: number, targetCol: number) => {
     if (!draggingPatientInfo) return;
 
     const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
@@ -67,7 +113,7 @@ const PatientGrid: React.FC = () => {
     });
 
     setDraggingPatientInfo(null);
-  };
+  }, [draggingPatientInfo]);
 
   const handleDragEnd = () => {
     setDraggingPatientInfo(null);
@@ -110,7 +156,7 @@ const PatientGrid: React.FC = () => {
     return cells;
   };
 
-  if (patients.length === 0 && !draggingPatientInfo) {
+  if (!isInitialized && !draggingPatientInfo) {
       return <div className="text-center p-8">Initializing patient grid...</div>;
   }
 
@@ -131,4 +177,3 @@ const PatientGrid: React.FC = () => {
 };
 
 export default PatientGrid;
-
