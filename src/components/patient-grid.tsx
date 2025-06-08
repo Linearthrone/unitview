@@ -33,10 +33,14 @@ const PatientGrid: React.FC = () => {
   ) => {
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
+    e.dataTransfer.effectAllowed = 'move'; // Indicate that a move operation is allowed
   };
 
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); 
+    if (draggingPatientInfo) {
+      e.dataTransfer.dropEffect = 'move'; // Indicate that a move operation will occur on drop
+    }
   };
 
   const handleDropOnCell = (targetRow: number, targetCol: number) => {
@@ -45,7 +49,7 @@ const PatientGrid: React.FC = () => {
     const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
 
     setPatients(prevPatients => {
-      const newPatients = prevPatients.map(p => ({...p})); // Create deep enough copies for modification
+      const newPatients = prevPatients.map(p => ({...p})); 
       const draggedPatient = newPatients.find(p => p.id === draggedPatientId);
 
       if (!draggedPatient) return prevPatients;
@@ -79,7 +83,7 @@ const PatientGrid: React.FC = () => {
             key={`${r}-${c}`}
             className={cn(
               "border border-border/30 min-h-[10rem] rounded-md",
-              "flex items-stretch justify-stretch p-0.5", // Use stretch to make PatientBlock fill cell
+              "flex items-stretch justify-stretch p-0.5", 
               draggingPatientInfo && "hover:bg-secondary/50 transition-colors"
             )}
             onDragOver={handleDragOverCell}
@@ -113,11 +117,11 @@ const PatientGrid: React.FC = () => {
   return (
     <div className="overflow-x-auto">
       <div
-        className="grid gap-2 p-4" // Reduced gap for tighter fit if many cards
+        className="grid gap-2 p-4"
         style={{
           gridTemplateColumns: `repeat(${NUM_COLS}, minmax(10rem, 1fr))`,
           gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`,
-          alignContent: 'start', // Align rows to the start if they don't fill height
+          alignContent: 'start', 
         }}
       >
         {renderGridCells()}
@@ -127,3 +131,4 @@ const PatientGrid: React.FC = () => {
 };
 
 export default PatientGrid;
+
