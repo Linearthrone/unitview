@@ -23,7 +23,11 @@ interface StoredPatientPosition {
   gridColumn: number;
 }
 
-const PatientGrid: React.FC = () => {
+interface PatientGridProps {
+  isLayoutLocked: boolean;
+}
+
+const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -132,6 +136,10 @@ const PatientGrid: React.FC = () => {
     originalGridRow: number,
     originalGridColumn: number
   ) => {
+    if (isLayoutLocked) {
+      e.preventDefault();
+      return;
+    }
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
     e.dataTransfer.effectAllowed = 'move';
@@ -139,13 +147,15 @@ const PatientGrid: React.FC = () => {
 
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); 
-    if (draggingPatientInfo) {
+    if (draggingPatientInfo && !isLayoutLocked) {
       e.dataTransfer.dropEffect = 'move';
+    } else {
+      e.dataTransfer.dropEffect = 'none';
     }
   };
 
   const handleDropOnCell = useCallback((targetRow: number, targetCol: number) => {
-    if (!draggingPatientInfo) return;
+    if (!draggingPatientInfo || isLayoutLocked) return;
 
     const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
 
@@ -168,7 +178,7 @@ const PatientGrid: React.FC = () => {
     });
 
     setDraggingPatientInfo(null);
-  }, [draggingPatientInfo]);
+  }, [draggingPatientInfo, isLayoutLocked]);
 
   const handleDragEnd = () => {
     setDraggingPatientInfo(null);
@@ -183,26 +193,26 @@ const PatientGrid: React.FC = () => {
           <div
             key={`${r}-${c}`}
             className={cn(
-              "border border-border/30 min-h-[10rem] rounded-md", // min-h might be overridden by grid row height but good for structure
+              "border border-border/30 min-h-[10rem] rounded-md",
               "flex items-stretch justify-stretch p-0.5", 
-              draggingPatientInfo && "hover:bg-secondary/50 transition-colors"
+              draggingPatientInfo && !isLayoutLocked && "hover:bg-secondary/50 transition-colors"
             )}
-            onDragOver={handleDragOverCell}
-            onDrop={() => handleDropOnCell(r, c)}
-            // style={{ minHeight: '10rem' }} // Explicit min-height for cells
+            onDragOver={!isLayoutLocked ? handleDragOverCell : undefined}
+            onDrop={!isLayoutLocked ? () => handleDropOnCell(r, c) : undefined}
           >
             {patientInCell && (
               <div
-                draggable
+                draggable={!isLayoutLocked}
                 onDragStart={(e) => handleDragStart(e, patientInCell.id, patientInCell.gridRow, patientInCell.gridColumn)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "cursor-grab w-full h-full", // Ensure PatientBlock takes full cell space
+                  "w-full h-full",
+                  !isLayoutLocked && "cursor-grab",
                   draggingPatientInfo?.id === patientInCell.id && "opacity-50"
                 )}
                 data-patient-id={patientInCell.id}
               >
-                <PatientBlock patient={patientInCell} isDragging={draggingPatientInfo?.id === patientInCell.id} />
+                <PatientBlock patient={patientInCell} isDragging={draggingPatientInfo?.id === patientInCell.id && !isLayoutLocked} />
               </div>
             )}
           </div>
@@ -212,7 +222,7 @@ const PatientGrid: React.FC = () => {
     return cells;
   };
 
-  if (!isInitialized && !draggingPatientInfo) { // Keep simple loading state
+  if (!isInitialized && !draggingPatientInfo) {
       return <div className="text-center p-8">Initializing patient grid...</div>;
   }
 
@@ -220,14 +230,13 @@ const PatientGrid: React.FC = () => {
     <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden">
       <div
         ref={gridRef}
-        className="grid gap-2 p-4" // p-4 contributes to natural size and will be scaled
+        className="grid gap-2 p-4"
         style={{
           gridTemplateColumns: `repeat(${NUM_COLS}, minmax(10rem, 1fr))`,
-          gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`, // 'auto' allows content height, '10rem' for fixed square cells before scaling
+          gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`,
           alignContent: 'start', 
           transform: `scale(${isMeasuring ? 1 : scale})`,
           transformOrigin: 'center center',
-          // transition: isMeasuring ? 'none' : 'transform 0.2s ease-out', // Optional: smooth transition for scale changes
         }}
       >
         {renderGridCells()}
