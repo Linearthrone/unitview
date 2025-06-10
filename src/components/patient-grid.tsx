@@ -197,8 +197,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
           <div
             key={`${r}-${c}`}
             className={cn(
-              "border border-border/30 min-h-[10rem] rounded-md",
-              "flex items-stretch justify-stretch p-0.5", 
+              "border border-border/30 min-h-[8rem] rounded-md", // Removed p-0.5
+              "flex items-stretch justify-stretch", 
               draggingPatientInfo && !isLayoutLocked && "hover:bg-secondary/50 transition-colors",
               !patientInCell && "bg-card"
             )}
@@ -235,10 +235,10 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isLayoutLocked }) => {
     <div ref={viewportRef} className="flex-grow flex items-center justify-center overflow-hidden">
       <div
         ref={gridRef}
-        className="grid gap-1" 
+        className="grid" // Removed gap-1
         style={{
-          gridTemplateColumns: `repeat(${NUM_COLS}, minmax(10rem, 1fr))`,
-          gridTemplateRows: `repeat(${NUM_ROWS}, minmax(10rem, auto))`,
+          gridTemplateColumns: `repeat(${NUM_COLS}, minmax(8rem, 1fr))`,
+          gridTemplateRows: `repeat(${NUM_ROWS}, minmax(8rem, auto))`,
           alignContent: 'start', 
           transform: `scale(${isMeasuring ? 1 : scale})`, 
           transformOrigin: 'center center',
