@@ -24,6 +24,8 @@ export const defaultLayout = (basePatients: Patient[]): Patient[] => {
 export const eighthFloorLayout = (basePatients: Patient[]): Patient[] => {
   const clonedPatients = getClonedPatients(basePatients);
   let patientIndex = 0;
+  // Fill top-left quadrant first (approx 11x6 area)
+  // Max patients in this quadrant = 66, more than enough for 48.
   for (let r = 1; r <= Math.floor(NUM_ROWS_GRID / 2) && patientIndex < clonedPatients.length; r++) {
     for (let c = 1; c <= Math.floor(NUM_COLS_GRID / 2) && patientIndex < clonedPatients.length; c++) {
       clonedPatients[patientIndex].gridRow = r;
@@ -31,12 +33,16 @@ export const eighthFloorLayout = (basePatients: Patient[]): Patient[] => {
       patientIndex++;
     }
   }
-  // Place remaining patients (if any) along the perimeter or another defined logic
-  const perimeterCells = getPerimeterCells();
-  for (; patientIndex < clonedPatients.length; patientIndex++) {
-    const pos = perimeterCells[patientIndex % perimeterCells.length]; // Use a different part of perimeter if needed
-    clonedPatients[patientIndex].gridRow = pos.row;
-    clonedPatients[patientIndex].gridColumn = pos.col;
+  // Place remaining patients (if any) in a secondary area or along a different perimeter section
+  // For this example, let's start placing them from row 1, col (NUM_COLS_GRID / 2) + 1
+  let remainingIndex = 0;
+  for (let r = 1; r <= NUM_ROWS_GRID && patientIndex < clonedPatients.length; r++) {
+    for (let c = Math.floor(NUM_COLS_GRID / 2) + 1; c <= NUM_COLS_GRID && patientIndex < clonedPatients.length; c++) {
+        clonedPatients[patientIndex].gridRow = r;
+        clonedPatients[patientIndex].gridColumn = c;
+        patientIndex++;
+        remainingIndex++;
+    }
   }
   return clonedPatients;
 };
@@ -48,6 +54,7 @@ export const tenthFloorLayout = (basePatients: Patient[]): Patient[] => {
   const startRow = Math.floor(NUM_ROWS_GRID / 2) + 1;
   const startCol = Math.floor(NUM_COLS_GRID / 2) + 1;
 
+  // Fill bottom-right quadrant
   for (let r = startRow; r <= NUM_ROWS_GRID && patientIndex < clonedPatients.length; r++) {
     for (let c = startCol; c <= NUM_COLS_GRID && patientIndex < clonedPatients.length; c++) {
       clonedPatients[patientIndex].gridRow = r;
@@ -55,13 +62,13 @@ export const tenthFloorLayout = (basePatients: Patient[]): Patient[] => {
       patientIndex++;
     }
   }
-  // Place remaining patients (if any)
-  const perimeterCells = getPerimeterCells();
-  for (; patientIndex < clonedPatients.length; patientIndex++) {
-    // Offset index to try and use different perimeter spots than default
-    const pos = perimeterCells[(patientIndex + Math.floor(perimeterCells.length / 2)) % perimeterCells.length];
-    clonedPatients[patientIndex].gridRow = pos.row;
-    clonedPatients[patientIndex].gridColumn = pos.col;
+  // Place remaining patients (if any) in the top-left as a fallback
+  for (let r = 1; r <= Math.floor(NUM_ROWS_GRID/2) && patientIndex < clonedPatients.length; r++) {
+    for (let c = 1; c <= Math.floor(NUM_COLS_GRID/2) && patientIndex < clonedPatients.length; c++) {
+        clonedPatients[patientIndex].gridRow = r;
+        clonedPatients[patientIndex].gridColumn = c;
+        patientIndex++;
+    }
   }
   return clonedPatients;
 };

@@ -4,29 +4,70 @@
 import React, { useState, useEffect } from 'react';
 import AppHeader from '@/components/app-header';
 import PatientGrid from '@/components/patient-grid';
+import { layouts as appLayouts, type LayoutName } from '@/lib/layouts'; // Aliased import
 
 export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('default'); // Initialize with 'default'
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
-  }, []);
+
+    // Load saved layout name from localStorage after mount
+    const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
+    if (savedLayout && appLayouts[savedLayout]) { // Check against actual layout keys
+      setCurrentLayoutName(savedLayout);
+      if (savedLayout === 'eighthFloor') {
+        setIsLayoutLocked(true); // Lock 8th floor by default
+      }
+    }
+  }, []); // Empty dependency array, runs once on mount
+
+  const handleSelectLayout = (newLayoutName: LayoutName) => {
+    setCurrentLayoutName(newLayoutName);
+    localStorage.setItem('lastSelectedLayoutName', newLayoutName);
+    if (newLayoutName === 'eighthFloor') {
+      setIsLayoutLocked(true);
+    } else {
+      // For other layouts, retain the user's explicit lock choice,
+      // or unlock if it was previously locked due to 'eighthFloor'
+      // This simple logic just unlocks it. A more complex state might be needed
+      // if you want to remember a user's lock preference *per layout*.
+      const userExplicitlyLocked = localStorage.getItem('userLayoutLockState') === 'true';
+      setIsLayoutLocked(userExplicitlyLocked); 
+    }
+  };
 
   const toggleLayoutLock = () => {
-    setIsLayoutLocked(prev => !prev);
+    if (currentLayoutName === 'eighthFloor') return; // 8th floor is always locked
+
+    setIsLayoutLocked(prev => {
+      const newLockState = !prev;
+      localStorage.setItem('userLayoutLockState', String(newLockState));
+      return newLockState;
+    });
   };
+
+  // Determine if the layout is effectively locked
+  const isEffectivelyLocked = currentLayoutName === 'eighthFloor' || isLayoutLocked;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader
         title="UnitView"
         subtitle="48 Bed Unit Patient Dashboard"
-        isLayoutLocked={isLayoutLocked}
+        isLayoutLocked={isEffectivelyLocked}
         onToggleLayoutLock={toggleLayoutLock}
+        currentLayoutName={currentLayoutName}
+        onSelectLayout={handleSelectLayout}
+        availableLayouts={Object.keys(appLayouts) as LayoutName[]}
       />
       <main className="flex-grow flex flex-col overflow-hidden">
-        <PatientGrid isLayoutLocked={isLayoutLocked} />
+        <PatientGrid
+          currentLayoutName={currentLayoutName}
+          isEffectivelyLocked={isEffectivelyLocked}
+        />
       </main>
       <footer className="text-center p-4 text-sm text-muted-foreground border-t">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}

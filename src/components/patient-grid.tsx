@@ -5,8 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Patient, StoredPatientPosition } from '@/types/patient';
 import PatientBlock from './patient-block';
 import { generateInitialPatients } from '@/lib/initial-patients';
-import { layouts } from '@/lib/layouts'; // Import layouts object
-import type { LayoutName } from '@/lib/layouts'; // Import LayoutName type
+import { layouts as importedGridLayouts, type LayoutName } from '@/lib/layouts'; // Aliased import
 import { cn } from '@/lib/utils';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 
@@ -32,23 +31,30 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
   const [scale, setScale] = useState(1);
   const [isMeasuring, setIsMeasuring] = useState(false);
 
-  const applyLayout = (layoutKey: LayoutName, base: Patient[]): Patient[] => {
-    if (layouts && typeof layouts[layoutKey] === 'function') {
-      return layouts[layoutKey](base);
+  const applyLayout = useCallback((layoutKey: LayoutName, base: Patient[]): Patient[] => {
+    if (importedGridLayouts && typeof importedGridLayouts[layoutKey] === 'function') {
+      return importedGridLayouts[layoutKey](base);
     }
     console.error(
       `Layout function for "${layoutKey}" not found or not a function. Falling back to default.`,
-      'Layouts object:', layouts
+      'Layouts object:', importedGridLayouts 
     );
-    if (layouts && typeof layouts.default === 'function') {
-      return layouts.default(base);
+    if (importedGridLayouts && typeof importedGridLayouts.default === 'function') {
+      return importedGridLayouts.default(base);
     }
     console.error("Critical: Default layout function also missing. Using base patient data.");
-    return [...base.map(p => ({ ...p }))]; // Return a copy
-  };
+    return [...base.map(p => ({ ...p }))]; 
+  }, []);
 
   // Effect for initializing and loading patients based on layout
   useEffect(() => {
+    // Ensure currentLayoutName is defined before proceeding
+    if (!currentLayoutName) {
+        console.warn("PatientGrid: currentLayoutName is undefined. Waiting for valid layout name.");
+        // Optionally, set a loading state or return early
+        return;
+    }
+
     const basePatients = generateInitialPatients();
     const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
     let finalPatientsData: Patient[];
@@ -61,12 +67,11 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
 
         finalPatientsData = basePatients.map(p => {
           const savedPos = positionMap.get(p.id);
-          return savedPos ? { ...p, ...savedPos } : { ...p }; // Apply saved positions or use base
+          return savedPos ? { ...p, ...savedPos } : { ...p };
         });
 
       } else {
         finalPatientsData = applyLayout(currentLayoutName, basePatients);
-        // And save this initial state of the predefined layout to localStorage
         const positionsToSave: StoredPatientPosition[] = finalPatientsData.map(p => ({
           id: p.id,
           gridRow: p.gridRow,
@@ -81,11 +86,11 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
 
     setPatients(finalPatientsData);
     setIsInitialized(true);
-  }, [currentLayoutName]); // Rerun when layout changes
+  }, [currentLayoutName, applyLayout]); 
 
   // Effect for saving patient positions to localStorage
   useEffect(() => {
-    if (!isInitialized || patients.length === 0 || isEffectivelyLocked) return;
+    if (!isInitialized || patients.length === 0 || isEffectivelyLocked || !currentLayoutName) return;
 
     const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
     try {
@@ -103,7 +108,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
 
   // Effect for scaling the grid
   useEffect(() => {
-    if (!isInitialized || !viewportRef.current || !gridRef.current) return;
+    if (!isInitialized || !viewportRef.current || !gridRef.current || !currentLayoutName) return;
 
     const calculateAndSetScale = () => {
       if (viewportRef.current && gridRef.current) {
@@ -142,21 +147,24 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
       }
     };
 
-    calculateAndSetScale();
+    calculateAndSetScale(); // Initial calculation
 
     const resizeObserver = new ResizeObserver(calculateAndSetScale);
-    resizeObserver.observe(viewportRef.current);
-
+    if (viewportRef.current) {
+        resizeObserver.observe(viewportRef.current);
+    }
+    
     const mutationObserver = new MutationObserver(calculateAndSetScale);
     if (gridRef.current) {
         mutationObserver.observe(gridRef.current, { childList: true, subtree: true, attributes: true, characterData: true });
     }
 
+
     return () => {
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
-  }, [isInitialized, currentLayoutName]);
+  }, [isInitialized, currentLayoutName]); // Depend on currentLayoutName as layout changes grid structure
 
 
   const handleDragStart = (
@@ -222,10 +230,10 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
           <div
             key={`${r}-${c}`}
             className={cn(
-              "border border-border/30 min-h-[8rem] rounded-md", // Maintained min-h
-              "flex items-stretch justify-stretch",
+              "border border-border/30 min-h-[8rem] rounded-md", 
+              "flex items-stretch justify-stretch", // ensure children can fill
               draggingPatientInfo && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
-              !patientInCell && "bg-card"
+              !patientInCell && "bg-card" // Explicit background for empty cells
             )}
             onDragOver={!isEffectivelyLocked ? handleDragOverCell : undefined}
             onDrop={!isEffectivelyLocked ? () => handleDropOnCell(r, c) : undefined}
@@ -237,7 +245,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
                 onDragStart={(e) => handleDragStart(e, patientInCell.id, patientInCell.gridRow, patientInCell.gridColumn)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "w-full h-full", // Ensure PatientBlock fills this div
+                  "w-full h-full", 
                   !isEffectivelyLocked && "cursor-grab",
                   draggingPatientInfo?.id === patientInCell.id && "opacity-50"
                 )}
@@ -253,23 +261,24 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
     return cells;
   };
 
-   if (!isInitialized) {
+   if (!isInitialized || !currentLayoutName) {
       return <div className="flex-grow flex items-center justify-center text-center p-8">Initializing patient grid...</div>;
   }
 
   return (
-    <div ref={viewportRef} className="flex-grow flex overflow-hidden">
+    <div ref={viewportRef} className="flex-grow flex overflow-hidden"> {/* Removed items-center justify-center */}
       <div
         ref={gridRef}
-        className="grid"
+        className="grid" // Removed gap-1
         style={{
           gridTemplateColumns: `repeat(${NUM_COLS_GRID}, minmax(8rem, 1fr))`,
           gridTemplateRows: `repeat(${NUM_ROWS_GRID}, minmax(8rem, auto))`,
-          alignContent: 'start',
+          alignContent: 'start', // Align content to the start if grid is smaller than viewport
           transform: `scale(${isMeasuring ? 1 : scale})`,
           transformOrigin: 'top left',
           willChange: 'transform',
           transition: isMeasuring ? 'none' : 'transform 0.2s ease-out',
+          // Removed p-0.5
         }}
       >
         {renderGridCells()}
@@ -279,4 +288,3 @@ const PatientGrid: React.FC<PatientGridProps> = ({ isEffectivelyLocked, currentL
 };
 
 export default PatientGrid;
-

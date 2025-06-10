@@ -1,16 +1,46 @@
 
 import React from 'react';
-import { Stethoscope, Lock, Unlock } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { LayoutName } from '@/lib/layouts'; // Import LayoutName
 
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
   isLayoutLocked: boolean;
   onToggleLayoutLock: () => void;
+  currentLayoutName: LayoutName;
+  onSelectLayout: (layoutName: LayoutName) => void;
+  availableLayouts: LayoutName[];
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, isLayoutLocked, onToggleLayoutLock }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({
+  title,
+  subtitle,
+  isLayoutLocked,
+  onToggleLayoutLock,
+  currentLayoutName,
+  onSelectLayout,
+  availableLayouts
+}) => {
+
+  const getFriendlyLayoutName = (layoutName: LayoutName): string => {
+    switch (layoutName) {
+      case 'default': return 'Default Layout';
+      case 'eighthFloor': return '8th Floor';
+      case 'tenthFloor': return '10th Floor';
+      default: return layoutName;
+    }
+  };
+
   return (
     <header className="bg-card text-card-foreground shadow-md p-4 sticky top-0 z-50">
       <div className="container mx-auto flex items-center justify-between">
@@ -21,10 +51,40 @@ const AppHeader: React.FC<AppHeaderProps> = ({ title, subtitle, isLayoutLocked, 
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={onToggleLayoutLock}>
-          {isLayoutLocked ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
-          {isLayoutLocked ? 'Layout Locked' : 'Lock Layout'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <LayoutGrid className="mr-2 h-4 w-4" />
+                {getFriendlyLayoutName(currentLayoutName)}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Select Unit Layout</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableLayouts.map((layoutName) => (
+                <DropdownMenuItem
+                  key={layoutName}
+                  onClick={() => onSelectLayout(layoutName)}
+                  disabled={layoutName === currentLayoutName}
+                >
+                  {getFriendlyLayoutName(layoutName)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onToggleLayoutLock}
+            disabled={currentLayoutName === 'eighthFloor'} // Disable if 8th floor is active
+            title={currentLayoutName === 'eighthFloor' ? "8th Floor layout is always locked" : (isLayoutLocked ? 'Unlock Layout' : 'Lock Layout')}
+          >
+            {isLayoutLocked ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
+            {isLayoutLocked ? 'Layout Locked' : 'Lock Layout'}
+          </Button>
+        </div>
       </div>
     </header>
   );
