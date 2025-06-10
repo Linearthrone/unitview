@@ -1,11 +1,11 @@
 
 import type { Patient } from '@/types/patient';
-import { getPerimeterCells, NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils'; // Added import
+import { getPerimeterCells, NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 
 export type LayoutName = 'default' | 'eighthFloor' | 'tenthFloor';
 
 // Helper function to get a copy of base patients to avoid direct mutation
-const getClonedPatients = (basePatients: Patient[]): Patient[] => 
+const getClonedPatients = (basePatients: Patient[]): Patient[] =>
   basePatients.map(p => ({ ...p }));
 
 // Default layout: Uses the initial positions from generateInitialPatients logic (now centralized)
@@ -59,7 +59,7 @@ export const tenthFloorLayout = (basePatients: Patient[]): Patient[] => {
   const perimeterCells = getPerimeterCells();
   for (; patientIndex < clonedPatients.length; patientIndex++) {
     // Offset index to try and use different perimeter spots than default
-    const pos = perimeterCells[(patientIndex + Math.floor(perimeterCells.length / 2)) % perimeterCells.length]; 
+    const pos = perimeterCells[(patientIndex + Math.floor(perimeterCells.length / 2)) % perimeterCells.length];
     clonedPatients[patientIndex].gridRow = pos.row;
     clonedPatients[patientIndex].gridColumn = pos.col;
   }
