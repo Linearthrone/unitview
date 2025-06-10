@@ -13,7 +13,7 @@ import {
   CalendarCheck,
   AlertTriangle,
   ShieldAlert,
-  Ban, 
+  Ban, // Changed from HandCuffs
   HeartHandshake,
   type LucideIcon
 } from 'lucide-react';
