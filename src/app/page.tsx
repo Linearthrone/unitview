@@ -4,25 +4,32 @@
 import React, { useState, useEffect } from 'react';
 import AppHeader from '@/components/app-header';
 import PatientGrid from '@/components/patient-grid';
-import { layouts as appLayouts, type LayoutName } from '@/lib/layouts'; // Aliased import
+import { layouts as appLayouts, type LayoutName } from '@/lib/layouts';
 
 export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-  const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('default'); // Initialize with 'default'
+  const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('default');
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
 
-    // Load saved layout name from localStorage after mount
     const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
-    if (savedLayout && appLayouts[savedLayout]) { // Check against actual layout keys
+    if (savedLayout && appLayouts[savedLayout]) {
       setCurrentLayoutName(savedLayout);
       if (savedLayout === 'eighthFloor') {
-        setIsLayoutLocked(true); // Lock 8th floor by default
+        setIsLayoutLocked(true);
       }
+    } else if (savedLayout && !appLayouts[savedLayout]) {
+      // If a saved layout name exists but is no longer valid (e.g. removed from code)
+      // fall back to default and clear the invalid localStorage item.
+      console.warn(`Saved layout "${savedLayout}" not found. Falling back to default.`);
+      setCurrentLayoutName('default');
+      localStorage.removeItem('lastSelectedLayoutName');
     }
-  }, []); // Empty dependency array, runs once on mount
+    // If no saved layout or invalid, it defaults to 'default' from useState and eighthFloor lock remains false.
+
+  }, []);
 
   const handleSelectLayout = (newLayoutName: LayoutName) => {
     setCurrentLayoutName(newLayoutName);
@@ -31,16 +38,14 @@ export default function Home() {
       setIsLayoutLocked(true);
     } else {
       // For other layouts, retain the user's explicit lock choice,
-      // or unlock if it was previously locked due to 'eighthFloor'
-      // This simple logic just unlocks it. A more complex state might be needed
-      // if you want to remember a user's lock preference *per layout*.
+      // or unlock if it was previously locked due to 'eighthFloor'.
       const userExplicitlyLocked = localStorage.getItem('userLayoutLockState') === 'true';
-      setIsLayoutLocked(userExplicitlyLocked); 
+      setIsLayoutLocked(userExplicitlyLocked);
     }
   };
 
   const toggleLayoutLock = () => {
-    if (currentLayoutName === 'eighthFloor') return; // 8th floor is always locked
+    if (currentLayoutName === 'eighthFloor') return;
 
     setIsLayoutLocked(prev => {
       const newLockState = !prev;
@@ -49,7 +54,6 @@ export default function Home() {
     });
   };
 
-  // Determine if the layout is effectively locked
   const isEffectivelyLocked = currentLayoutName === 'eighthFloor' || isLayoutLocked;
 
   return (
@@ -63,7 +67,7 @@ export default function Home() {
         onSelectLayout={handleSelectLayout}
         availableLayouts={Object.keys(appLayouts) as LayoutName[]}
       />
-      <main className="flex-grow flex flex-col overflow-hidden">
+      <main className="flex-grow flex flex-col overflow-auto"> {/* Changed overflow-hidden to overflow-auto */}
         <PatientGrid
           currentLayoutName={currentLayoutName}
           isEffectivelyLocked={isEffectivelyLocked}
