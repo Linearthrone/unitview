@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,6 +20,7 @@ interface AppHeaderProps {
   currentLayoutName: LayoutName;
   onSelectLayout: (layoutName: LayoutName) => void;
   availableLayouts: LayoutName[];
+  onPrint: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -29,7 +30,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onToggleLayoutLock,
   currentLayoutName,
   onSelectLayout,
-  availableLayouts
+  availableLayouts,
+  onPrint
 }) => {
 
   const getFriendlyLayoutName = (layoutName: LayoutName): string => {
@@ -42,7 +44,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="bg-card text-card-foreground shadow-md p-4 sticky top-0 z-50">
+    <header className="bg-card text-card-foreground shadow-md p-4 sticky top-0 z-50 print-hide">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Stethoscope className="h-8 w-8 text-primary" />
@@ -77,8 +79,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           <Button
             variant="outline"
             size="sm"
+            onClick={onPrint}
+            title="Print Charge Report"
+          >
+            <Printer className="mr-2 h-4 w-4" />
+            Print Report
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={onToggleLayoutLock}
-            disabled={currentLayoutName === 'eighthFloor'} // Disable if 8th floor is active
+            disabled={currentLayoutName === 'eighthFloor'}
             title={currentLayoutName === 'eighthFloor' ? "8th Floor layout is always locked" : (isLayoutLocked ? 'Unlock Layout' : 'Lock Layout')}
           >
             {isLayoutLocked ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}

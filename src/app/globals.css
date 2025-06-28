@@ -104,3 +104,19 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  body {
+    background-color: white !important;
+    font-size: 10pt;
+  }
+  .print-hide {
+    display: none !important;
+  }
+  main.print-hide + div {
+    display: block !important;
+  }
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+}
