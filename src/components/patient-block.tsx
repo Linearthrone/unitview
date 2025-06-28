@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Patient, MobilityStatus, AlertDisplayInfo } from '@/types/patient';
@@ -13,7 +12,9 @@ import {
   CalendarCheck,
   AlertTriangle,
   ShieldAlert,
-  Ban, // Changed from HandCuffs
+  Ban,
+  BrainCircuit,
+  Wind,
   HeartHandshake,
   type LucideIcon
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import { cn } from '@/lib/utils';
 interface PatientBlockProps {
   patient: Patient;
   isDragging?: boolean;
+  onSelectPatient: () => void;
 }
 
 const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
@@ -30,7 +32,7 @@ const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
   'Independent': Footprints,
 };
 
-const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
+const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSelectPatient }) => {
   const MobilityIcon = mobilityIcons[patient.mobility];
 
   const formatDate = (date: Date): string => {
@@ -39,13 +41,13 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
 
   const getCardColors = () => {
     if (patient.isComfortCareDNR) {
-      return "bg-purple-200 dark:bg-purple-800 border-purple-400 dark:border-purple-600";
+      return "bg-purple-300 dark:bg-purple-900 border-purple-500 dark:border-purple-700";
     }
     if (patient.gender === 'Male') {
-      return "bg-sky-200 dark:bg-sky-800 border-sky-400 dark:border-sky-600";
+      return "bg-sky-300 dark:bg-sky-900 border-sky-500 dark:border-sky-700";
     }
     if (patient.gender === 'Female') {
-      return "bg-pink-200 dark:bg-pink-800 border-pink-400 dark:border-pink-600";
+      return "bg-pink-300 dark:bg-pink-900 border-pink-500 dark:border-pink-700";
     }
     return "bg-card border-border"; // Default card colors
   };
@@ -53,6 +55,12 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
   const alerts: AlertDisplayInfo[] = [];
   if (patient.isFallRisk) {
     alerts.push({ IconComponent: AlertTriangle, colorClass: 'text-accent', tooltipText: 'Fall Risk' });
+  }
+  if (patient.isSeizureRisk) {
+    alerts.push({ IconComponent: BrainCircuit, colorClass: 'text-accent', tooltipText: 'Seizure Risk' });
+  }
+  if (patient.isAspirationRisk) {
+    alerts.push({ IconComponent: Wind, colorClass: 'text-accent', tooltipText: 'Aspiration Risk' });
   }
   if (patient.isIsolation) {
     alerts.push({ IconComponent: ShieldAlert, colorClass: 'text-accent', tooltipText: 'Isolation Precautions' });
@@ -64,7 +72,6 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
     alerts.push({ IconComponent: HeartHandshake, colorClass: 'text-purple-600 dark:text-purple-400', tooltipText: 'Comfort Care / DNR' });
   }
   
-
   return (
     <Card 
       className={cn(
@@ -76,13 +83,20 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging }) => {
     >
       <CardHeader className="p-3">
         <CardTitle className="text-lg flex justify-between items-center">
-          <span>Bed {patient.bedNumber}</span>
+          <button
+            onClick={onSelectPatient}
+            className="hover:underline focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 -ml-1"
+            title={`View report for Bed ${patient.bedNumber}`}
+          >
+            Bed {patient.bedNumber}
+          </button>
           <Badge 
             variant={patient.isComfortCareDNR || patient.gender ? "outline" : "secondary"} 
             className={cn(
-              "text-xs",
+              "text-xs truncate",
               (patient.isComfortCareDNR || patient.gender) && "border-current text-current" 
             )}
+            title={patient.name}
           >
             {patient.name}
           </Badge>

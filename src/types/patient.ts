@@ -1,19 +1,25 @@
-
 import type { LucideIcon } from 'lucide-react';
 
 export type MobilityStatus = 'Bed Rest' | 'Assisted' | 'Independent';
-
 export type PatientGender = 'Male' | 'Female';
+export type CodeStatus = 'Full Code' | 'DNR' | 'DNI' | 'DNR/DNI';
 
 export interface Patient {
   id: string;
   bedNumber: number;
   name: string;
+  age: number;
+  gender?: PatientGender;
   admitDate: Date;
-  dischargeDate: Date;
+  dischargeDate: Date; // This is EDD
+  chiefComplaint: string;
+  ldas: string[]; // Lines, Drains, Airways
+  diet: string;
   mobility: MobilityStatus;
-  gender?: PatientGender; // Optional: can be undefined
+  codeStatus: CodeStatus;
   isFallRisk: boolean;
+  isSeizureRisk: boolean;
+  isAspirationRisk: boolean;
   isIsolation: boolean;
   isInRestraints: boolean;
   isComfortCareDNR: boolean;
