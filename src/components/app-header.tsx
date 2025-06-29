@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ interface AppHeaderProps {
   onSelectLayout: (layoutName: LayoutName) => void;
   availableLayouts: LayoutName[];
   onPrint: () => void;
+  onSaveLayout: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -31,7 +32,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   currentLayoutName,
   onSelectLayout,
   availableLayouts,
-  onPrint
+  onPrint,
+  onSaveLayout
 }) => {
 
   const getFriendlyLayoutName = (layoutName: LayoutName): string => {
@@ -84,6 +86,17 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           >
             <Printer className="mr-2 h-4 w-4" />
             Print Report
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSaveLayout}
+            disabled={isLayoutLocked}
+            title={isLayoutLocked ? "Unlock to save changes" : "Save current layout"}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            Save Layout
           </Button>
 
           <Button

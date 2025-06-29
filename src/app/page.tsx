@@ -9,6 +9,7 @@ import PrintableReport from '@/components/printable-report';
 import { layouts as appLayouts, type LayoutName } from '@/lib/layouts';
 import type { Patient } from '@/types/patient';
 import { generateInitialPatients } from '@/lib/initial-patients';
+import { useToast } from "@/hooks/use-toast";
 
 interface StoredPatientPosition {
   id: string;
@@ -30,6 +31,16 @@ export default function Home() {
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const { toast } = useToast();
+
+  const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
+    switch (layoutName) {
+      case 'default': return 'Default Layout';
+      case 'eighthFloor': return '8th Floor';
+      case 'tenthFloor': return '10th Floor';
+      default: return layoutName;
+    }
+  }, []);
 
   const applyLayout = useCallback((layoutKey: LayoutName, base: Patient[]): Patient[] => {
     if (appLayouts && typeof appLayouts === 'object' && appLayouts[layoutKey] && typeof appLayouts[layoutKey] === 'function') {
@@ -90,23 +101,6 @@ export default function Home() {
   const isEffectivelyLocked = currentLayoutName === 'eighthFloor' || isLayoutLocked;
 
   useEffect(() => {
-    if (!isInitialized || patients.length === 0 || isEffectivelyLocked || !currentLayoutName) return;
-
-    const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
-    try {
-      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
-        id: p.id,
-        gridRow: p.gridRow,
-        gridColumn: p.gridColumn,
-      }));
-      localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
-    } catch (error) {
-      console.error(`Error saving patient layout ${currentLayoutName} to localStorage:`, error);
-    }
-  }, [patients, isInitialized, currentLayoutName, isEffectivelyLocked]);
-
-
-  useEffect(() => {
     setCurrentYear(new Date().getFullYear());
 
     const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
@@ -136,6 +130,38 @@ export default function Home() {
       return newLockState;
     });
   };
+  
+  const handleSaveLayout = useCallback(() => {
+    if (isEffectivelyLocked) {
+      toast({
+        variant: "destructive",
+        title: "Layout Locked",
+        description: "Unlock the layout to save changes.",
+      });
+      return;
+    }
+
+    const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
+    try {
+      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
+        id: p.id,
+        gridRow: p.gridRow,
+        gridColumn: p.gridColumn,
+      }));
+      localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
+      toast({
+        title: "Layout Saved",
+        description: `Your arrangement for the "${getFriendlyLayoutName(currentLayoutName)}" layout has been saved.`,
+      });
+    } catch (error) {
+      console.error(`Error saving patient layout ${currentLayoutName} to localStorage:`, error);
+      toast({
+        variant: "destructive",
+        title: "Save Error",
+        description: "Could not save the layout. Please try again.",
+      });
+    }
+  }, [patients, isEffectivelyLocked, currentLayoutName, getFriendlyLayoutName, toast]);
 
   const handlePrint = () => {
     window.print();
@@ -195,6 +221,7 @@ export default function Home() {
         onSelectLayout={handleSelectLayout}
         availableLayouts={Object.keys(appLayouts) as LayoutName[]}
         onPrint={handlePrint}
+        onSaveLayout={handleSaveLayout}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
