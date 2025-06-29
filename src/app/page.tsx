@@ -6,7 +6,9 @@ import AppHeader from '@/components/app-header';
 import PatientGrid from '@/components/patient-grid';
 import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
-import { layouts as appLayouts, type LayoutName } from '@/lib/layouts';
+import SaveLayoutDialog from '@/components/save-layout-dialog';
+import { layouts as appLayouts } from '@/lib/layouts';
+import type { LayoutName } from '@/types/patient';
 import type { Patient } from '@/types/patient';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { useToast } from "@/hooks/use-toast";
@@ -26,12 +28,15 @@ export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('default');
+  const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>(Object.keys(appLayouts) as LayoutName[]);
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
+  
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
 
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
@@ -46,15 +51,38 @@ export default function Home() {
     if (appLayouts && typeof appLayouts === 'object' && appLayouts[layoutKey] && typeof appLayouts[layoutKey] === 'function') {
       return appLayouts[layoutKey](base);
     }
-    console.error(
-      `Layout function for "${layoutKey}" not found or not a function. Falling back to default.`,
-      'Layouts object:', appLayouts
+    console.warn(
+      `Layout function for "${layoutKey}" not found. This is expected for custom layouts which are loaded from storage.`,
     );
-    if (appLayouts && typeof appLayouts === 'object' && appLayouts.default && typeof appLayouts.default === 'function') {
-      return appLayouts.default(base);
-    }
-    console.error("Critical: Default layout function also missing or layouts object is not as expected. Using base patient data.");
+    // For custom layouts, return base patients; the positions will be applied from localStorage.
     return [...base.map(p => ({ ...p }))];
+  }, []);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+
+    const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
+
+    try {
+        const customLayoutNames = JSON.parse(localStorage.getItem('customLayoutNames') || '[]') as string[];
+        const allNames = [...Object.keys(appLayouts), ...customLayoutNames];
+        const uniqueNames = Array.from(new Set(allNames));
+        setAvailableLayouts(uniqueNames);
+        
+        if (savedLayout && uniqueNames.includes(savedLayout)) {
+            setCurrentLayoutName(savedLayout);
+        } else if (savedLayout) {
+             console.warn(`Saved layout "${savedLayout}" not found. Falling back to default.`);
+             setCurrentLayoutName('default');
+             localStorage.removeItem('lastSelectedLayoutName');
+        }
+    } catch (error) {
+        console.error("Failed to load custom layouts:", error);
+        setAvailableLayouts(Object.keys(appLayouts) as LayoutName[]);
+    }
+
+    const userLock = localStorage.getItem('userLayoutLockState') === 'true';
+    setIsLayoutLocked(userLock);
   }, []);
 
   useEffect(() => {
@@ -69,7 +97,7 @@ export default function Home() {
 
     try {
       const savedLayoutJSON = localStorage.getItem(layoutStorageKey);
-      if (savedLayoutJSON && currentLayoutName !== 'eighthFloor') {
+      if (savedLayoutJSON) {
         const savedPositions = JSON.parse(savedLayoutJSON) as StoredPatientPosition[];
         const positionMap = new Map(savedPositions.map(p => [p.id, { gridRow: p.gridRow, gridColumn: p.gridColumn }]));
 
@@ -100,22 +128,6 @@ export default function Home() {
 
   const isEffectivelyLocked = currentLayoutName === 'eighthFloor' || isLayoutLocked;
 
-  useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-
-    const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
-    if (savedLayout && appLayouts[savedLayout]) {
-      setCurrentLayoutName(savedLayout);
-    } else if (savedLayout && !appLayouts[savedLayout]) {
-      console.warn(`Saved layout "${savedLayout}" not found. Falling back to default.`);
-      setCurrentLayoutName('default');
-      localStorage.removeItem('lastSelectedLayoutName');
-    }
-
-    const userLock = localStorage.getItem('userLayoutLockState') === 'true';
-    setIsLayoutLocked(userLock);
-  }, []);
-
   const handleSelectLayout = (newLayoutName: LayoutName) => {
     setCurrentLayoutName(newLayoutName);
     localStorage.setItem('lastSelectedLayoutName', newLayoutName);
@@ -131,7 +143,7 @@ export default function Home() {
     });
   };
   
-  const handleSaveLayout = useCallback(() => {
+  const handleOpenSaveDialog = () => {
     if (isEffectivelyLocked) {
       toast({
         variant: "destructive",
@@ -140,8 +152,11 @@ export default function Home() {
       });
       return;
     }
-
-    const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
+    setIsSaveDialogOpen(true);
+  };
+  
+  const handleSaveNewLayout = (newLayoutName: string) => {
+    const layoutStorageKey = `patientGridLayout_${newLayoutName}`;
     try {
       const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
         id: p.id,
@@ -149,19 +164,28 @@ export default function Home() {
         gridColumn: p.gridColumn,
       }));
       localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
+
+      const customLayoutNames = JSON.parse(localStorage.getItem('customLayoutNames') || '[]') as string[];
+      const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, newLayoutName]));
+      localStorage.setItem('customLayoutNames', JSON.stringify(updatedCustomLayouts));
+      
+      setAvailableLayouts(Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts])));
+      setCurrentLayoutName(newLayoutName);
+      localStorage.setItem('lastSelectedLayoutName', newLayoutName);
+      
       toast({
         title: "Layout Saved",
-        description: `Your arrangement for the "${getFriendlyLayoutName(currentLayoutName)}" layout has been saved.`,
+        description: `Layout "${newLayoutName}" has been successfully saved.`,
       });
     } catch (error) {
-      console.error(`Error saving patient layout ${currentLayoutName} to localStorage:`, error);
+      console.error(`Error saving new layout ${newLayoutName}:`, error);
       toast({
         variant: "destructive",
         title: "Save Error",
-        description: "Could not save the layout. Please try again.",
+        description: "Could not save the new layout. Please try again.",
       });
     }
-  }, [patients, isEffectivelyLocked, currentLayoutName, getFriendlyLayoutName, toast]);
+  };
 
   const handlePrint = () => {
     window.print();
@@ -205,10 +229,33 @@ export default function Home() {
 
     setDraggingPatientInfo(null);
   }, [draggingPatientInfo, isEffectivelyLocked]);
-
+  
   const handleDragEnd = useCallback(() => {
     setDraggingPatientInfo(null);
   }, []);
+
+  const handleAutoSave = useCallback(() => {
+    if (isEffectivelyLocked) return;
+    
+    // Only auto-save for existing layouts, not during creation of a new one
+    const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
+    try {
+      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
+        id: p.id,
+        gridRow: p.gridRow,
+        gridColumn: p.gridColumn,
+      }));
+      localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
+    } catch (error) {
+      console.error(`Error auto-saving layout ${currentLayoutName}:`, error);
+    }
+  }, [patients, isEffectivelyLocked, currentLayoutName]);
+
+  useEffect(() => {
+    if (isInitialized && !isEffectivelyLocked) {
+      handleAutoSave();
+    }
+  }, [patients, isInitialized, isEffectivelyLocked, handleAutoSave]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -219,9 +266,9 @@ export default function Home() {
         onToggleLayoutLock={toggleLayoutLock}
         currentLayoutName={currentLayoutName}
         onSelectLayout={handleSelectLayout}
-        availableLayouts={Object.keys(appLayouts) as LayoutName[]}
+        availableLayouts={availableLayouts}
         onPrint={handlePrint}
-        onSaveLayout={handleSaveLayout}
+        onSaveLayout={handleOpenSaveDialog}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -244,6 +291,12 @@ export default function Home() {
             setSelectedPatient(null);
           }
         }}
+      />
+      <SaveLayoutDialog
+        open={isSaveDialogOpen}
+        onOpenChange={setIsSaveDialogOpen}
+        onSave={handleSaveNewLayout}
+        existingLayoutNames={availableLayouts}
       />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}

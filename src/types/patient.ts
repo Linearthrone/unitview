@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 export type MobilityStatus = 'Bed Rest' | 'Assisted' | 'Independent';
 export type PatientGender = 'Male' | 'Female';
 export type CodeStatus = 'Full Code' | 'DNR' | 'DNI' | 'DNR/DNI';
+export type LayoutName = string;
 
 export interface Patient {
   id: string;

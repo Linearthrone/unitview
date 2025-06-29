@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { LayoutName } from '@/lib/layouts'; // Import LayoutName
+import type { LayoutName } from '@/types/patient';
 
 interface AppHeaderProps {
   title: string;
@@ -93,10 +93,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             size="sm"
             onClick={onSaveLayout}
             disabled={isLayoutLocked}
-            title={isLayoutLocked ? "Unlock to save changes" : "Save current layout"}
+            title={isLayoutLocked ? "Unlock to save changes" : "Save current layout as a new template"}
           >
             <Save className="mr-2 h-4 w-4" />
-            Save Layout
+            Save As...
           </Button>
 
           <Button
