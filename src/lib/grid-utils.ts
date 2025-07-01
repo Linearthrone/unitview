@@ -1,6 +1,6 @@
 
-export const NUM_COLS_GRID = 22;
-export const NUM_ROWS_GRID = 12;
+export const NUM_COLS_GRID = 16;
+export const NUM_ROWS_GRID = 10;
 
 export const getPerimeterCells = (): { row: number; col: number }[] => {
   const cells: { row: number; col: number }[] = [];
