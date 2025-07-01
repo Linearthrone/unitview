@@ -136,8 +136,17 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
       </CardHeader>
       <CardContent className="p-3 flex-grow space-y-2 text-sm">
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <MobilityIcon className="h-4 w-4 text-primary" strokeWidth={2.5} />
-          <span>Mobility: {patient.mobility}</span>
+          <span>Mobility:</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <MobilityIcon className="h-5 w-5 text-primary" strokeWidth={2.5} aria-label={patient.mobility} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{patient.mobility}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         {patient.notes && (
           <p className="text-xs pt-1 border-t mt-2 italic">

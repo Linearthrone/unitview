@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -11,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import type { Patient } from '@/types/patient';
+import type { Patient, MobilityStatus } from '@/types/patient';
 import { cn } from '@/lib/utils';
 import {
   User,
@@ -25,7 +24,10 @@ import {
   AlertTriangle,
   BrainCircuit,
   Wind,
-  UserMinus
+  UserMinus,
+  BedDouble,
+  Accessibility,
+  type LucideIcon,
 } from 'lucide-react';
 
 interface ReportSheetProps {
@@ -35,8 +37,16 @@ interface ReportSheetProps {
   onDischarge: (patient: Patient) => void;
 }
 
+const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
+  'Bed Rest': BedDouble,
+  'Assisted': Accessibility,
+  'Independent': Footprints,
+};
+
 const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, onDischarge }) => {
   if (!patient) return null;
+
+  const MobilityIcon = mobilityIcons[patient.mobility] || Footprints;
 
   const formatDate = (date: Date) => {
     try {
@@ -95,7 +105,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
               <h3 className="font-semibold text-lg mb-3 text-primary">Clinical Status</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-3"><Utensils className="h-4 w-4 text-muted-foreground" /> <span>Diet: {patient.diet}</span></div>
-                <div className="flex items-center gap-3"><Footprints className="h-4 w-4 text-muted-foreground" /> <span>Mobility: {patient.mobility}</span></div>
+                <div className="flex items-center gap-3"><MobilityIcon className="h-4 w-4 text-muted-foreground" /> <span>Mobility: {patient.mobility}</span></div>
                 <div className="flex items-start gap-3"><FileHeart className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" /> <div><span className="font-medium">LDAs:</span> {patient.ldas.length > 0 ? patient.ldas.join(', ') : 'None'}</div></div>
               </div>
             </section>
