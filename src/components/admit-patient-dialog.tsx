@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -155,9 +156,10 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                           <SelectContent>
                             {allBedNumbers.map(bed => {
                               const patientInBed = patients.find(p => p.bedNumber === bed);
+                              const isVacant = !patientInBed || patientInBed.name === 'Vacant';
                               return (
                                 <SelectItem key={bed} value={bed.toString()}>
-                                  Bed {bed} {patientInBed ? `(Occupied: ${patientInBed.name})` : '(Empty)'}
+                                  Bed {bed} {isVacant ? '(Empty)' : `(Occupied: ${patientInBed.name})`}
                                 </SelectItem>
                               )
                             })}

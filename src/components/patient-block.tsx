@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Patient, MobilityStatus, AlertDisplayInfo } from '@/types/patient';
@@ -33,10 +34,31 @@ const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
 };
 
 const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSelectPatient }) => {
+  if (patient.name === 'Vacant') {
+    return (
+      <Card className="flex flex-col h-full shadow-lg bg-gray-200 dark:bg-gray-800 border-gray-400">
+        <CardHeader className="p-3">
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Bed {patient.bedNumber}</span>
+            <Badge variant="secondary">Vacant</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 flex-grow flex items-center justify-center">
+          <span className="text-muted-foreground text-sm">Bed Available</span>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   const MobilityIcon = mobilityIcons[patient.mobility];
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
+    try {
+      if (isNaN(date.getTime())) return 'N/A';
+      return new Date(date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
+    } catch {
+      return 'N/A'
+    }
   };
 
   const getCardColors = () => {
@@ -49,7 +71,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
     if (patient.gender === 'Female') {
       return "bg-pink-300 dark:bg-pink-900 border-pink-500 dark:border-pink-700";
     }
-    return "bg-card border-border"; // Default card colors
+    return "bg-card border-border";
   };
 
   const alerts: AlertDisplayInfo[] = [];

@@ -8,6 +8,7 @@ import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
 import SaveLayoutDialog from '@/components/save-layout-dialog';
 import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
+import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName } from '@/types/patient';
 import type { Patient } from '@/types/patient';
@@ -39,6 +40,8 @@ export default function Home() {
   
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isAdmitDialogOpen, setIsAdmitDialogOpen] = useState(false);
+  const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
+
 
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
@@ -225,6 +228,41 @@ export default function Home() {
     });
   };
 
+  const handleDischargePatient = () => {
+    if (!patientToDischarge) return;
+
+    const vacantPatient: Patient = {
+      ...patientToDischarge,
+      name: 'Vacant',
+      age: 0,
+      gender: undefined,
+      admitDate: new Date(),
+      dischargeDate: new Date(),
+      chiefComplaint: 'N/A',
+      ldas: [],
+      diet: 'N/A',
+      mobility: 'Independent',
+      codeStatus: 'Full Code',
+      isFallRisk: false,
+      isSeizureRisk: false,
+      isAspirationRisk: false,
+      isIsolation: false,
+      isInRestraints: false,
+      isComfortCareDNR: false,
+      notes: '',
+    };
+    
+    setPatients(prev => prev.map(p => (p.id === patientToDischarge.id ? vacantPatient : p)));
+
+    toast({
+      title: "Patient Discharged",
+      description: `${patientToDischarge.name} has been discharged from Bed ${patientToDischarge.bedNumber}.`,
+    });
+
+    setPatientToDischarge(null);
+    setSelectedPatient(null);
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -330,6 +368,7 @@ export default function Home() {
             setSelectedPatient(null);
           }
         }}
+        onDischarge={(patient) => setPatientToDischarge(patient)}
       />
       <SaveLayoutDialog
         open={isSaveDialogOpen}
@@ -342,6 +381,12 @@ export default function Home() {
         onOpenChange={setIsAdmitDialogOpen}
         onSave={handleSaveAdmittedPatient}
         patients={patients}
+      />
+      <DischargeConfirmationDialog
+        open={!!patientToDischarge}
+        onOpenChange={(isOpen) => !isOpen && setPatientToDischarge(null)}
+        patient={patientToDischarge}
+        onConfirm={handleDischargePatient}
       />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}

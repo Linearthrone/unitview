@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Patient, MobilityStatus } from '@/types/patient';
@@ -30,7 +31,7 @@ const formatDate = (date: Date): string => {
 };
 
 const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
-  const activePatients = patients.filter(p => p.gridRow > 0 && p.gridColumn > 0);
+  const activePatients = patients.filter(p => p.gridRow > 0 && p.gridColumn > 0 && p.name !== 'Vacant');
   const sortedPatients = [...activePatients].sort((a, b) => a.bedNumber - b.bedNumber);
 
   return (
