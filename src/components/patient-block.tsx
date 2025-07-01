@@ -34,7 +34,11 @@ const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
 const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSelectPatient }) => {
   if (patient.name === 'Vacant') {
     return (
-      <Card className="flex flex-col h-full shadow-lg bg-gray-200 dark:bg-gray-800 border-gray-400">
+      <Card 
+        onClick={onSelectPatient}
+        className="flex flex-col h-full shadow-lg bg-gray-200 dark:bg-gray-800 border-gray-400 cursor-pointer"
+        title={`View report for Bed ${patient.bedNumber}`}
+      >
         <CardHeader className="p-3">
           <CardTitle className="text-lg flex justify-between items-center">
             <span>Bed {patient.bedNumber}</span>
@@ -94,23 +98,21 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
   
   return (
     <Card 
+      onClick={onSelectPatient}
       className={cn(
-        "flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200",
+        "flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer",
         isDragging ? "opacity-50 ring-2 ring-primary" : "",
         getCardColors()
       )}
       data-patient-id={patient.id}
+      title={`View report for ${patient.name} in Bed ${patient.bedNumber}`}
     >
       <CardHeader className="p-3">
         <CardTitle className="text-lg font-normal">
             <div className="flex justify-between items-start">
-                <button
-                    onClick={onSelectPatient}
-                    className="font-bold hover:underline focus:outline-none focus:ring-1 focus:ring-ring rounded"
-                    title={`View report for Bed ${patient.bedNumber}`}
-                >
+                <div className="font-bold">
                     Bed {patient.bedNumber}
-                </button>
+                </div>
                 <div className="text-right text-sm leading-tight">
                     <div>
                         <span className="text-xs font-light">Admit </span>
