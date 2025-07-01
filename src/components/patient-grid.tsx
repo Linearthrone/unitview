@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -51,7 +52,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
           <div
             key={`${r}-${c}`}
             className={cn(
-              "border border-border/30 min-h-[8rem] rounded-md",
+              "border border-border/30 min-h-[12rem] rounded-md",
               "flex items-stretch justify-stretch",
               draggingPatientInfo && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
               !patientInCell && "bg-card"
@@ -95,8 +96,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
       <div
         className="grid"
         style={{
-          gridTemplateColumns: `repeat(${NUM_COLS_GRID}, minmax(8rem, 1fr))`,
-          gridTemplateRows: `repeat(${NUM_ROWS_GRID}, minmax(8rem, auto))`,
+          gridTemplateColumns: `repeat(${NUM_COLS_GRID}, minmax(12rem, 1fr))`,
+          gridTemplateRows: `repeat(${NUM_ROWS_GRID}, minmax(12rem, auto))`,
           alignContent: 'start',
           gap: '0.25rem',
         }}

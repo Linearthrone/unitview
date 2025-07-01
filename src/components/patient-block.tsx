@@ -122,11 +122,14 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
                     </div>
                 </div>
             </div>
-            <div 
-                className="font-semibold text-base truncate pt-1"
-                title={patient.name}
-            >
-                {patient.name}
+            <div className="pt-1">
+                <Badge
+                  variant="secondary"
+                  className="font-semibold text-base truncate block w-full text-center py-1 px-2"
+                  title={patient.name}
+                >
+                    {patient.name}
+                </Badge>
             </div>
         </CardTitle>
       </CardHeader>
