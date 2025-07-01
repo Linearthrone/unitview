@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Patient, MobilityStatus, AlertDisplayInfo } from '@/types/patient';
@@ -136,8 +135,8 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 flex-grow space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <MobilityIcon className="h-4 w-4 text-primary" />
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <MobilityIcon className="h-4 w-4 text-primary" strokeWidth={2.5} />
           <span>Mobility: {patient.mobility}</span>
         </div>
         {patient.notes && (
@@ -153,7 +152,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
               {alerts.map(({ IconComponent, colorClass, tooltipText }, index) => (
                 <Tooltip key={index}>
                   <TooltipTrigger asChild>
-                    <IconComponent className={cn("h-5 w-5", colorClass)} aria-label={tooltipText} />
+                    <IconComponent className={cn("h-5 w-5", colorClass)} strokeWidth={2.5} aria-label={tooltipText} />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{tooltipText}</p>
