@@ -9,8 +9,6 @@ import {
   BedDouble,
   Accessibility,
   Footprints,
-  CalendarPlus,
-  CalendarCheck,
   AlertTriangle,
   ShieldAlert,
   Ban,
@@ -104,35 +102,35 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
       data-patient-id={patient.id}
     >
       <CardHeader className="p-3">
-        <CardTitle className="text-lg flex justify-between items-center">
-          <button
-            onClick={onSelectPatient}
-            className="hover:underline focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 -ml-1"
-            title={`View report for Bed ${patient.bedNumber}`}
-          >
-            Bed {patient.bedNumber}
-          </button>
-          <Badge 
-            variant={patient.isComfortCareDNR || patient.gender ? "outline" : "secondary"} 
-            className={cn(
-              "text-xs truncate",
-              (patient.isComfortCareDNR || patient.gender) && "border-current text-current" 
-            )}
-            title={patient.name}
-          >
-            {patient.name}
-          </Badge>
+        <CardTitle className="text-lg font-normal">
+            <div className="flex justify-between items-start">
+                <button
+                    onClick={onSelectPatient}
+                    className="font-bold hover:underline focus:outline-none focus:ring-1 focus:ring-ring rounded"
+                    title={`View report for Bed ${patient.bedNumber}`}
+                >
+                    Bed {patient.bedNumber}
+                </button>
+                <div className="text-right text-sm leading-tight">
+                    <div>
+                        <span className="text-xs font-light">Admit </span>
+                        {formatDate(patient.admitDate)}
+                    </div>
+                    <div>
+                        <span className="text-xs font-light">EDD </span>
+                        {formatDate(patient.dischargeDate)}
+                    </div>
+                </div>
+            </div>
+            <div 
+                className="font-semibold text-base truncate pt-1"
+                title={patient.name}
+            >
+                {patient.name}
+            </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 flex-grow space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <CalendarPlus className="h-4 w-4 text-primary" />
-          <span>Admit: {formatDate(patient.admitDate)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <CalendarCheck className="h-4 w-4 text-primary" />
-          <span>Discharge: {formatDate(patient.dischargeDate)}</span>
-        </div>
         <div className="flex items-center gap-2">
           <MobilityIcon className="h-4 w-4 text-primary" />
           <span>Mobility: {patient.mobility}</span>
