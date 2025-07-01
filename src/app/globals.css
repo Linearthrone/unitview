@@ -113,9 +113,6 @@ body {
   .print-hide {
     display: none !important;
   }
-  main.print-hide + div {
-    display: block !important;
-  }
   .page-break-inside-avoid {
     page-break-inside: avoid;
   }
