@@ -7,6 +7,7 @@ import PatientGrid from '@/components/patient-grid';
 import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
 import SaveLayoutDialog from '@/components/save-layout-dialog';
+import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName } from '@/types/patient';
 import type { Patient } from '@/types/patient';
@@ -37,6 +38,7 @@ export default function Home() {
   const { toast } = useToast();
   
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [isAdmitDialogOpen, setIsAdmitDialogOpen] = useState(false);
 
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
@@ -187,6 +189,42 @@ export default function Home() {
     }
   };
 
+  const handleSaveAdmittedPatient = (formData: AdmitPatientFormValues) => {
+    setPatients(prevPatients =>
+      prevPatients.map(p => {
+        if (p.bedNumber === formData.bedNumber) {
+          // Overwrite patient data, but keep persistent grid position and ID
+          return {
+            ...p,
+            name: formData.name,
+            age: formData.age,
+            gender: formData.gender,
+            chiefComplaint: formData.chiefComplaint,
+            admitDate: formData.admitDate,
+            dischargeDate: formData.dischargeDate,
+            ldas: formData.ldas ? formData.ldas.split(',').map(s => s.trim()).filter(Boolean) : [],
+            diet: formData.diet,
+            mobility: formData.mobility,
+            codeStatus: formData.codeStatus,
+            isFallRisk: formData.isFallRisk,
+            isSeizureRisk: formData.isSeizureRisk,
+            isAspirationRisk: formData.isAspirationRisk,
+            isIsolation: formData.isIsolation,
+            isInRestraints: formData.isInRestraints,
+            isComfortCareDNR: formData.isComfortCareDNR,
+            notes: '', // Reset notes for new patient
+          };
+        }
+        return p;
+      })
+    );
+    setIsAdmitDialogOpen(false);
+    toast({
+      title: "Patient Admitted",
+      description: `${formData.name} has been admitted to Bed ${formData.bedNumber}.`,
+    });
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -269,6 +307,7 @@ export default function Home() {
         availableLayouts={availableLayouts}
         onPrint={handlePrint}
         onSaveLayout={handleOpenSaveDialog}
+        onAdmitPatient={() => setIsAdmitDialogOpen(true)}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -297,6 +336,12 @@ export default function Home() {
         onOpenChange={setIsSaveDialogOpen}
         onSave={handleSaveNewLayout}
         existingLayoutNames={availableLayouts}
+      />
+      <AdmitPatientDialog
+        open={isAdmitDialogOpen}
+        onOpenChange={setIsAdmitDialogOpen}
+        onSave={handleSaveAdmittedPatient}
+        patients={patients}
       />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}

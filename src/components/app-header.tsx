@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ interface AppHeaderProps {
   availableLayouts: LayoutName[];
   onPrint: () => void;
   onSaveLayout: () => void;
+  onAdmitPatient: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -33,7 +34,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onSelectLayout,
   availableLayouts,
   onPrint,
-  onSaveLayout
+  onSaveLayout,
+  onAdmitPatient
 }) => {
 
   const getFriendlyLayoutName = (layoutName: LayoutName): string => {
@@ -56,6 +58,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onAdmitPatient}
+            title="Admit or Transfer-In a new patient"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Admit Patient
+          </Button>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
