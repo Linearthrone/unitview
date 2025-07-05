@@ -302,6 +302,31 @@ export default function Home() {
     setSelectedPatient(null);
   };
   
+  const findEmptySlotForNurse = (): { row: number; col: number } | null => {
+    const occupiedCells = new Set<string>();
+    patients.forEach(p => {
+        occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
+    });
+    nurses.forEach(n => {
+        for (let i = 0; i < 3; i++) {
+            occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
+        }
+    });
+
+    for (let c = 1; c <= NUM_COLS_GRID; c++) {
+      for (let r = 1; r <= NUM_ROWS_GRID - 2; r++) {
+        if (
+          !occupiedCells.has(`${r}-${c}`) &&
+          !occupiedCells.has(`${r + 1}-${c}`) &&
+          !occupiedCells.has(`${r + 2}-${c}`)
+        ) {
+          return { row: r, col: c };
+        }
+      }
+    }
+    return null;
+  };
+
   const handleSaveNurse = (formData: AddNurseFormValues) => {
     const assignedSpectra = spectraPool.find(s => s.inService && !nurses.some(n => n.spectra === s.id));
     if (!assignedSpectra) {
@@ -313,14 +338,24 @@ export default function Home() {
       return;
     }
     
+    const position = findEmptySlotForNurse();
+    if (!position) {
+      toast({
+        variant: "destructive",
+        title: "No Space Available",
+        description: "Cannot add new nurse, the grid is full.",
+      });
+      return;
+    }
+
     const newNurse: Nurse = {
       id: `nurse-${Date.now()}`,
       name: formData.name,
       relief: formData.relief,
       spectra: assignedSpectra.id,
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 1,
-      gridColumn: 1,
+      gridRow: position.row,
+      gridColumn: position.col,
     };
     
     setNurses(prev => [...prev, newNurse]);
@@ -597,6 +632,7 @@ export default function Home() {
         onOpenChange={setIsAdmitDialogOpen}
         onSave={handleSaveAdmittedPatient}
         patients={patients}
+        nurses={nurses}
       />
       <AddNurseDialog
         open={isAddNurseDialogOpen}

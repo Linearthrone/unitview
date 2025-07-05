@@ -8,6 +8,7 @@ import * as z from 'zod';
 import { format } from "date-fns";
 import { CalendarIcon, UserPlus } from 'lucide-react';
 import type { Patient, MobilityStatus, PatientGender, CodeStatus } from '@/types/patient';
+import type { Nurse } from '@/types/nurse';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -44,9 +45,6 @@ const DIETS = [
     "Regular", "NPO (Nothing by mouth)", "Cardiac Diet", "Diabetic Diet (ADA)", "Renal Diet", "Clear Liquids",
     "Full Liquids", "Mechanical Soft", "Pureed"
 ];
-const NURSES = [
-  'RN Alice', 'RN Bob', 'RN Carol', 'RN David', 'RN Eve', 'RN Frank', 'To Be Assigned'
-];
 
 const formSchema = z.object({
   bedNumber: z.coerce.number().min(1, "Bed number is required."),
@@ -76,9 +74,10 @@ interface AdmitPatientDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: AdmitPatientFormValues) => void;
   patients: Patient[];
+  nurses: Nurse[];
 }
 
-export default function AdmitPatientDialog({ open, onOpenChange, onSave, patients }: AdmitPatientDialogProps) {
+export default function AdmitPatientDialog({ open, onOpenChange, onSave, patients, nurses }: AdmitPatientDialogProps) {
   const form = useForm<AdmitPatientFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -93,6 +92,10 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
       isComfortCareDNR: false,
     },
   });
+
+  const availableNurses = React.useMemo(() => {
+    return ['To Be Assigned', ...nurses.map(n => n.name)];
+  }, [nurses]);
 
   useEffect(() => {
     if (open) {
@@ -201,7 +204,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {NURSES.map(nurse => (
+                                {availableNurses.map(nurse => (
                                   <SelectItem key={nurse} value={nurse}>{nurse}</SelectItem>
                                 ))}
                               </SelectContent>
