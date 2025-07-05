@@ -12,6 +12,7 @@ import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/ad
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
 import AddNurseDialog, { type AddNurseFormValues } from '@/components/add-nurse-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
+import AddRoomDialog from '@/components/add-room-dialog';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
@@ -54,6 +55,7 @@ export default function Home() {
   const [isAdmitDialogOpen, setIsAdmitDialogOpen] = useState(false);
   const [isAddNurseDialogOpen, setIsAddNurseDialogOpen] = useState(false);
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
+  const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
 
   // Initial setup on mount
@@ -123,11 +125,15 @@ export default function Home() {
   };
 
   const handleSaveAdmittedPatient = (formData: AdmitPatientFormValues) => {
-    setPatients(patientService.admitPatient(formData, patients));
+    const updatedPatients = patientService.admitPatient(formData, patients);
+    setPatients(updatedPatients);
     setIsAdmitDialogOpen(false);
+    
+    const admittedToPatient = updatedPatients.find(p => p.bedNumber === formData.bedNumber);
+    
     toast({
       title: "Patient Admitted",
-      description: `${formData.name} has been admitted to Bed ${formData.bedNumber}.`,
+      description: `${formData.name} has been admitted to ${admittedToPatient?.roomDesignation}.`,
     });
   };
 
@@ -136,7 +142,7 @@ export default function Home() {
     setPatients(patientService.dischargePatient(patientToDischarge, patients));
     toast({
       title: "Patient Discharged",
-      description: `${patientToDischarge.name} has been discharged from Bed ${patientToDischarge.bedNumber}.`,
+      description: `${patientToDischarge.name} has been discharged from ${patientToDischarge.roomDesignation}.`,
     });
     setPatientToDischarge(null);
     setSelectedPatient(null);
@@ -178,6 +184,24 @@ export default function Home() {
         setSpectraPool(result.newPool);
     } else if (result.error) {
         toast({ variant: "destructive", title: "Cannot Disable", description: result.error });
+    }
+  };
+
+  const handleCreateRoom = (designation: string) => {
+    const result = patientService.createRoom(designation, patients, nurses);
+    if (result.newPatients) {
+      setPatients(result.newPatients);
+      setIsAddRoomDialogOpen(false);
+      toast({
+        title: "Room Created",
+        description: `Room "${designation}" has been added to the grid.`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Could Not Create Room",
+        description: result.error,
+      });
     }
   };
 
@@ -366,11 +390,13 @@ export default function Home() {
     }
   }, []);
 
+  const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader
         title="UnitView"
-        subtitle="48 Bed Unit Patient Dashboard"
+        activePatientCount={activePatientCount}
         isLayoutLocked={isLayoutLocked}
         onToggleLayoutLock={toggleLayoutLock}
         currentLayoutName={currentLayoutName}
@@ -381,6 +407,7 @@ export default function Home() {
         onAdmitPatient={() => setIsAdmitDialogOpen(true)}
         onAddNurse={() => setIsAddNurseDialogOpen(true)}
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
+        onAddRoom={() => setIsAddRoomDialogOpen(true)}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -427,6 +454,12 @@ export default function Home() {
         open={isAddNurseDialogOpen}
         onOpenChange={setIsAddNurseDialogOpen}
         onSave={handleSaveNurse}
+      />
+      <AddRoomDialog
+        open={isAddRoomDialogOpen}
+        onOpenChange={setIsAddRoomDialogOpen}
+        onSave={handleCreateRoom}
+        existingDesignations={patients.map(p => p.roomDesignation)}
       />
       <ManageSpectraDialog
         open={isManageSpectraDialogOpen}

@@ -72,7 +72,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
           return (
             <div key={patient.id} className={cn("border border-black rounded-md p-2 text-xs page-break-inside-avoid flex flex-col", dnrColor || genderColor)}>
               <div className="flex justify-between items-start mb-1">
-                <div className="font-bold text-sm">Bed {patient.bedNumber} - {patient.name}</div>
+                <div className="font-bold text-sm">{patient.roomDesignation} - {patient.name}</div>
                 <div className="font-bold text-sm">{patient.age} {patient.gender?.[0]}</div>
               </div>
 

@@ -1,7 +1,10 @@
+
 import type { Patient, LayoutName } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { layouts as appLayouts } from '@/lib/layouts';
+import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
+import type { Nurse } from '@/types/nurse';
 
 interface StoredPatientPosition {
   id: string;
@@ -97,4 +100,70 @@ export function dischargePatient(patientToDischarge: Patient, patients: Patient[
       notes: '',
     };
     return patients.map(p => (p.id === patientToDischarge.id ? vacantPatient : p));
+}
+
+function findEmptySlotForPatient(patients: Patient[], nurses: Nurse[]): { row: number; col: number } | null {
+    const occupiedCells = new Set<string>();
+    patients.forEach(p => {
+        if(p.gridColumn > 0 && p.gridRow > 0) {
+            occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
+        }
+    });
+    nurses.forEach(n => {
+        for (let i = 0; i < 3; i++) {
+            occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
+        }
+    });
+
+    // Prefer inner grid cells
+    for (let r = 2; r < NUM_ROWS_GRID; r++) {
+      for (let c = 2; c < NUM_COLS_GRID; c++) {
+        if (!occupiedCells.has(`${r}-${c}`)) {
+          return { row: r, col: c };
+        }
+      }
+    }
+    // Fallback to perimeter
+     for (let r = 1; r <= NUM_ROWS_GRID; r++) {
+      for (let c = 1; c <= NUM_COLS_GRID; c++) {
+        if (!occupiedCells.has(`${r}-${c}`)) {
+          return { row: r, col: c };
+        }
+      }
+    }
+    return null;
+}
+
+export function createRoom(designation: string, patients: Patient[], nurses: Nurse[]): { newPatients: Patient[] | null, error?: string } {
+    const position = findEmptySlotForPatient(patients, nurses);
+    if (!position) {
+        return { newPatients: null, error: "No empty space on the grid to add a new room." };
+    }
+
+    const newBedNumber = Math.max(0, ...patients.map(p => p.bedNumber)) + 1;
+    
+    const newRoom: Patient = {
+      id: `patient-${Date.now()}`,
+      bedNumber: newBedNumber,
+      roomDesignation: designation,
+      name: 'Vacant',
+      age: 0,
+      admitDate: new Date(),
+      dischargeDate: new Date(),
+      chiefComplaint: 'N/A',
+      ldas: [],
+      diet: 'N/A',
+      mobility: 'Independent',
+      codeStatus: 'Full Code',
+      isFallRisk: false,
+      isSeizureRisk: false,
+      isAspirationRisk: false,
+      isIsolation: false,
+      isInRestraints: false,
+      isComfortCareDNR: false,
+      gridRow: position.row,
+      gridColumn: position.col,
+    };
+
+    return { newPatients: [...patients, newRoom] };
 }

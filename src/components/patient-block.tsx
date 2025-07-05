@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Patient, MobilityStatus, AlertDisplayInfo } from '@/types/patient';
@@ -36,16 +37,16 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
       <Card 
         onClick={onSelectPatient}
         className="flex flex-col h-full shadow-lg bg-gray-200 dark:bg-gray-800 border-gray-400 cursor-pointer"
-        title={`View report for Bed ${patient.bedNumber}`}
+        title={`View report for ${patient.roomDesignation}`}
       >
         <CardHeader className="p-3">
           <CardTitle className="text-lg flex justify-between items-center">
-            <span>Bed {patient.bedNumber}</span>
+            <span>{patient.roomDesignation}</span>
             <Badge variant="secondary">Vacant</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 flex-grow flex items-center justify-center">
-          <span className="text-muted-foreground text-sm">Bed Available</span>
+          <span className="text-muted-foreground text-sm">Room Available</span>
         </CardContent>
       </Card>
     );
@@ -104,13 +105,13 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
         getCardColors()
       )}
       data-patient-id={patient.id}
-      title={`View report for ${patient.name} in Bed ${patient.bedNumber}`}
+      title={`View report for ${patient.name} in ${patient.roomDesignation}`}
     >
       <CardHeader className="p-3">
         <CardTitle className="text-lg font-normal">
             <div className="flex justify-between items-start">
                 <div className="font-bold">
-                    Bed {patient.bedNumber}
+                    {patient.roomDesignation}
                 </div>
                 <div className="text-right text-sm leading-tight">
                     <div>

@@ -1,3 +1,4 @@
+
 import type { Patient, MobilityStatus, PatientGender, CodeStatus } from '@/types/patient';
 import { getPerimeterCells } from '@/lib/grid-utils';
 
@@ -78,6 +79,7 @@ export const generateInitialPatients = (): Patient[] => {
     patients.push({
       id: `patient-${i + 1}`,
       bedNumber: i + 1,
+      roomDesignation: `Bed ${i + 1}`,
       name: fullName,
       age: Math.floor(Math.random() * 80) + 18,
       gender: GENDERS[i % GENDERS.length],

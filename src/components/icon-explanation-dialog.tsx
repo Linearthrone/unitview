@@ -39,7 +39,8 @@ import {
   FileHeart,
   ListTodo,
   CheckCircle,
-  XCircle
+  XCircle,
+  PlusSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -71,6 +72,7 @@ const iconSections = [
   {
     title: 'Header Actions',
     icons: [
+      { Icon: PlusSquare, description: 'Create New Room Card' },
       { Icon: UserPlus, description: 'Admit Patient / Add Nurse' },
       { Icon: LayoutGrid, description: 'Select Unit Layout' },
       { Icon: Printer, description: 'Print Charge Report' },

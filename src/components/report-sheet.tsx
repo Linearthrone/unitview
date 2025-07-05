@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -75,7 +76,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
         <SheetHeader className="bg-secondary p-4 text-left sticky top-0 z-10 border-b">
           <SheetTitle className="text-2xl">{patient.name}</SheetTitle>
-          <SheetDescription>Bed {patient.bedNumber} - Charge Nurse Report</SheetDescription>
+          <SheetDescription>{patient.roomDesignation} - Charge Nurse Report</SheetDescription>
         </SheetHeader>
         
         {!isVacant && (
@@ -160,7 +161,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
 
         {isVacant && (
             <div className="flex-grow flex items-center justify-center text-center p-6">
-                <p className="text-muted-foreground">This bed is currently vacant.</p>
+                <p className="text-muted-foreground">This room is currently vacant.</p>
             </div>
         )}
         

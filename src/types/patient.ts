@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 
 export type MobilityStatus = 'Bed Rest' | 'Assisted' | 'Independent';
@@ -7,7 +8,8 @@ export type LayoutName = string;
 
 export interface Patient {
   id: string;
-  bedNumber: number;
+  bedNumber: number; // internal unique id for the room/slot
+  roomDesignation: string; // user-facing name for the room, e.g., "Bed 101" or "Trauma 1"
   name: string;
   age: number;
   gender?: PatientGender;

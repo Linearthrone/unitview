@@ -34,7 +34,7 @@ export default function DischargeConfirmationDialog({ open, onOpenChange, onConf
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure you want to discharge this patient?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will clear the current information for <span className="font-bold">{patient.name}</span> in Bed {patient.bedNumber}. The bed will be reset to a vacant state. This action cannot be undone.
+            This will clear the current information for <span className="font-bold">{patient.name}</span> in {patient.roomDesignation}. The room will be reset to a vacant state. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

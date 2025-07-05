@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ import IconExplanationDialog from './icon-explanation-dialog';
 
 interface AppHeaderProps {
   title: string;
-  subtitle?: string;
+  activePatientCount: number;
   isLayoutLocked: boolean;
   onToggleLayoutLock: () => void;
   currentLayoutName: LayoutName;
@@ -28,11 +28,12 @@ interface AppHeaderProps {
   onAdmitPatient: () => void;
   onAddNurse: () => void;
   onManageSpectra: () => void;
+  onAddRoom: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
   title,
-  subtitle,
+  activePatientCount,
   isLayoutLocked,
   onToggleLayoutLock,
   currentLayoutName,
@@ -42,7 +43,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onSaveLayout,
   onAdmitPatient,
   onAddNurse,
-  onManageSpectra
+  onManageSpectra,
+  onAddRoom,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
@@ -63,10 +65,19 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <Stethoscope className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-2xl font-headline font-bold text-primary">{title}</h1>
-              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+              <p className="text-sm text-muted-foreground">{activePatientCount} Patient(s) in Unit</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAddRoom}
+              title="Create a new vacant room card"
+            >
+              <PlusSquare className="mr-2 h-4 w-4" />
+              Create Room
+            </Button>
             <Button
               variant="outline"
               size="sm"
