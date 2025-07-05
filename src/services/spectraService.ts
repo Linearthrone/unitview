@@ -1,29 +1,37 @@
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { Nurse, Spectra } from '@/types/nurse';
 import { generateInitialSpectra } from '@/lib/initial-spectra';
 
-const SPECTRA_POOL_KEY = 'spectraPool';
+const spectraDocRef = doc(db, 'appState', 'spectraPool');
 
-export function getSpectraPool(): Spectra[] {
+export async function getSpectraPool(): Promise<Spectra[]> {
     try {
-        const savedSpectra = localStorage.getItem(SPECTRA_POOL_KEY);
-        if (savedSpectra) {
-            return JSON.parse(savedSpectra);
+        const docSnap = await getDoc(spectraDocRef);
+        if (docSnap.exists()) {
+            // The data is stored under a 'pool' key in the document
+            return docSnap.data().pool as Spectra[];
         } else {
+            // Document doesn't exist, create it with initial data
             const initialSpectra = generateInitialSpectra();
-            saveSpectraPool(initialSpectra);
+            await saveSpectraPool(initialSpectra);
             return initialSpectra;
         }
     } catch (error) {
-        console.error("Failed to load spectra pool:", error);
+        console.error("Failed to load spectra pool from Firestore:", error);
         return generateInitialSpectra();
     }
 }
 
-export function saveSpectraPool(pool: Spectra[]): void {
-    localStorage.setItem(SPECTRA_POOL_KEY, JSON.stringify(pool));
+export async function saveSpectraPool(pool: Spectra[]): Promise<void> {
+    try {
+        await setDoc(spectraDocRef, { pool });
+    } catch (error) {
+        console.error("Failed to save spectra pool to Firestore:", error);
+    }
 }
 
-export function addSpectra(newId: string, pool: Spectra[]): { newPool: Spectra[] | null; error?: string } {
+export async function addSpectra(newId: string, pool: Spectra[]): Promise<{ newPool: Spectra[] | null; error?: string }> {
     const trimmedId = newId.trim().toUpperCase();
     if (!trimmedId) {
         return { newPool: null, error: "Spectra ID cannot be empty." };
@@ -32,15 +40,15 @@ export function addSpectra(newId: string, pool: Spectra[]): { newPool: Spectra[]
         return { newPool: null, error: "This Spectra ID already exists in the pool." };
     }
     const newPool = [...pool, { id: trimmedId, inService: true }];
-    saveSpectraPool(newPool);
+    await saveSpectraPool(newPool);
     return { newPool };
 }
 
-export function toggleSpectraStatus(id: string, inService: boolean, pool: Spectra[], nurses: Nurse[]): { newPool: Spectra[] | null; error?: string } {
+export async function toggleSpectraStatus(id: string, inService: boolean, pool: Spectra[], nurses: Nurse[]): Promise<{ newPool: Spectra[] | null; error?: string }> {
     if (!inService && nurses.some(n => n.spectra === id)) {
         return { newPool: null, error: "This Spectra is currently assigned to a nurse." };
     }
     const newPool = pool.map(s => s.id === id ? { ...s, inService } : s);
-    saveSpectraPool(newPool);
+    await saveSpectraPool(newPool);
     return { newPool };
 }

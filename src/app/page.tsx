@@ -24,6 +24,7 @@ import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
 import * as nurseService from '@/services/nurseService';
 import * as spectraService from '@/services/spectraService';
+import { Stethoscope } from 'lucide-react';
 
 
 interface DraggingPatientInfo {
@@ -48,6 +49,7 @@ export default function Home() {
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
   
@@ -60,38 +62,55 @@ export default function Home() {
 
   // Initial setup on mount
   useEffect(() => {
-    setCurrentYear(new Date().getFullYear());
-    
-    // Load initial state from services (which use localStorage)
-    setIsLayoutLocked(layoutService.getUserLayoutLockState());
-    setSpectraPool(spectraService.getSpectraPool());
+    const initializeApp = async () => {
+      setIsLoading(true);
+      setCurrentYear(new Date().getFullYear());
+      
+      const lockState = await layoutService.getUserLayoutLockState();
+      setIsLayoutLocked(lockState);
 
-    const allLayouts = layoutService.getAvailableLayouts();
-    setAvailableLayouts(allLayouts);
+      const [initialSpectra, allLayouts] = await Promise.all([
+        spectraService.getSpectraPool(),
+        layoutService.getAvailableLayouts()
+      ]);
+      
+      setSpectraPool(initialSpectra);
+      setAvailableLayouts(allLayouts);
 
-    const savedLayout = layoutService.getLastSelectedLayout();
-    if (savedLayout && allLayouts.includes(savedLayout)) {
-        setCurrentLayoutName(savedLayout);
-    } else {
-        setCurrentLayoutName('default');
-    }
+      const savedLayout = await layoutService.getLastSelectedLayout();
+      if (savedLayout && allLayouts.includes(savedLayout)) {
+          setCurrentLayoutName(savedLayout);
+      } else {
+          setCurrentLayoutName('default');
+      }
+      // The data-loading useEffect will now trigger based on currentLayoutName changing
+    };
+    initializeApp();
   }, []);
 
-  // Load patient and nurse data when layout or spectra pool changes
+  // Load patient and nurse data when layout changes
   useEffect(() => {
     if (!currentLayoutName || spectraPool.length === 0) {
         return;
     }
-    
-    setPatients(patientService.getPatients(currentLayoutName));
-    setNurses(nurseService.getNurses(currentLayoutName, spectraPool));
-
-    setIsInitialized(true);
+    const loadData = async () => {
+        setIsInitialized(false);
+        const [patientData, nurseData] = await Promise.all([
+            patientService.getPatients(currentLayoutName),
+            nurseService.getNurses(currentLayoutName, spectraPool)
+        ]);
+        setPatients(patientData);
+        setNurses(nurseData);
+        setIsInitialized(true);
+        setIsLoading(false);
+    };
+    loadData();
   }, [currentLayoutName, spectraPool]);
 
-  const handleSelectLayout = (newLayoutName: LayoutName) => {
+  const handleSelectLayout = async (newLayoutName: LayoutName) => {
+    setIsLoading(true);
     setCurrentLayoutName(newLayoutName);
-    layoutService.setLastSelectedLayout(newLayoutName);
+    await layoutService.setLastSelectedLayout(newLayoutName);
   };
 
   const toggleLayoutLock = () => {
@@ -112,11 +131,11 @@ export default function Home() {
     setIsSaveDialogOpen(true);
   };
   
-  const handleSaveNewLayout = (newLayoutName: string) => {
-    const updatedLayouts = layoutService.saveNewLayout(newLayoutName, patients, nurses);
+  const handleSaveNewLayout = async (newLayoutName: string) => {
+    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses);
     setAvailableLayouts(updatedLayouts);
     setCurrentLayoutName(newLayoutName);
-    layoutService.setLastSelectedLayout(newLayoutName);
+    await layoutService.setLastSelectedLayout(newLayoutName);
     
     toast({
       title: "Layout Saved",
@@ -168,8 +187,8 @@ export default function Home() {
     }
   };
   
-  const handleAddSpectra = (newId: string) => {
-    const result = spectraService.addSpectra(newId, spectraPool);
+  const handleAddSpectra = async (newId: string) => {
+    const result = await spectraService.addSpectra(newId, spectraPool);
     if (result.newPool) {
       setSpectraPool(result.newPool);
       toast({ title: "Spectra Added", description: `Device ${newId.trim().toUpperCase()} added to the pool.` });
@@ -178,8 +197,8 @@ export default function Home() {
     }
   };
   
-  const handleToggleSpectraStatus = (id: string, inService: boolean) => {
-    const result = spectraService.toggleSpectraStatus(id, inService, spectraPool, nurses);
+  const handleToggleSpectraStatus = async (id: string, inService: boolean) => {
+    const result = await spectraService.toggleSpectraStatus(id, inService, spectraPool, nurses);
     if (result.newPool) {
         setSpectraPool(result.newPool);
     } else if (result.error) {
@@ -298,10 +317,12 @@ export default function Home() {
     setDraggingNurseInfo(null);
   }, []);
 
-  const handleAutoSave = useCallback(() => {
+  const handleAutoSave = useCallback(async () => {
     if (isLayoutLocked || !isInitialized) return;
-    patientService.savePatients(currentLayoutName, patients);
-    nurseService.saveNurses(currentLayoutName, nurses);
+    await Promise.all([
+      patientService.savePatients(currentLayoutName, patients),
+      nurseService.saveNurses(currentLayoutName, nurses)
+    ]);
   }, [patients, nurses, isLayoutLocked, currentLayoutName, isInitialized]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
@@ -391,6 +412,15 @@ export default function Home() {
   }, []);
 
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-background items-center justify-center">
+        <Stethoscope className="h-16 w-16 text-primary animate-pulse" />
+        <p className="text-lg text-muted-foreground mt-4">Loading Unit Data from Firestore...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">

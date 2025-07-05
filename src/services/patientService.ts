@@ -1,4 +1,5 @@
-
+import { db } from '@/lib/firebase';
+import { collection, doc, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import type { Patient, LayoutName } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import { generateInitialPatients } from '@/lib/initial-patients';
@@ -6,45 +7,55 @@ import { layouts as appLayouts } from '@/lib/layouts';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 import type { Nurse } from '@/types/nurse';
 
-interface StoredPatientPosition {
-  id: string;
-  gridRow: number;
-  gridColumn: number;
+const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
+
+// Converts Firestore Timestamps to JS Dates in a patient object
+const patientFromFirestore = (data: any): Patient => {
+    return {
+        ...data,
+        admitDate: (data.admitDate as Timestamp)?.toDate ? (data.admitDate as Timestamp).toDate() : new Date(),
+        dischargeDate: (data.dischargeDate as Timestamp)?.toDate ? (data.dischargeDate as Timestamp).toDate() : new Date(),
+    } as Patient;
 }
 
-const getStorageKey = (layoutName: LayoutName) => `patientGridLayout_${layoutName}`;
-
-export function getPatients(layoutName: LayoutName): Patient[] {
-    const basePatients = generateInitialPatients();
-    const storageKey = getStorageKey(layoutName);
-    let finalPatientsData: Patient[];
-
+export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
+    const collectionRef = getCollectionRef(layoutName);
     try {
-        const savedLayoutJSON = localStorage.getItem(storageKey);
-        if (savedLayoutJSON) {
-            const savedPositions = JSON.parse(savedLayoutJSON) as StoredPatientPosition[];
-            const positionMap = new Map(savedPositions.map(p => [p.id, { gridRow: p.gridRow, gridColumn: p.gridColumn }]));
-            finalPatientsData = basePatients.map(p => {
-                const savedPos = positionMap.get(p.id);
-                return savedPos ? { ...p, ...savedPos } : { ...p };
-            });
-        } else {
-            finalPatientsData = appLayouts[layoutName] ? appLayouts[layoutName](basePatients) : basePatients;
+        const snapshot = await getDocs(collectionRef);
+        if (!snapshot.empty) {
+            return snapshot.docs.map(doc => patientFromFirestore(doc.data()));
         }
+
+        // If empty, generate, save, and return initial data for this layout
+        console.log(`No data for layout '${layoutName}' in Firestore. Generating initial layout.`);
+        const basePatients = generateInitialPatients();
+        const initialLayoutPatients = appLayouts[layoutName] 
+            ? appLayouts[layoutName](basePatients) 
+            : basePatients;
+        
+        await savePatients(layoutName, initialLayoutPatients);
+        return initialLayoutPatients;
+
     } catch (error) {
-        console.error(`Error processing patient layout ${layoutName} from localStorage:`, error);
-        finalPatientsData = appLayouts[layoutName] ? appLayouts[layoutName](basePatients) : basePatients;
+        console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
+        // Fallback to in-memory generation on error
+        const basePatients = generateInitialPatients();
+        return appLayouts[layoutName] ? appLayouts[layoutName](basePatients) : basePatients;
     }
-    return finalPatientsData;
 }
 
-export function savePatients(layoutName: LayoutName, patients: Patient[]): void {
-    const storageKey = getStorageKey(layoutName);
+export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
+    const collectionRef = getCollectionRef(layoutName);
+    const batch = writeBatch(db);
     try {
-        const positionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
-        localStorage.setItem(storageKey, JSON.stringify(positionsToSave));
+        patients.forEach(patient => {
+            const docRef = doc(collectionRef, patient.id);
+            // The Firebase SDK handles JS Date conversion to Timestamp automatically.
+            batch.set(docRef, { ...patient });
+        });
+        await batch.commit();
     } catch (error) {
-        console.error(`Error saving patient layout ${layoutName}:`, error);
+        console.error(`Error saving patient layout ${layoutName} to Firestore:`, error);
     }
 }
 
@@ -56,7 +67,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 name: formData.name,
                 age: formData.age,
                 gender: formData.gender,
-                assignedNurse: formData.assignedNurse,
+                assignedNurse: formData.assignedNurse === 'To Be Assigned' ? undefined : formData.assignedNurse,
                 chiefComplaint: formData.chiefComplaint,
                 admitDate: formData.admitDate,
                 dischargeDate: formData.dischargeDate,
@@ -115,7 +126,6 @@ function findEmptySlotForPatient(patients: Patient[], nurses: Nurse[]): { row: n
         }
     });
 
-    // Prefer inner grid cells
     for (let r = 2; r < NUM_ROWS_GRID; r++) {
       for (let c = 2; c < NUM_COLS_GRID; c++) {
         if (!occupiedCells.has(`${r}-${c}`)) {
@@ -123,7 +133,6 @@ function findEmptySlotForPatient(patients: Patient[], nurses: Nurse[]): { row: n
         }
       }
     }
-    // Fallback to perimeter
      for (let r = 1; r <= NUM_ROWS_GRID; r++) {
       for (let c = 1; c <= NUM_COLS_GRID; c++) {
         if (!occupiedCells.has(`${r}-${c}`)) {
@@ -148,6 +157,8 @@ export function createRoom(designation: string, patients: Patient[], nurses: Nur
       roomDesignation: designation,
       name: 'Vacant',
       age: 0,
+      gender: undefined,
+      assignedNurse: undefined,
       admitDate: new Date(),
       dischargeDate: new Date(),
       chiefComplaint: 'N/A',
@@ -161,6 +172,7 @@ export function createRoom(designation: string, patients: Patient[], nurses: Nur
       isIsolation: false,
       isInRestraints: false,
       isComfortCareDNR: false,
+      notes: undefined,
       gridRow: position.row,
       gridColumn: position.col,
     };

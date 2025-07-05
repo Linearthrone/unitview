@@ -1,47 +1,81 @@
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName, Patient } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 import { saveNurses } from './nurseService';
 import { savePatients } from './patientService';
 
-const CUSTOM_LAYOUT_NAMES_KEY = 'customLayoutNames';
-const LAST_LAYOUT_KEY = 'lastSelectedLayoutName';
+const appConfigDocRef = doc(db, 'appState', 'config');
 
-export function getAvailableLayouts(): LayoutName[] {
+interface AppConfig {
+    customLayoutNames?: LayoutName[];
+    lastSelectedLayout?: LayoutName;
+}
+
+async function getAppConfig(): Promise<AppConfig> {
     try {
-        const customLayoutNames = JSON.parse(localStorage.getItem(CUSTOM_LAYOUT_NAMES_KEY) || '[]') as string[];
-        const allNames = [...Object.keys(appLayouts), ...customLayoutNames];
-        return Array.from(new Set(allNames));
+        const docSnap = await getDoc(appConfigDocRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as AppConfig;
+        }
+        return {}; // Return empty object if not found
     } catch (error) {
-        console.error("Failed to load custom layouts:", error);
-        return Object.keys(appLayouts) as LayoutName[];
+        console.error("Error fetching app config from Firestore:", error);
+        return {};
     }
 }
 
-export function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[]): LayoutName[] {
-    savePatients(layoutName, patients);
-    saveNurses(layoutName, nurses);
+export async function getAvailableLayouts(): Promise<LayoutName[]> {
+    const config = await getAppConfig();
+    const customLayoutNames = config.customLayoutNames || [];
+    const allNames = [...Object.keys(appLayouts), ...customLayoutNames];
+    return Array.from(new Set(allNames));
+}
 
-    const customLayoutNames = JSON.parse(localStorage.getItem(CUSTOM_LAYOUT_NAMES_KEY) || '[]') as string[];
+export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[]): Promise<LayoutName[]> {
+    // Save the actual layout data to their respective collections
+    await savePatients(layoutName, patients);
+    await saveNurses(layoutName, nurses);
+
+    // Update the list of custom layout names in the central config doc
+    const config = await getAppConfig();
+    const customLayoutNames = config.customLayoutNames || [];
     const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, layoutName]));
-    localStorage.setItem(CUSTOM_LAYOUT_NAMES_KEY, JSON.stringify(updatedCustomLayouts));
     
+    try {
+        // Use set with merge to create or update the document
+        await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
+    } catch (error) {
+        console.error("Error saving new layout name:", error);
+    }
+
     return Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts]));
 }
 
 
-export function getLastSelectedLayout(): LayoutName | null {
-    return localStorage.getItem(LAST_LAYOUT_KEY) as LayoutName | null;
+export async function getLastSelectedLayout(): Promise<LayoutName | null> {
+    const config = await getAppConfig();
+    return config.lastSelectedLayout || null;
 }
 
-export function setLastSelectedLayout(layoutName: LayoutName): void {
-    localStorage.setItem(LAST_LAYOUT_KEY, layoutName);
+export async function setLastSelectedLayout(layoutName: LayoutName): Promise<void> {
+    try {
+        // Use set with merge to create or update the document
+        await setDoc(appConfigDocRef, { lastSelectedLayout: layoutName }, { merge: true });
+    } catch(error) {
+        console.error("Error setting last selected layout:", error);
+    }
 }
 
-export function getUserLayoutLockState(): boolean {
+export async function getUserLayoutLockState(): Promise<boolean> {
+    // This value is needed synchronously on page load to prevent UI flickering and layout changes.
+    // For this reason, we'll leave it in localStorage for instant access.
+    // A full migration would require a global loading state for the app config.
     return localStorage.getItem('userLayoutLockState') === 'true';
 }
 
 export function setUserLayoutLockState(isLocked: boolean): void {
+    // Sticking with localStorage for synchronous access.
     localStorage.setItem('userLayoutLockState', String(isLocked));
 }
