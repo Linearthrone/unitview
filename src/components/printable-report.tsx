@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { Patient, MobilityStatus } from '@/types/patient';
 import {
   BedDouble,
@@ -27,17 +28,32 @@ const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
 };
 
 const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return 'N/A';
+    return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+  } catch {
+    return 'N/A';
+  }
 };
 
 const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
+  const [generatedDate, setGeneratedDate] = useState('');
+
+  useEffect(() => {
+    // This runs only on the client, after hydration, to prevent mismatch
+    setGeneratedDate(new Date().toLocaleString());
+  }, []);
+
   const activePatients = patients.filter(p => p.gridRow > 0 && p.gridColumn > 0 && p.name !== 'Vacant');
   const sortedPatients = [...activePatients].sort((a, b) => a.bedNumber - b.bedNumber);
 
   return (
     <div className="hidden print:block text-black font-sans">
       <h1 className="text-xl font-bold text-center mb-2">Unit Charge Report</h1>
-      <p className="text-center text-sm mb-4">Generated on: {new Date().toLocaleString()}</p>
+      <p className="text-center text-sm mb-4">
+        {generatedDate && `Generated on: ${generatedDate}`}
+      </p>
       
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
         {sortedPatients.map((patient) => {
