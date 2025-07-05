@@ -12,7 +12,9 @@ import DischargeConfirmationDialog from '@/components/discharge-confirmation-dia
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName } from '@/types/patient';
 import type { Patient } from '@/types/patient';
+import type { Nurse } from '@/types/nurse';
 import { generateInitialPatients } from '@/lib/initial-patients';
+import { generateInitialNurses } from '@/lib/initial-nurses';
 import { useToast } from "@/hooks/use-toast";
 
 interface StoredPatientPosition {
@@ -33,6 +35,7 @@ export default function Home() {
   const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>(Object.keys(appLayouts) as LayoutName[]);
 
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [nurses, setNurses] = useState<Nurse[]>([]);
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -65,6 +68,7 @@ export default function Home() {
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
+    setNurses(generateInitialNurses());
 
     const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
 
@@ -311,7 +315,6 @@ export default function Home() {
   const handleAutoSave = useCallback(() => {
     if (isEffectivelyLocked) return;
     
-    // Only auto-save for existing layouts, not during creation of a new one
     const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
     try {
       const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
@@ -324,6 +327,80 @@ export default function Home() {
       console.error(`Error auto-saving layout ${currentLayoutName}:`, error);
     }
   }, [patients, isEffectivelyLocked, currentLayoutName]);
+
+  const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
+    if (!draggingPatientInfo) return;
+    const { id: draggedPatientId } = draggingPatientInfo;
+
+    let newPatients = [...patients];
+    let newNurses = [...nurses];
+    
+    const draggedPatient = newPatients.find(p => p.id === draggedPatientId);
+    const targetNurse = newNurses.find(n => n.id === targetNurseId);
+
+    if (!draggedPatient || !targetNurse) return;
+
+    // 1. Unassign the dragged patient from any previous nurse
+    newNurses = newNurses.map(nurse => ({
+        ...nurse,
+        assignedPatientIds: nurse.assignedPatientIds.map(id => (id === draggedPatientId ? null : id))
+    }));
+
+    // 2. Unassign any patient currently in the target slot
+    const oldPatientIdInSlot = targetNurse.assignedPatientIds[slotIndex];
+    if (oldPatientIdInSlot) {
+        newPatients = newPatients.map(p => p.id === oldPatientIdInSlot ? { ...p, assignedNurse: undefined } : p);
+    }
+    
+    // 3. Make the new assignment
+    newNurses = newNurses.map(nurse => {
+        if (nurse.id === targetNurseId) {
+            const newAssignments = [...nurse.assignedPatientIds];
+            newAssignments[slotIndex] = draggedPatientId;
+            return { ...nurse, assignedPatientIds: newAssignments };
+        }
+        return nurse;
+    });
+
+    newPatients = newPatients.map(p => {
+        if (p.id === draggedPatientId) {
+            return { ...p, assignedNurse: targetNurse.name };
+        }
+        return p;
+    });
+
+    setNurses(newNurses);
+    setPatients(newPatients);
+    setDraggingPatientInfo(null);
+  }, [draggingPatientInfo, patients, nurses]);
+
+  const handleClearNurseAssignments = useCallback((nurseId: string) => {
+    let newPatients = [...patients];
+    let newNurses = [...nurses];
+
+    const nurseToClear = newNurses.find(n => n.id === nurseId);
+    if (!nurseToClear) return;
+    
+    const patientIdsToClear = nurseToClear.assignedPatientIds.filter(id => id !== null);
+    
+    newPatients = newPatients.map(p => {
+        if (patientIdsToClear.includes(p.id)) {
+            return { ...p, assignedNurse: undefined };
+        }
+        return p;
+    });
+
+    newNurses = newNurses.map(n => {
+        if (n.id === nurseId) {
+            return { ...n, assignedPatientIds: Array(6).fill(null) };
+        }
+        return n;
+    });
+    
+    setNurses(newNurses);
+    setPatients(newPatients);
+  }, [patients, nurses]);
+
 
   useEffect(() => {
     if (isInitialized && !isEffectivelyLocked) {
@@ -348,12 +425,15 @@ export default function Home() {
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
           patients={patients}
+          nurses={nurses}
           isInitialized={isInitialized}
           isEffectivelyLocked={isEffectivelyLocked}
           draggingPatientInfo={draggingPatientInfo}
           onSelectPatient={setSelectedPatient}
           onDragStart={handleDragStart}
           onDropOnCell={handleDropOnCell}
+          onDropOnNurseSlot={handleDropOnNurseSlot}
+          onClearNurseAssignments={handleClearNurseAssignments}
           onDragEnd={handleDragEnd}
         />
       </main>
