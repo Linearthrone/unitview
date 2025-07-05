@@ -61,13 +61,66 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     <>
       <header className="bg-card text-card-foreground shadow-md p-4 sticky top-0 z-50 print-hide">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Stethoscope className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-headline font-bold text-primary">{title}</h1>
-              <p className="text-sm text-muted-foreground">{activePatientCount} Patient(s) in Unit</p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <Stethoscope className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-2xl font-headline font-bold text-primary">{title}</h1>
+                <p className="text-sm text-muted-foreground">{activePatientCount} Patient(s) in Unit</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <LayoutGrid className="mr-2 h-4 w-4" />
+                    {getFriendlyLayoutName(currentLayoutName)}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Select Unit Layout</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableLayouts.map((layoutName) => (
+                    <DropdownMenuItem
+                      key={layoutName}
+                      onClick={() => onSelectLayout(layoutName)}
+                      disabled={layoutName === currentLayoutName}
+                    >
+                      {getFriendlyLayoutName(layoutName)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onAdmitPatient}
+                title="Admit or Transfer-In a new patient"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Admit Patient
+              </Button>
+               <Button
+                variant="outline"
+                size="sm"
+                onClick={onAddNurse}
+                title="Add a new nurse to the unit"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Nurse
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onPrint}
+                title="Print Charge Report"
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print Report
+              </Button>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -81,57 +134,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={onAdmitPatient}
-              title="Admit or Transfer-In a new patient"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Admit Patient
-            </Button>
-             <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddNurse}
-              title="Add a new nurse to the unit"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Nurse
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  {getFriendlyLayoutName(currentLayoutName)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Select Unit Layout</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {availableLayouts.map((layoutName) => (
-                  <DropdownMenuItem
-                    key={layoutName}
-                    onClick={() => onSelectLayout(layoutName)}
-                    disabled={layoutName === currentLayoutName}
-                  >
-                    {getFriendlyLayoutName(layoutName)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onPrint}
-              title="Print Charge Report"
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              Print Report
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
               onClick={onSaveLayout}
               disabled={isLayoutLocked}
               title={isLayoutLocked ? "Unlock to save changes" : "Save current layout as a new template"}
@@ -139,7 +141,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               <Save className="mr-2 h-4 w-4" />
               Save As...
             </Button>
-
             <Button
               variant="outline"
               size="sm"
