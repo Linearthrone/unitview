@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -36,6 +37,9 @@ import {
   CalendarDays,
   Utensils,
   FileHeart,
+  ListTodo,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -67,12 +71,13 @@ const iconSections = [
   {
     title: 'Header Actions',
     icons: [
-      { Icon: UserPlus, description: 'Admit / Transfer-In Patient' },
+      { Icon: UserPlus, description: 'Admit Patient / Add Nurse' },
       { Icon: LayoutGrid, description: 'Select Unit Layout' },
       { Icon: Printer, description: 'Print Charge Report' },
       { Icon: Save, description: 'Save Layout As...' },
       { Icon: Lock, description: 'Layout Locked' },
       { Icon: Unlock, description: 'Layout Unlocked' },
+      { Icon: ListTodo, description: 'Manage Spectra Pool' },
       { Icon: HelpCircle, description: 'Icon Explanation' },
     ],
   },
@@ -81,14 +86,16 @@ const iconSections = [
     icons: [
       { Icon: Stethoscope, description: 'Application Logo' },
       { Icon: UserMinus, description: 'Discharge / Transfer-Out Patient' },
-      { Icon: User, description: 'Patient Name' },
-      { Icon: UserRound, description: 'Assigned Nurse' },
+      { Icon: User, description: 'Patient Name / Nurse Name' },
+      { Icon: UserRound, description: 'Assigned Nurse / Relief Nurse' },
       { Icon: Cake, description: 'Patient Age' },
       { Icon: VenetianMask, description: 'Patient Gender' },
       { Icon: FileText, description: 'Chief Complaint' },
       { Icon: CalendarDays, description: 'Date (Admit / EDD)' },
       { Icon: Utensils, description: 'Patient Diet' },
       { Icon: FileHeart, description: 'Lines, Drains, Airways (LDAs)' },
+      { Icon: CheckCircle, description: 'Spectra In Service' },
+      { Icon: XCircle, description: 'Spectra Out of Service' },
     ],
   },
 ];

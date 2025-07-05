@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,6 +26,8 @@ interface AppHeaderProps {
   onPrint: () => void;
   onSaveLayout: () => void;
   onAdmitPatient: () => void;
+  onAddNurse: () => void;
+  onManageSpectra: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -37,7 +40,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   availableLayouts,
   onPrint,
   onSaveLayout,
-  onAdmitPatient
+  onAdmitPatient,
+  onAddNurse,
+  onManageSpectra
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
@@ -70,6 +75,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             >
               <UserPlus className="mr-2 h-4 w-4" />
               Admit Patient
+            </Button>
+             <Button
+              variant="outline"
+              size="sm"
+              onClick={onAddNurse}
+              title="Add a new nurse to the unit"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Nurse
             </Button>
             
             <DropdownMenu>
@@ -125,6 +139,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               {isLayoutLocked ? 'Layout Locked' : 'Lock Layout'}
             </Button>
             <div className="border-l h-6"></div>
+             <Button
+              variant="outline"
+              size="sm"
+              onClick={onManageSpectra}
+              title="Manage Spectra Pool"
+            >
+              <ListTodo className="mr-2 h-4 w-4" />
+              Manage Spectra
+            </Button>
             <Button
               variant="outline"
               size="sm"

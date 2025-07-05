@@ -1,10 +1,15 @@
 
+export interface Spectra {
+  id: string; // The spectra number itself, e.g., "SPEC-1234"
+  inService: boolean;
+}
+
 export interface Nurse {
   id: string;
   name: string;
-  spectra: string; // Employee ID or similar
-  relief?: string; // Name of relief nurse
-  assignedPatientIds: (string | null)[]; // Array of 6, string is patient.id
+  spectra: string;
+  relief?: string;
+  assignedPatientIds: (string | null)[];
   gridRow: number;
   gridColumn: number;
 }

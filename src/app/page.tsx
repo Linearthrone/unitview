@@ -9,21 +9,19 @@ import PrintableReport from '@/components/printable-report';
 import SaveLayoutDialog from '@/components/save-layout-dialog';
 import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
+import AddNurseDialog, { type AddNurseFormValues } from '@/components/add-nurse-dialog';
+import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName } from '@/types/patient';
 import type { Patient } from '@/types/patient';
-import type { Nurse } from '@/types/nurse';
+import type { Nurse, Spectra } from '@/types/nurse';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { generateInitialNurses } from '@/lib/initial-nurses';
+import { generateInitialSpectra } from '@/lib/initial-spectra';
 import { useToast } from "@/hooks/use-toast";
-import { NUM_ROWS_GRID } from '@/lib/grid-utils';
+import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 
 interface StoredPatientPosition {
-  id: string;
-  gridRow: number;
-  gridColumn: number;
-}
-interface StoredNursePosition {
   id: string;
   gridRow: number;
   gridColumn: number;
@@ -45,6 +43,8 @@ export default function Home() {
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
+  const [spectraPool, setSpectraPool] = useState<Spectra[]>([]);
+  
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -53,6 +53,8 @@ export default function Home() {
   
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [isAdmitDialogOpen, setIsAdmitDialogOpen] = useState(false);
+  const [isAddNurseDialogOpen, setIsAddNurseDialogOpen] = useState(false);
+  const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
 
 
@@ -101,11 +103,26 @@ export default function Home() {
 
     const userLock = localStorage.getItem('userLayoutLockState') === 'true';
     setIsLayoutLocked(userLock);
+    
+    // Load Spectra Pool
+    try {
+      const savedSpectra = localStorage.getItem('spectraPool');
+      if (savedSpectra) {
+        setSpectraPool(JSON.parse(savedSpectra));
+      } else {
+        const initialSpectra = generateInitialSpectra();
+        setSpectraPool(initialSpectra);
+        localStorage.setItem('spectraPool', JSON.stringify(initialSpectra));
+      }
+    } catch (error) {
+      console.error("Failed to load spectra pool:", error);
+      setSpectraPool(generateInitialSpectra());
+    }
+
   }, []);
 
   useEffect(() => {
-    if (!currentLayoutName) {
-        console.warn("Home: currentLayoutName is undefined. Waiting for valid layout name.");
+    if (!currentLayoutName || spectraPool.length === 0) {
         return;
     }
     
@@ -125,7 +142,6 @@ export default function Home() {
         });
       } else {
         finalPatientsData = applyLayout(currentLayoutName, basePatients);
-        localStorage.setItem(patientLayoutStorageKey, JSON.stringify(finalPatientsData.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }))));
       }
     } catch (error) {
       console.error(`Error processing patient layout ${currentLayoutName} from localStorage:`, error);
@@ -134,31 +150,27 @@ export default function Home() {
     setPatients(finalPatientsData);
 
     // Load Nurses
-    const initialNurses = generateInitialNurses();
     const nurseLayoutStorageKey = `nurseGridLayout_${currentLayoutName}`;
-    let finalNursesData: Nurse[];
-
     try {
       const savedNurseLayoutJSON = localStorage.getItem(nurseLayoutStorageKey);
       if (savedNurseLayoutJSON) {
-        const savedNursePositions = JSON.parse(savedNurseLayoutJSON) as StoredNursePosition[];
-        const nursePositionMap = new Map(savedNursePositions.map(n => [n.id, { gridRow: n.gridRow, gridColumn: n.gridColumn }]));
-        finalNursesData = initialNurses.map(n => {
-            const savedPos = nursePositionMap.get(n.id);
-            return savedPos ? { ...n, ...savedPos } : n;
-        });
+        setNurses(JSON.parse(savedNurseLayoutJSON));
       } else {
-        finalNursesData = initialNurses;
-        localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(finalNursesData.map(n => ({ id: n.id, gridRow: n.gridRow, gridColumn: n.gridColumn }))));
+        const initialNurses = generateInitialNurses();
+        const availableSpectra = spectraPool.filter(s => s.inService && !initialNurses.some(n => n.spectra === s.id));
+        const nursesWithSpectra = initialNurses.map((nurse, index) => ({
+          ...nurse,
+          spectra: availableSpectra[index]?.id || 'N/A',
+        }));
+        setNurses(nursesWithSpectra);
       }
     } catch (error) {
         console.error(`Error processing nurse layout ${currentLayoutName} from localStorage:`, error);
-        finalNursesData = initialNurses;
+        setNurses(generateInitialNurses());
     }
-    setNurses(finalNursesData);
 
     setIsInitialized(true);
-  }, [currentLayoutName, applyLayout]);
+  }, [currentLayoutName, applyLayout, spectraPool.length]);
 
   const isEffectivelyLocked = isLayoutLocked;
 
@@ -191,15 +203,11 @@ export default function Home() {
     const patientLayoutStorageKey = `patientGridLayout_${newLayoutName}`;
     const nurseLayoutStorageKey = `nurseGridLayout_${newLayoutName}`;
     try {
-      // Save patients
       const patientPositionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
       localStorage.setItem(patientLayoutStorageKey, JSON.stringify(patientPositionsToSave));
       
-      // Save nurses
-      const nursePositionsToSave: StoredNursePosition[] = nurses.map(n => ({ id: n.id, gridRow: n.gridRow, gridColumn: n.gridColumn }));
-      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(nursePositionsToSave));
+      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(nurses));
 
-      // Update available layouts
       const customLayoutNames = JSON.parse(localStorage.getItem('customLayoutNames') || '[]') as string[];
       const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, newLayoutName]));
       localStorage.setItem('customLayoutNames', JSON.stringify(updatedCustomLayouts));
@@ -226,7 +234,6 @@ export default function Home() {
     setPatients(prevPatients =>
       prevPatients.map(p => {
         if (p.bedNumber === formData.bedNumber) {
-          // Overwrite patient data, but keep persistent grid position and ID
           return {
             ...p,
             name: formData.name,
@@ -246,7 +253,7 @@ export default function Home() {
             isIsolation: formData.isIsolation,
             isInRestraints: formData.isInRestraints,
             isComfortCareDNR: formData.isComfortCareDNR,
-            notes: '', // Reset notes for new patient
+            notes: '',
           };
         }
         return p;
@@ -294,6 +301,56 @@ export default function Home() {
     setPatientToDischarge(null);
     setSelectedPatient(null);
   };
+  
+  const handleSaveNurse = (formData: AddNurseFormValues) => {
+    const assignedSpectra = spectraPool.find(s => s.inService && !nurses.some(n => n.spectra === s.id));
+    if (!assignedSpectra) {
+      toast({
+        variant: "destructive",
+        title: "No Spectra Available",
+        description: "Could not add nurse. Please add or enable a Spectra device in the pool.",
+      });
+      return;
+    }
+    
+    const newNurse: Nurse = {
+      id: `nurse-${Date.now()}`,
+      name: formData.name,
+      relief: formData.relief,
+      spectra: assignedSpectra.id,
+      assignedPatientIds: Array(6).fill(null),
+      gridRow: 1,
+      gridColumn: 1,
+    };
+    
+    setNurses(prev => [...prev, newNurse]);
+    setIsAddNurseDialogOpen(false);
+    toast({
+      title: "Nurse Added",
+      description: `${formData.name} has been added to the unit.`,
+    });
+  };
+  
+  const handleAddSpectra = (newId: string) => {
+    setSpectraPool(prev => {
+        const newPool = [...prev, { id: newId, inService: true }];
+        localStorage.setItem('spectraPool', JSON.stringify(newPool));
+        return newPool;
+    });
+    toast({ title: "Spectra Added", description: `Device ${newId} added to the pool.` });
+  };
+  
+  const handleToggleSpectraStatus = (id: string, inService: boolean) => {
+    if (!inService && nurses.some(n => n.spectra === id)) {
+        toast({ variant: "destructive", title: "Cannot Disable", description: "This Spectra is currently assigned to a nurse." });
+        return;
+    }
+    setSpectraPool(prev => {
+        const newPool = prev.map(s => s.id === id ? { ...s, inService } : s);
+        localStorage.setItem('spectraPool', JSON.stringify(newPool));
+        return newPool;
+    });
+  };
 
   const handlePrint = () => {
     window.print();
@@ -330,7 +387,6 @@ export default function Home() {
   const handleDropOnCell = useCallback((targetRow: number, targetCol: number) => {
     if (isEffectivelyLocked) return;
 
-    // Handle patient drop
     if (draggingPatientInfo) {
         const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
         setPatients(prevPatients => {
@@ -350,7 +406,6 @@ export default function Home() {
         });
     }
 
-    // Handle nurse drop
     if (draggingNurseInfo) {
       const { id: draggedNurseId } = draggingNurseInfo;
       setNurses(prevNurses => {
@@ -358,7 +413,7 @@ export default function Home() {
         const draggedNurse = newNurses.find(n => n.id === draggedNurseId);
         if (!draggedNurse) return prevNurses;
 
-        const newRow = Math.min(targetRow, NUM_ROWS_GRID - 2); // Span is 3 rows
+        const newRow = Math.min(targetRow, NUM_ROWS_GRID - 2); 
 
         const targetCells = [`${newRow}-${targetCol}`, `${newRow + 1}-${targetCol}`, `${newRow + 2}-${targetCol}`];
         const isOccupiedByPatient = patients.some(p => targetCells.includes(`${p.gridRow}-${p.gridColumn}`));
@@ -391,9 +446,8 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(() => {
-    if (isEffectivelyLocked) return;
+    if (isEffectivelyLocked || !isInitialized) return;
     
-    // Auto-save patients
     const patientLayoutStorageKey = `patientGridLayout_${currentLayoutName}`;
     try {
       const positionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
@@ -402,16 +456,14 @@ export default function Home() {
       console.error(`Error auto-saving patient layout ${currentLayoutName}:`, error);
     }
     
-    // Auto-save nurses
     const nurseLayoutStorageKey = `nurseGridLayout_${currentLayoutName}`;
     try {
-      const positionsToSave: StoredNursePosition[] = nurses.map(n => ({ id: n.id, gridRow: n.gridRow, gridColumn: n.gridColumn }));
-      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(positionsToSave));
+      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(nurses));
     } catch (error) {
       console.error(`Error auto-saving nurse layout ${currentLayoutName}:`, error);
     }
 
-  }, [patients, nurses, isEffectivelyLocked, currentLayoutName]);
+  }, [patients, nurses, isEffectivelyLocked, currentLayoutName, isInitialized]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -425,19 +477,16 @@ export default function Home() {
 
     if (!draggedPatient || !targetNurse) return;
 
-    // 1. Unassign the dragged patient from any previous nurse
     newNurses = newNurses.map(nurse => ({
         ...nurse,
         assignedPatientIds: nurse.assignedPatientIds.map(id => (id === draggedPatientId ? null : id))
     }));
 
-    // 2. Unassign any patient currently in the target slot
     const oldPatientIdInSlot = targetNurse.assignedPatientIds[slotIndex];
     if (oldPatientIdInSlot) {
         newPatients = newPatients.map(p => p.id === oldPatientIdInSlot ? { ...p, assignedNurse: undefined } : p);
     }
     
-    // 3. Make the new assignment
     newNurses = newNurses.map(nurse => {
         if (nurse.id === targetNurseId) {
             const newAssignments = [...nurse.assignedPatientIds];
@@ -506,6 +555,8 @@ export default function Home() {
         onPrint={handlePrint}
         onSaveLayout={handleOpenSaveDialog}
         onAdmitPatient={() => setIsAdmitDialogOpen(true)}
+        onAddNurse={() => setIsAddNurseDialogOpen(true)}
+        onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -521,7 +572,7 @@ export default function Home() {
           onDropOnCell={handleDropOnCell}
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
-          onDragEnd={handleDragEnd}
+  onDragEnd={handleDragEnd}
         />
       </main>
       <PrintableReport patients={patients} />
@@ -546,6 +597,18 @@ export default function Home() {
         onOpenChange={setIsAdmitDialogOpen}
         onSave={handleSaveAdmittedPatient}
         patients={patients}
+      />
+      <AddNurseDialog
+        open={isAddNurseDialogOpen}
+        onOpenChange={setIsAddNurseDialogOpen}
+        onSave={handleSaveNurse}
+      />
+      <ManageSpectraDialog
+        open={isManageSpectraDialogOpen}
+        onOpenChange={setIsManageSpectraDialogOpen}
+        spectraPool={spectraPool}
+        onAddSpectra={handleAddSpectra}
+        onToggleStatus={handleToggleSpectraStatus}
       />
       <DischargeConfirmationDialog
         open={!!patientToDischarge}
