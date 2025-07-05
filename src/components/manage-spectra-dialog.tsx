@@ -36,21 +36,11 @@ export default function ManageSpectraDialog({
   onToggleStatus,
 }: ManageSpectraDialogProps) {
   const [newSpectraId, setNewSpectraId] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const handleAdd = () => {
-    const trimmedId = newSpectraId.trim().toUpperCase();
-    if (!trimmedId) {
-      setError('Spectra ID cannot be empty.');
-      return;
-    }
-    if (spectraPool.some(s => s.id.toUpperCase() === trimmedId)) {
-      setError('This Spectra ID already exists in the pool.');
-      return;
-    }
-    onAddSpectra(trimmedId);
+    // Validation is now handled by the parent service, just pass the value up.
+    onAddSpectra(newSpectraId);
     setNewSpectraId('');
-    setError(null);
   };
 
   return (
@@ -68,17 +58,13 @@ export default function ManageSpectraDialog({
             id="new-spectra"
             placeholder="e.g., SPEC-0000"
             value={newSpectraId}
-            onChange={(e) => {
-                setNewSpectraId(e.target.value);
-                setError(null);
-            }}
+            onChange={(e) => setNewSpectraId(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           />
           <Button type="button" onClick={handleAdd}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add
           </Button>
         </div>
-        {error && <p className="text-sm text-destructive -mt-2 text-center">{error}</p>}
 
         <Separator />
         

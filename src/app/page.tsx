@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+// UI Components
 import AppHeader from '@/components/app-header';
 import PatientGrid from '@/components/patient-grid';
 import ReportSheet from '@/components/report-sheet';
@@ -11,21 +12,19 @@ import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/ad
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
 import AddNurseDialog, { type AddNurseFormValues } from '@/components/add-nurse-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
-import { layouts as appLayouts } from '@/lib/layouts';
-import type { LayoutName } from '@/types/patient';
-import type { Patient } from '@/types/patient';
-import type { Nurse, Spectra } from '@/types/nurse';
-import { generateInitialPatients } from '@/lib/initial-patients';
-import { generateInitialNurses } from '@/lib/initial-nurses';
-import { generateInitialSpectra } from '@/lib/initial-spectra';
+// Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
+// Types
+import type { LayoutName, Patient } from '@/types/patient';
+import type { Nurse, Spectra } from '@/types/nurse';
+// Services
+import * as layoutService from '@/services/layoutService';
+import * as patientService from '@/services/patientService';
+import * as nurseService from '@/services/nurseService';
+import * as spectraService from '@/services/spectraService';
 
-interface StoredPatientPosition {
-  id: string;
-  gridRow: number;
-  gridColumn: number;
-}
+
 interface DraggingPatientInfo {
   id: string;
   originalGridRow: number;
@@ -39,7 +38,7 @@ export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('default');
-  const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>(Object.keys(appLayouts) as LayoutName[]);
+  const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>([]);
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
@@ -57,158 +56,50 @@ export default function Home() {
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
 
-
-  const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
-    switch (layoutName) {
-      case 'default': return 'Default Layout';
-      case 'eighthFloor': return '8th Floor';
-      case 'tenthFloor': return '10th Floor';
-      default: return layoutName;
-    }
-  }, []);
-
-  const applyLayout = useCallback((layoutKey: LayoutName, base: Patient[]): Patient[] => {
-    if (appLayouts && typeof appLayouts === 'object' && appLayouts[layoutKey] && typeof appLayouts[layoutKey] === 'function') {
-      return appLayouts[layoutKey](base);
-    }
-    console.warn(
-      `Layout function for "${layoutKey}" not found. This is expected for custom layouts which are loaded from storage.`,
-    );
-    // For custom layouts, return base patients; the positions will be applied from localStorage.
-    return [...base.map(p => ({ ...p }))];
-  }, []);
-
+  // Initial setup on mount
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
-
-    const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
-
-    try {
-        const customLayoutNames = JSON.parse(localStorage.getItem('customLayoutNames') || '[]') as string[];
-        const allNames = [...Object.keys(appLayouts), ...customLayoutNames];
-        const uniqueNames = Array.from(new Set(allNames));
-        setAvailableLayouts(uniqueNames);
-        
-        if (savedLayout && uniqueNames.includes(savedLayout)) {
-            setCurrentLayoutName(savedLayout);
-        } else if (savedLayout) {
-             console.warn(`Saved layout "${savedLayout}" not found. Falling back to default.`);
-             setCurrentLayoutName('default');
-             localStorage.removeItem('lastSelectedLayoutName');
-        }
-    } catch (error) {
-        console.error("Failed to load custom layouts:", error);
-        setAvailableLayouts(Object.keys(appLayouts) as LayoutName[]);
-    }
-
-    const userLock = localStorage.getItem('userLayoutLockState') === 'true';
-    setIsLayoutLocked(userLock);
     
-    // Load Spectra Pool
-    try {
-      const savedSpectra = localStorage.getItem('spectraPool');
-      if (savedSpectra) {
-        setSpectraPool(JSON.parse(savedSpectra));
-      } else {
-        const initialSpectra = generateInitialSpectra();
-        setSpectraPool(initialSpectra);
-        localStorage.setItem('spectraPool', JSON.stringify(initialSpectra));
-      }
-    } catch (error) {
-      console.error("Failed to load spectra pool:", error);
-      setSpectraPool(generateInitialSpectra());
-    }
+    // Load initial state from services (which use localStorage)
+    setIsLayoutLocked(layoutService.getUserLayoutLockState());
+    setSpectraPool(spectraService.getSpectraPool());
 
+    const allLayouts = layoutService.getAvailableLayouts();
+    setAvailableLayouts(allLayouts);
+
+    const savedLayout = layoutService.getLastSelectedLayout();
+    if (savedLayout && allLayouts.includes(savedLayout)) {
+        setCurrentLayoutName(savedLayout);
+    } else {
+        setCurrentLayoutName('default');
+    }
   }, []);
 
+  // Load patient and nurse data when layout or spectra pool changes
   useEffect(() => {
     if (!currentLayoutName || spectraPool.length === 0) {
         return;
     }
     
-    // Load Patients
-    const basePatients = generateInitialPatients();
-    const patientLayoutStorageKey = `patientGridLayout_${currentLayoutName}`;
-    let finalPatientsData: Patient[];
-
-    try {
-      const savedLayoutJSON = localStorage.getItem(patientLayoutStorageKey);
-      if (savedLayoutJSON) {
-        const savedPositions = JSON.parse(savedLayoutJSON) as StoredPatientPosition[];
-        const positionMap = new Map(savedPositions.map(p => [p.id, { gridRow: p.gridRow, gridColumn: p.gridColumn }]));
-        finalPatientsData = basePatients.map(p => {
-          const savedPos = positionMap.get(p.id);
-          return savedPos ? { ...p, ...savedPos } : { ...p };
-        });
-      } else {
-        finalPatientsData = applyLayout(currentLayoutName, basePatients);
-      }
-    } catch (error) {
-      console.error(`Error processing patient layout ${currentLayoutName} from localStorage:`, error);
-      finalPatientsData = applyLayout(currentLayoutName, basePatients);
-    }
-    setPatients(finalPatientsData);
-
-    // Load Nurses
-    const nurseLayoutStorageKey = `nurseGridLayout_${currentLayoutName}`;
-    try {
-      const savedNurseLayoutJSON = localStorage.getItem(nurseLayoutStorageKey);
-      if (savedNurseLayoutJSON) {
-        const savedNurses = JSON.parse(savedNurseLayoutJSON) as Partial<Nurse>[];
-        // Validate and provide defaults for nurses loaded from storage
-        const validatedNurses = savedNurses.map(nurse => ({
-            id: nurse.id || `nurse-${Date.now()}`,
-            name: nurse.name || 'Unnamed',
-            relief: nurse.relief || '',
-            spectra: nurse.spectra || 'N/A',
-            gridRow: nurse.gridRow || 1,
-            gridColumn: nurse.gridColumn || 1,
-            // Ensure assignedPatientIds is always an array to prevent crashes from old data.
-            assignedPatientIds: nurse.assignedPatientIds && Array.isArray(nurse.assignedPatientIds) 
-                                ? nurse.assignedPatientIds 
-                                : Array(6).fill(null),
-        })) as Nurse[];
-        setNurses(validatedNurses);
-      } else {
-        const initialNurses = generateInitialNurses();
-        const availableSpectra = spectraPool.filter(s => s.inService);
-        const nursesWithSpectra = initialNurses.map((nurse, index) => ({
-          ...nurse,
-          spectra: availableSpectra[index]?.id || 'N/A',
-        }));
-        setNurses(nursesWithSpectra as Nurse[]);
-      }
-    } catch (error) {
-        console.error(`Error processing nurse layout ${currentLayoutName} from localStorage:`, error);
-        const initialNurses = generateInitialNurses();
-        const availableSpectra = spectraPool.filter(s => s.inService);
-        const nursesWithSpectra = initialNurses.map((nurse, index) => ({
-          ...nurse,
-          spectra: availableSpectra[index]?.id || 'N/A',
-        }));
-        setNurses(nursesWithSpectra as Nurse[]);
-    }
+    setPatients(patientService.getPatients(currentLayoutName));
+    setNurses(nurseService.getNurses(currentLayoutName, spectraPool));
 
     setIsInitialized(true);
-  }, [currentLayoutName, applyLayout, spectraPool.length]);
-
-  const isEffectivelyLocked = isLayoutLocked;
+  }, [currentLayoutName, spectraPool]);
 
   const handleSelectLayout = (newLayoutName: LayoutName) => {
     setCurrentLayoutName(newLayoutName);
-    localStorage.setItem('lastSelectedLayoutName', newLayoutName);
+    layoutService.setLastSelectedLayout(newLayoutName);
   };
 
   const toggleLayoutLock = () => {
-    setIsLayoutLocked(prev => {
-      const newLockState = !prev;
-      localStorage.setItem('userLayoutLockState', String(newLockState));
-      return newLockState;
-    });
+    const newLockState = !isLayoutLocked;
+    setIsLayoutLocked(newLockState);
+    layoutService.setUserLayoutLockState(newLockState);
   };
   
   const handleOpenSaveDialog = () => {
-    if (isEffectivelyLocked) {
+    if (isLayoutLocked) {
       toast({
         variant: "destructive",
         title: "Layout Locked",
@@ -220,65 +111,19 @@ export default function Home() {
   };
   
   const handleSaveNewLayout = (newLayoutName: string) => {
-    const patientLayoutStorageKey = `patientGridLayout_${newLayoutName}`;
-    const nurseLayoutStorageKey = `nurseGridLayout_${newLayoutName}`;
-    try {
-      const patientPositionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
-      localStorage.setItem(patientLayoutStorageKey, JSON.stringify(patientPositionsToSave));
-      
-      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(nurses));
-
-      const customLayoutNames = JSON.parse(localStorage.getItem('customLayoutNames') || '[]') as string[];
-      const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, newLayoutName]));
-      localStorage.setItem('customLayoutNames', JSON.stringify(updatedCustomLayouts));
-      
-      setAvailableLayouts(Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts])));
-      setCurrentLayoutName(newLayoutName);
-      localStorage.setItem('lastSelectedLayoutName', newLayoutName);
-      
-      toast({
-        title: "Layout Saved",
-        description: `Layout "${newLayoutName}" has been successfully saved.`,
-      });
-    } catch (error) {
-      console.error(`Error saving new layout ${newLayoutName}:`, error);
-      toast({
-        variant: "destructive",
-        title: "Save Error",
-        description: "Could not save the new layout. Please try again.",
-      });
-    }
+    const updatedLayouts = layoutService.saveNewLayout(newLayoutName, patients, nurses);
+    setAvailableLayouts(updatedLayouts);
+    setCurrentLayoutName(newLayoutName);
+    layoutService.setLastSelectedLayout(newLayoutName);
+    
+    toast({
+      title: "Layout Saved",
+      description: `Layout "${newLayoutName}" has been successfully saved.`,
+    });
   };
 
   const handleSaveAdmittedPatient = (formData: AdmitPatientFormValues) => {
-    setPatients(prevPatients =>
-      prevPatients.map(p => {
-        if (p.bedNumber === formData.bedNumber) {
-          return {
-            ...p,
-            name: formData.name,
-            age: formData.age,
-            gender: formData.gender,
-            assignedNurse: formData.assignedNurse,
-            chiefComplaint: formData.chiefComplaint,
-            admitDate: formData.admitDate,
-            dischargeDate: formData.dischargeDate,
-            ldas: formData.ldas ? formData.ldas.split(',').map(s => s.trim()).filter(Boolean) : [],
-            diet: formData.diet,
-            mobility: formData.mobility,
-            codeStatus: formData.codeStatus,
-            isFallRisk: formData.isFallRisk,
-            isSeizureRisk: formData.isSeizureRisk,
-            isAspirationRisk: formData.isAspirationRisk,
-            isIsolation: formData.isIsolation,
-            isInRestraints: formData.isInRestraints,
-            isComfortCareDNR: formData.isComfortCareDNR,
-            notes: '',
-          };
-        }
-        return p;
-      })
-    );
+    setPatients(patientService.admitPatient(formData, patients));
     setIsAdmitDialogOpen(false);
     toast({
       title: "Patient Admitted",
@@ -288,123 +133,52 @@ export default function Home() {
 
   const handleDischargePatient = () => {
     if (!patientToDischarge) return;
-
-    const vacantPatient: Patient = {
-      ...patientToDischarge,
-      name: 'Vacant',
-      age: 0,
-      gender: undefined,
-      admitDate: new Date(),
-      dischargeDate: new Date(),
-      chiefComplaint: 'N/A',
-      ldas: [],
-      diet: 'N/A',
-      mobility: 'Independent',
-      codeStatus: 'Full Code',
-      assignedNurse: undefined,
-      isFallRisk: false,
-      isSeizureRisk: false,
-      isAspirationRisk: false,
-      isIsolation: false,
-      isInRestraints: false,
-      isComfortCareDNR: false,
-      notes: '',
-    };
-    
-    setPatients(prev => prev.map(p => (p.id === patientToDischarge.id ? vacantPatient : p)));
-
+    setPatients(patientService.dischargePatient(patientToDischarge, patients));
     toast({
       title: "Patient Discharged",
       description: `${patientToDischarge.name} has been discharged from Bed ${patientToDischarge.bedNumber}.`,
     });
-
     setPatientToDischarge(null);
     setSelectedPatient(null);
   };
   
-  const findEmptySlotForNurse = (): { row: number; col: number } | null => {
-    const occupiedCells = new Set<string>();
-    patients.forEach(p => {
-        occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
-    });
-    nurses.forEach(n => {
-        for (let i = 0; i < 3; i++) {
-            occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
-        }
-    });
-
-    for (let c = 1; c <= NUM_COLS_GRID; c++) {
-      for (let r = 1; r <= NUM_ROWS_GRID - 2; r++) {
-        if (
-          !occupiedCells.has(`${r}-${c}`) &&
-          !occupiedCells.has(`${r + 1}-${c}`) &&
-          !occupiedCells.has(`${r + 2}-${c}`)
-        ) {
-          return { row: r, col: c };
-        }
-      }
-    }
-    return null;
-  };
-
   const handleSaveNurse = (formData: AddNurseFormValues) => {
-    const assignedSpectra = spectraPool.find(s => s.inService && !nurses.some(n => n.spectra === s.id));
-    if (!assignedSpectra) {
-      toast({
-        variant: "destructive",
-        title: "No Spectra Available",
-        description: "Could not add nurse. Please add or enable a Spectra device in the pool.",
-      });
-      return;
+    const result = nurseService.addNurse(formData, nurses, patients, spectraPool);
+    if (result.newNurses) {
+        setNurses(result.newNurses);
+        setIsAddNurseDialogOpen(false);
+        toast({
+            title: "Nurse Added",
+            description: `${formData.name} has been added to the unit.`,
+        });
+    } else {
+        toast({
+            variant: "destructive",
+            title: result.error === "No Spectra Available" ? "No Spectra Available" : "No Space Available",
+            description: result.error === "No Spectra Available" 
+                ? "Could not add nurse. Please add or enable a Spectra device in the pool."
+                : "Cannot add new nurse, the grid is full.",
+        });
     }
-    
-    const position = findEmptySlotForNurse();
-    if (!position) {
-      toast({
-        variant: "destructive",
-        title: "No Space Available",
-        description: "Cannot add new nurse, the grid is full.",
-      });
-      return;
-    }
-
-    const newNurse: Nurse = {
-      id: `nurse-${Date.now()}`,
-      name: formData.name,
-      relief: formData.relief,
-      spectra: assignedSpectra.id,
-      assignedPatientIds: Array(6).fill(null),
-      gridRow: position.row,
-      gridColumn: position.col,
-    };
-    
-    setNurses(prev => [...prev, newNurse]);
-    setIsAddNurseDialogOpen(false);
-    toast({
-      title: "Nurse Added",
-      description: `${formData.name} has been added to the unit.`,
-    });
   };
   
   const handleAddSpectra = (newId: string) => {
-    setSpectraPool(prev => {
-        const newPool = [...prev, { id: newId, inService: true }];
-        localStorage.setItem('spectraPool', JSON.stringify(newPool));
-        return newPool;
-    });
-    toast({ title: "Spectra Added", description: `Device ${newId} added to the pool.` });
+    const result = spectraService.addSpectra(newId, spectraPool);
+    if (result.newPool) {
+      setSpectraPool(result.newPool);
+      toast({ title: "Spectra Added", description: `Device ${newId.trim().toUpperCase()} added to the pool.` });
+    } else if (result.error) {
+      toast({ variant: "destructive", title: "Error Adding Spectra", description: result.error });
+    }
   };
   
   const handleToggleSpectraStatus = (id: string, inService: boolean) => {
-    if (!inService && nurses.some(n => n.spectra === id)) {
-        toast({ variant: "destructive", title: "Cannot Disable", description: "This Spectra is currently assigned to a nurse." });
-        return;
+    const result = spectraService.toggleSpectraStatus(id, inService, spectraPool, nurses);
+    if (result.newPool) {
+        setSpectraPool(result.newPool);
+    } else if (result.error) {
+        toast({ variant: "destructive", title: "Cannot Disable", description: result.error });
     }
-    setSpectraPool(prev => {
-        const newPool = prev.map(s => s.id === id ? { ...s, inService } : s);
-        localStorage.setItem('spectraPool', JSON.stringify(newPool));
-        return newPool;
-    });
   };
 
   const handlePrint = () => {
@@ -417,7 +191,7 @@ export default function Home() {
     originalGridRow: number,
     originalGridColumn: number
   ) => {
-    if (isEffectivelyLocked) {
+    if (isLayoutLocked) {
       e.preventDefault();
       return;
     }
@@ -425,10 +199,10 @@ export default function Home() {
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
     e.dataTransfer.effectAllowed = 'move';
-  }, [isEffectivelyLocked]);
+  }, [isLayoutLocked]);
   
   const handleNurseDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, nurseId: string) => {
-    if (isEffectivelyLocked) {
+    if (isLayoutLocked) {
       e.preventDefault();
       return;
     }
@@ -436,11 +210,11 @@ export default function Home() {
     setDraggingNurseInfo({ id: nurseId });
     e.dataTransfer.setData('text/plain', nurseId);
     e.dataTransfer.effectAllowed = 'move';
-  }, [isEffectivelyLocked]);
+  }, [isLayoutLocked]);
 
 
   const handleDropOnCell = useCallback((targetRow: number, targetCol: number) => {
-    if (isEffectivelyLocked) return;
+    if (isLayoutLocked) return;
 
     if (draggingPatientInfo) {
         const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
@@ -493,7 +267,7 @@ export default function Home() {
 
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
-  }, [draggingPatientInfo, draggingNurseInfo, isEffectivelyLocked, patients, toast]);
+  }, [draggingPatientInfo, draggingNurseInfo, isLayoutLocked, patients, toast]);
   
   const handleDragEnd = useCallback(() => {
     setDraggingPatientInfo(null);
@@ -501,24 +275,10 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(() => {
-    if (isEffectivelyLocked || !isInitialized) return;
-    
-    const patientLayoutStorageKey = `patientGridLayout_${currentLayoutName}`;
-    try {
-      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
-      localStorage.setItem(patientLayoutStorageKey, JSON.stringify(positionsToSave));
-    } catch (error) {
-      console.error(`Error auto-saving patient layout ${currentLayoutName}:`, error);
-    }
-    
-    const nurseLayoutStorageKey = `nurseGridLayout_${currentLayoutName}`;
-    try {
-      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(nurses));
-    } catch (error) {
-      console.error(`Error auto-saving nurse layout ${currentLayoutName}:`, error);
-    }
-
-  }, [patients, nurses, isEffectivelyLocked, currentLayoutName, isInitialized]);
+    if (isLayoutLocked || !isInitialized) return;
+    patientService.savePatients(currentLayoutName, patients);
+    nurseService.saveNurses(currentLayoutName, nurses);
+  }, [patients, nurses, isLayoutLocked, currentLayoutName, isInitialized]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -592,17 +352,26 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (isInitialized && !isEffectivelyLocked) {
+    if (isInitialized && !isLayoutLocked) {
       handleAutoSave();
     }
-  }, [patients, nurses, isInitialized, isEffectivelyLocked, handleAutoSave]);
+  }, [patients, nurses, isInitialized, isLayoutLocked, handleAutoSave]);
+    
+  const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
+    switch (layoutName) {
+      case 'default': return 'Default Layout';
+      case 'eighthFloor': return '8th Floor';
+      case 'tenthFloor': return '10th Floor';
+      default: return layoutName;
+    }
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader
         title="UnitView"
         subtitle="48 Bed Unit Patient Dashboard"
-        isLayoutLocked={isEffectivelyLocked}
+        isLayoutLocked={isLayoutLocked}
         onToggleLayoutLock={toggleLayoutLock}
         currentLayoutName={currentLayoutName}
         onSelectLayout={handleSelectLayout}
@@ -618,7 +387,7 @@ export default function Home() {
           patients={patients}
           nurses={nurses}
           isInitialized={isInitialized}
-          isEffectivelyLocked={isEffectivelyLocked}
+          isEffectivelyLocked={isLayoutLocked}
           draggingPatientInfo={draggingPatientInfo}
           draggingNurseInfo={draggingNurseInfo}
           onSelectPatient={setSelectedPatient}
@@ -627,7 +396,7 @@ export default function Home() {
           onDropOnCell={handleDropOnCell}
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
-  onDragEnd={handleDragEnd}
+          onDragEnd={handleDragEnd}
         />
       </main>
       <PrintableReport patients={patients} />
