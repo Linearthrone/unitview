@@ -41,7 +41,10 @@ const NurseAssignmentCard: React.FC<NurseAssignmentCardProps> = ({
   };
 
   return (
-    <Card className="flex flex-col h-full shadow-lg bg-secondary/50 border-primary/50">
+    <Card className={cn(
+      "flex flex-col h-full shadow-lg bg-secondary/50 border-primary/50",
+      !isEffectivelyLocked && "cursor-grab"
+    )}>
       <CardHeader className="p-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <User className="h-5 w-5 text-primary" />

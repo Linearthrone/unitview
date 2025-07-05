@@ -14,6 +14,9 @@ interface DraggingPatientInfo {
   originalGridRow: number;
   originalGridColumn: number;
 }
+interface DraggingNurseInfo {
+  id: string;
+}
 
 interface PatientGridProps {
   patients: Patient[];
@@ -21,8 +24,10 @@ interface PatientGridProps {
   isInitialized: boolean;
   isEffectivelyLocked: boolean;
   draggingPatientInfo: DraggingPatientInfo | null;
+  draggingNurseInfo: DraggingNurseInfo | null;
   onSelectPatient: (patient: Patient) => void;
-  onDragStart: (e: React.DragEvent<HTMLDivElement>, patientId: string, row: number, col: number) => void;
+  onPatientDragStart: (e: React.DragEvent<HTMLDivElement>, patientId: string, row: number, col: number) => void;
+  onNurseDragStart: (e: React.DragEvent<HTMLDivElement>, nurseId: string) => void;
   onDropOnCell: (targetRow: number, targetCol: number) => void;
   onDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
   onClearNurseAssignments: (nurseId: string) => void;
@@ -35,8 +40,10 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   isInitialized,
   isEffectivelyLocked,
   draggingPatientInfo,
+  draggingNurseInfo,
   onSelectPatient,
-  onDragStart,
+  onPatientDragStart,
+  onNurseDragStart,
   onDropOnCell,
   onDropOnNurseSlot,
   onClearNurseAssignments,
@@ -44,7 +51,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (draggingPatientInfo && !isEffectivelyLocked) {
+    if ((draggingPatientInfo || draggingNurseInfo) && !isEffectivelyLocked) {
       e.dataTransfer.dropEffect = 'move';
     } else {
       e.dataTransfer.dropEffect = 'none';
@@ -74,7 +81,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
             className={cn(
               "border border-border/30 min-h-[12rem] rounded-md",
               "flex items-stretch justify-stretch",
-              draggingPatientInfo && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
+              (draggingPatientInfo || draggingNurseInfo) && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
               !patientInCell && "bg-card"
             )}
             onDragOver={!isEffectivelyLocked ? handleDragOverCell : undefined}
@@ -84,7 +91,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
             {patientInCell && (
               <div
                 draggable={!isEffectivelyLocked}
-                onDragStart={(e) => onDragStart(e, patientInCell.id, patientInCell.gridRow, patientInCell.gridColumn)}
+                onDragStart={(e) => onPatientDragStart(e, patientInCell.id, patientInCell.gridRow, patientInCell.gridColumn)}
                 onDragEnd={onDragEnd}
                 className={cn(
                   "w-full h-full",
@@ -125,7 +132,13 @@ const PatientGrid: React.FC<PatientGridProps> = ({
         {renderGridCells()}
         {nurses.map(nurse => (
           <div 
-            key={nurse.id} 
+            key={nurse.id}
+            draggable={!isEffectivelyLocked}
+            onDragStart={(e) => onNurseDragStart(e, nurse.id)}
+            onDragEnd={onDragEnd}
+            className={cn(
+              draggingNurseInfo?.id === nurse.id && "opacity-50"
+            )}
             style={{ 
               gridRowStart: nurse.gridRow, 
               gridColumnStart: nurse.gridColumn, 

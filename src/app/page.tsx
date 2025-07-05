@@ -16,8 +16,14 @@ import type { Nurse } from '@/types/nurse';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { generateInitialNurses } from '@/lib/initial-nurses';
 import { useToast } from "@/hooks/use-toast";
+import { NUM_ROWS_GRID } from '@/lib/grid-utils';
 
 interface StoredPatientPosition {
+  id: string;
+  gridRow: number;
+  gridColumn: number;
+}
+interface StoredNursePosition {
   id: string;
   gridRow: number;
   gridColumn: number;
@@ -26,6 +32,9 @@ interface DraggingPatientInfo {
   id: string;
   originalGridRow: number;
   originalGridColumn: number;
+}
+interface DraggingNurseInfo {
+  id: string;
 }
 
 export default function Home() {
@@ -37,6 +46,7 @@ export default function Home() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
+  const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
@@ -68,7 +78,6 @@ export default function Home() {
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
-    setNurses(generateInitialNurses());
 
     const savedLayout = localStorage.getItem('lastSelectedLayoutName') as LayoutName | null;
 
@@ -99,37 +108,55 @@ export default function Home() {
         console.warn("Home: currentLayoutName is undefined. Waiting for valid layout name.");
         return;
     }
-
+    
+    // Load Patients
     const basePatients = generateInitialPatients();
-    const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
+    const patientLayoutStorageKey = `patientGridLayout_${currentLayoutName}`;
     let finalPatientsData: Patient[];
 
     try {
-      const savedLayoutJSON = localStorage.getItem(layoutStorageKey);
+      const savedLayoutJSON = localStorage.getItem(patientLayoutStorageKey);
       if (savedLayoutJSON) {
         const savedPositions = JSON.parse(savedLayoutJSON) as StoredPatientPosition[];
         const positionMap = new Map(savedPositions.map(p => [p.id, { gridRow: p.gridRow, gridColumn: p.gridColumn }]));
-
         finalPatientsData = basePatients.map(p => {
           const savedPos = positionMap.get(p.id);
           return savedPos ? { ...p, ...savedPos } : { ...p };
         });
-
       } else {
         finalPatientsData = applyLayout(currentLayoutName, basePatients);
-        const positionsToSave: StoredPatientPosition[] = finalPatientsData.map(p => ({
-            id: p.id,
-            gridRow: p.gridRow,
-            gridColumn: p.gridColumn,
-        }));
-        localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
+        localStorage.setItem(patientLayoutStorageKey, JSON.stringify(finalPatientsData.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }))));
       }
     } catch (error) {
-      console.error(`Error processing layout ${currentLayoutName} from localStorage:`, error);
+      console.error(`Error processing patient layout ${currentLayoutName} from localStorage:`, error);
       finalPatientsData = applyLayout(currentLayoutName, basePatients);
     }
-
     setPatients(finalPatientsData);
+
+    // Load Nurses
+    const initialNurses = generateInitialNurses();
+    const nurseLayoutStorageKey = `nurseGridLayout_${currentLayoutName}`;
+    let finalNursesData: Nurse[];
+
+    try {
+      const savedNurseLayoutJSON = localStorage.getItem(nurseLayoutStorageKey);
+      if (savedNurseLayoutJSON) {
+        const savedNursePositions = JSON.parse(savedNurseLayoutJSON) as StoredNursePosition[];
+        const nursePositionMap = new Map(savedNursePositions.map(n => [n.id, { gridRow: n.gridRow, gridColumn: n.gridColumn }]));
+        finalNursesData = initialNurses.map(n => {
+            const savedPos = nursePositionMap.get(n.id);
+            return savedPos ? { ...n, ...savedPos } : n;
+        });
+      } else {
+        finalNursesData = initialNurses;
+        localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(finalNursesData.map(n => ({ id: n.id, gridRow: n.gridRow, gridColumn: n.gridColumn }))));
+      }
+    } catch (error) {
+        console.error(`Error processing nurse layout ${currentLayoutName} from localStorage:`, error);
+        finalNursesData = initialNurses;
+    }
+    setNurses(finalNursesData);
+
     setIsInitialized(true);
   }, [currentLayoutName, applyLayout]);
 
@@ -161,15 +188,18 @@ export default function Home() {
   };
   
   const handleSaveNewLayout = (newLayoutName: string) => {
-    const layoutStorageKey = `patientGridLayout_${newLayoutName}`;
+    const patientLayoutStorageKey = `patientGridLayout_${newLayoutName}`;
+    const nurseLayoutStorageKey = `nurseGridLayout_${newLayoutName}`;
     try {
-      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
-        id: p.id,
-        gridRow: p.gridRow,
-        gridColumn: p.gridColumn,
-      }));
-      localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
+      // Save patients
+      const patientPositionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
+      localStorage.setItem(patientLayoutStorageKey, JSON.stringify(patientPositionsToSave));
+      
+      // Save nurses
+      const nursePositionsToSave: StoredNursePosition[] = nurses.map(n => ({ id: n.id, gridRow: n.gridRow, gridColumn: n.gridColumn }));
+      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(nursePositionsToSave));
 
+      // Update available layouts
       const customLayoutNames = JSON.parse(localStorage.getItem('customLayoutNames') || '[]') as string[];
       const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, newLayoutName]));
       localStorage.setItem('customLayoutNames', JSON.stringify(updatedCustomLayouts));
@@ -269,7 +299,7 @@ export default function Home() {
     window.print();
   };
   
-  const handleDragStart = useCallback((
+  const handlePatientDragStart = useCallback((
     e: React.DragEvent<HTMLDivElement>,
     patientId: string,
     originalGridRow: number,
@@ -279,54 +309,109 @@ export default function Home() {
       e.preventDefault();
       return;
     }
+    setDraggingNurseInfo(null);
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
     e.dataTransfer.effectAllowed = 'move';
   }, [isEffectivelyLocked]);
+  
+  const handleNurseDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, nurseId: string) => {
+    if (isEffectivelyLocked) {
+      e.preventDefault();
+      return;
+    }
+    setDraggingPatientInfo(null);
+    setDraggingNurseInfo({ id: nurseId });
+    e.dataTransfer.setData('text/plain', nurseId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, [isEffectivelyLocked]);
+
 
   const handleDropOnCell = useCallback((targetRow: number, targetCol: number) => {
-    if (!draggingPatientInfo || isEffectivelyLocked) return;
+    if (isEffectivelyLocked) return;
 
-    const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
+    // Handle patient drop
+    if (draggingPatientInfo) {
+        const { id: draggedPatientId, originalGridRow, originalGridColumn } = draggingPatientInfo;
+        setPatients(prevPatients => {
+            const newPatients = prevPatients.map(p => ({...p}));
+            const draggedPatient = newPatients.find(p => p.id === draggedPatientId);
+            if (!draggedPatient) return prevPatients;
 
-    setPatients(prevPatients => {
-      const newPatients = prevPatients.map(p => ({...p}));
-      const draggedPatient = newPatients.find(p => p.id === draggedPatientId);
-      if (!draggedPatient) return prevPatients;
+            const patientInTargetCell = newPatients.find(p => p.gridRow === targetRow && p.gridColumn === targetCol && p.id !== draggedPatientId);
+            draggedPatient.gridRow = targetRow;
+            draggedPatient.gridColumn = targetCol;
 
-      const patientInTargetCell = newPatients.find(p => p.gridRow === targetRow && p.gridColumn === targetCol && p.id !== draggedPatientId);
-      draggedPatient.gridRow = targetRow;
-      draggedPatient.gridColumn = targetCol;
+            if (patientInTargetCell) {
+                patientInTargetCell.gridRow = originalGridRow;
+                patientInTargetCell.gridColumn = originalGridColumn;
+            }
+            return newPatients;
+        });
+    }
 
-      if (patientInTargetCell) {
-        patientInTargetCell.gridRow = originalGridRow;
-        patientInTargetCell.gridColumn = originalGridColumn;
-      }
-      return newPatients;
-    });
+    // Handle nurse drop
+    if (draggingNurseInfo) {
+      const { id: draggedNurseId } = draggingNurseInfo;
+      setNurses(prevNurses => {
+        const newNurses = prevNurses.map(n => ({ ...n }));
+        const draggedNurse = newNurses.find(n => n.id === draggedNurseId);
+        if (!draggedNurse) return prevNurses;
+
+        const newRow = Math.min(targetRow, NUM_ROWS_GRID - 2); // Span is 3 rows
+
+        const targetCells = [`${newRow}-${targetCol}`, `${newRow + 1}-${targetCol}`, `${newRow + 2}-${targetCol}`];
+        const isOccupiedByPatient = patients.some(p => targetCells.includes(`${p.gridRow}-${p.gridColumn}`));
+        const isOccupiedByOtherNurse = newNurses.some(nurse => {
+          if (nurse.id === draggedNurseId) return false;
+          if (nurse.gridColumn !== targetCol) return false;
+          const nurseTop = nurse.gridRow;
+          const nurseBottom = nurse.gridRow + 2;
+          return newRow <= nurseBottom && (newRow + 2) >= nurseTop;
+        });
+
+        if (isOccupiedByPatient || isOccupiedByOtherNurse) {
+          toast({ variant: "destructive", title: "Cannot Move Nurse", description: "The target location is occupied." });
+          return prevNurses;
+        }
+
+        draggedNurse.gridRow = newRow;
+        draggedNurse.gridColumn = targetCol;
+        return newNurses;
+      });
+    }
 
     setDraggingPatientInfo(null);
-  }, [draggingPatientInfo, isEffectivelyLocked]);
+    setDraggingNurseInfo(null);
+  }, [draggingPatientInfo, draggingNurseInfo, isEffectivelyLocked, patients, toast]);
   
   const handleDragEnd = useCallback(() => {
     setDraggingPatientInfo(null);
+    setDraggingNurseInfo(null);
   }, []);
 
   const handleAutoSave = useCallback(() => {
     if (isEffectivelyLocked) return;
     
-    const layoutStorageKey = `patientGridLayout_${currentLayoutName}`;
+    // Auto-save patients
+    const patientLayoutStorageKey = `patientGridLayout_${currentLayoutName}`;
     try {
-      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({
-        id: p.id,
-        gridRow: p.gridRow,
-        gridColumn: p.gridColumn,
-      }));
-      localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
+      const positionsToSave: StoredPatientPosition[] = patients.map(p => ({ id: p.id, gridRow: p.gridRow, gridColumn: p.gridColumn }));
+      localStorage.setItem(patientLayoutStorageKey, JSON.stringify(positionsToSave));
     } catch (error) {
-      console.error(`Error auto-saving layout ${currentLayoutName}:`, error);
+      console.error(`Error auto-saving patient layout ${currentLayoutName}:`, error);
     }
-  }, [patients, isEffectivelyLocked, currentLayoutName]);
+    
+    // Auto-save nurses
+    const nurseLayoutStorageKey = `nurseGridLayout_${currentLayoutName}`;
+    try {
+      const positionsToSave: StoredNursePosition[] = nurses.map(n => ({ id: n.id, gridRow: n.gridRow, gridColumn: n.gridColumn }));
+      localStorage.setItem(nurseLayoutStorageKey, JSON.stringify(positionsToSave));
+    } catch (error) {
+      console.error(`Error auto-saving nurse layout ${currentLayoutName}:`, error);
+    }
+
+  }, [patients, nurses, isEffectivelyLocked, currentLayoutName]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -406,7 +491,7 @@ export default function Home() {
     if (isInitialized && !isEffectivelyLocked) {
       handleAutoSave();
     }
-  }, [patients, isInitialized, isEffectivelyLocked, handleAutoSave]);
+  }, [patients, nurses, isInitialized, isEffectivelyLocked, handleAutoSave]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -429,8 +514,10 @@ export default function Home() {
           isInitialized={isInitialized}
           isEffectivelyLocked={isEffectivelyLocked}
           draggingPatientInfo={draggingPatientInfo}
+          draggingNurseInfo={draggingNurseInfo}
           onSelectPatient={setSelectedPatient}
-          onDragStart={handleDragStart}
+          onPatientDragStart={handlePatientDragStart}
+          onNurseDragStart={handleNurseDragStart}
           onDropOnCell={handleDropOnCell}
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
