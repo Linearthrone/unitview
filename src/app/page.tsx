@@ -154,19 +154,39 @@ export default function Home() {
     try {
       const savedNurseLayoutJSON = localStorage.getItem(nurseLayoutStorageKey);
       if (savedNurseLayoutJSON) {
-        setNurses(JSON.parse(savedNurseLayoutJSON));
+        const savedNurses = JSON.parse(savedNurseLayoutJSON) as Partial<Nurse>[];
+        // Validate and provide defaults for nurses loaded from storage
+        const validatedNurses = savedNurses.map(nurse => ({
+            id: nurse.id || `nurse-${Date.now()}`,
+            name: nurse.name || 'Unnamed',
+            relief: nurse.relief || '',
+            spectra: nurse.spectra || 'N/A',
+            gridRow: nurse.gridRow || 1,
+            gridColumn: nurse.gridColumn || 1,
+            // Ensure assignedPatientIds is always an array to prevent crashes from old data.
+            assignedPatientIds: nurse.assignedPatientIds && Array.isArray(nurse.assignedPatientIds) 
+                                ? nurse.assignedPatientIds 
+                                : Array(6).fill(null),
+        })) as Nurse[];
+        setNurses(validatedNurses);
       } else {
         const initialNurses = generateInitialNurses();
-        const availableSpectra = spectraPool.filter(s => s.inService && !initialNurses.some(n => n.spectra === s.id));
+        const availableSpectra = spectraPool.filter(s => s.inService);
         const nursesWithSpectra = initialNurses.map((nurse, index) => ({
           ...nurse,
           spectra: availableSpectra[index]?.id || 'N/A',
         }));
-        setNurses(nursesWithSpectra);
+        setNurses(nursesWithSpectra as Nurse[]);
       }
     } catch (error) {
         console.error(`Error processing nurse layout ${currentLayoutName} from localStorage:`, error);
-        setNurses(generateInitialNurses());
+        const initialNurses = generateInitialNurses();
+        const availableSpectra = spectraPool.filter(s => s.inService);
+        const nursesWithSpectra = initialNurses.map((nurse, index) => ({
+          ...nurse,
+          spectra: availableSpectra[index]?.id || 'N/A',
+        }));
+        setNurses(nursesWithSpectra as Nurse[]);
     }
 
     setIsInitialized(true);
