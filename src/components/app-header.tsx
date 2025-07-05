@@ -119,8 +119,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               variant="outline"
               size="sm"
               onClick={onToggleLayoutLock}
-              disabled={currentLayoutName === 'eighthFloor'}
-              title={currentLayoutName === 'eighthFloor' ? "8th Floor layout is always locked" : (isLayoutLocked ? 'Unlock Layout' : 'Lock Layout')}
+              title={isLayoutLocked ? 'Unlock Layout' : 'Lock Layout'}
             >
               {isLayoutLocked ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
               {isLayoutLocked ? 'Layout Locked' : 'Lock Layout'}

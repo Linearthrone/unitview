@@ -113,14 +113,12 @@ export default function Home() {
 
       } else {
         finalPatientsData = applyLayout(currentLayoutName, basePatients);
-        if (currentLayoutName !== 'eighthFloor') {
-            const positionsToSave: StoredPatientPosition[] = finalPatientsData.map(p => ({
-              id: p.id,
-              gridRow: p.gridRow,
-              gridColumn: p.gridColumn,
-            }));
-            localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
-        }
+        const positionsToSave: StoredPatientPosition[] = finalPatientsData.map(p => ({
+            id: p.id,
+            gridRow: p.gridRow,
+            gridColumn: p.gridColumn,
+        }));
+        localStorage.setItem(layoutStorageKey, JSON.stringify(positionsToSave));
       }
     } catch (error) {
       console.error(`Error processing layout ${currentLayoutName} from localStorage:`, error);
@@ -131,7 +129,7 @@ export default function Home() {
     setIsInitialized(true);
   }, [currentLayoutName, applyLayout]);
 
-  const isEffectivelyLocked = currentLayoutName === 'eighthFloor' || isLayoutLocked;
+  const isEffectivelyLocked = isLayoutLocked;
 
   const handleSelectLayout = (newLayoutName: LayoutName) => {
     setCurrentLayoutName(newLayoutName);
@@ -139,8 +137,6 @@ export default function Home() {
   };
 
   const toggleLayoutLock = () => {
-    if (currentLayoutName === 'eighthFloor') return;
-
     setIsLayoutLocked(prev => {
       const newLockState = !prev;
       localStorage.setItem('userLayoutLockState', String(newLockState));
