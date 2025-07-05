@@ -44,6 +44,9 @@ const DIETS = [
     "Regular", "NPO (Nothing by mouth)", "Cardiac Diet", "Diabetic Diet (ADA)", "Renal Diet", "Clear Liquids",
     "Full Liquids", "Mechanical Soft", "Pureed"
 ];
+const NURSES = [
+  'RN Alice', 'RN Bob', 'RN Carol', 'RN David', 'RN Eve', 'RN Frank', 'To Be Assigned'
+];
 
 const formSchema = z.object({
   bedNumber: z.coerce.number().min(1, "Bed number is required."),
@@ -57,6 +60,7 @@ const formSchema = z.object({
   diet: z.string().min(1, "Diet is required."),
   mobility: z.enum(MOBILITY_STATUSES),
   codeStatus: z.enum(CODE_STATUSES),
+  assignedNurse: z.string().min(1, "Nurse assignment is required."),
   isFallRisk: z.boolean().default(false),
   isSeizureRisk: z.boolean().default(false),
   isAspirationRisk: z.boolean().default(false),
@@ -80,6 +84,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
     defaultValues: {
       admitDate: new Date(),
       dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
+      assignedNurse: 'To Be Assigned',
       isFallRisk: false,
       isSeizureRisk: false,
       isAspirationRisk: false,
@@ -99,6 +104,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
         bedNumber: undefined,
         chiefComplaint: '',
         ldas: '',
+        assignedNurse: 'To Be Assigned',
         isFallRisk: false,
         isSeizureRisk: false,
         isAspirationRisk: false,
@@ -182,6 +188,28 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                            <FormMessage/>
                         </FormItem>
                      )}/>
+                     <FormField
+                        control={form.control}
+                        name="assignedNurse"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Assigned Nurse</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a nurse" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {NURSES.map(nurse => (
+                                  <SelectItem key={nurse} value={nurse}>{nurse}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                    </div>
                 </section>
                 

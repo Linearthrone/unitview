@@ -18,6 +18,7 @@ export interface Patient {
   diet: string;
   mobility: MobilityStatus;
   codeStatus: CodeStatus;
+  assignedNurse?: string;
   isFallRisk: boolean;
   isSeizureRisk: boolean;
   isAspirationRisk: boolean;

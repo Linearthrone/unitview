@@ -27,6 +27,7 @@ import {
   UserMinus,
   BedDouble,
   Accessibility,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -85,6 +86,9 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
                 <div className="flex items-center gap-3"><User className="h-4 w-4 text-muted-foreground" /> <span>Name: {patient.name}</span></div>
                 <div className="flex items-center gap-3"><Cake className="h-4 w-4 text-muted-foreground" /> <span>Age: {patient.age}</span></div>
                 <div className="flex items-center gap-3"><VenetianMask className="h-4 w-4 text-muted-foreground" /> <span>Gender: {patient.gender || 'N/A'}</span></div>
+                {patient.assignedNurse && (
+                  <div className="flex items-center gap-3"><UserRound className="h-4 w-4 text-muted-foreground" /> <span>Assigned Nurse: {patient.assignedNurse}</span></div>
+                )}
               </div>
             </section>
 

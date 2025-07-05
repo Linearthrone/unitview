@@ -132,6 +132,11 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
                     {patient.name}
                 </Badge>
             </div>
+            {patient.assignedNurse && (
+              <div className="text-center text-xs font-medium text-card-foreground/90 pt-1">
+                {patient.assignedNurse}
+              </div>
+            )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 flex-grow space-y-2 text-sm">

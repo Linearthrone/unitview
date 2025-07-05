@@ -4,6 +4,9 @@ import { getPerimeterCells } from '@/lib/grid-utils';
 const MOBILITY_STATUSES: MobilityStatus[] = ['Bed Rest', 'Assisted', 'Independent'];
 const GENDERS: PatientGender[] = ['Male', 'Female'];
 const CODE_STATUSES: CodeStatus[] = ['Full Code', 'DNR', 'DNI', 'DNR/DNI'];
+const NURSES = [
+  'RN Alice', 'RN Bob', 'RN Carol', 'RN David', 'RN Eve', 'RN Frank'
+];
 
 const FIRST_NAMES = [
   "Aisha", "Alejandro", "Alina", "Ananya", "Andrei", "Astrid", "Ben", "Bianca", "Carlos", "Chen",
@@ -85,6 +88,7 @@ export const generateInitialPatients = (): Patient[] => {
       diet: DIETS[Math.floor(Math.random() * DIETS.length)],
       mobility: MOBILITY_STATUSES[i % MOBILITY_STATUSES.length],
       codeStatus: codeStatus,
+      assignedNurse: NURSES[Math.floor(i / 8) % NURSES.length],
       isFallRisk: Math.random() > 0.6,
       isSeizureRisk: Math.random() > 0.85,
       isAspirationRisk: Math.random() > 0.8,
