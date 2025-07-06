@@ -10,18 +10,6 @@ export const defaultLayout = (basePatients: Patient[]): Patient[] => {
   return getClonedPatients(basePatients);
 };
 
-// 8th Floor Layout: Starts empty
-export const eighthFloorLayout = (basePatients: Patient[]): Patient[] => {
-  return []; // Return an empty array
-};
-
-// 10th Floor Layout: Starts empty
-export const tenthFloorLayout = (basePatients: Patient[]): Patient[] => {
-  return []; // Return an empty array
-};
-
 export const layouts: Record<string, (basePatients: Patient[]) => Patient[]> = {
   default: defaultLayout,
-  eighthFloor: eighthFloorLayout,
-  tenthFloor: tenthFloorLayout,
 };

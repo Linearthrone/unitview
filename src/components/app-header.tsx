@@ -51,8 +51,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const getFriendlyLayoutName = (layoutName: LayoutName): string => {
     switch (layoutName) {
       case 'default': return 'Default Layout';
-      case 'eighthFloor': return '8th Floor';
-      case 'tenthFloor': return '10th Floor';
       default: return layoutName;
     }
   };
