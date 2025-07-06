@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import type { Nurse, Spectra } from '@/types/nurse';
@@ -6,6 +7,19 @@ import type { AddNurseFormValues } from '@/components/add-nurse-dialog';
 import type { LayoutName } from '@/types/patient';
 import { generateInitialNurses } from '@/lib/initial-nurses';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
+import { layouts as appLayouts } from '@/lib/layouts';
+
+// Helper to remove undefined fields from an object before Firestore write
+const cleanDataForFirestore = (data: Record<string, any>) => {
+    const cleanedData: Record<string, any> = {};
+    for (const key in data) {
+        if (data[key] !== undefined) {
+            cleanedData[key] = data[key];
+        }
+    }
+    return cleanedData;
+};
+
 
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 
@@ -15,6 +29,10 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
         const snapshot = await getDocs(collectionRef);
         if (!snapshot.empty) {
             return snapshot.docs.map(doc => doc.data() as Nurse);
+        }
+
+        if (layoutName !== 'default') {
+            return []; // Return empty for non-default layouts if they don't exist
         }
 
         console.log(`No nurse data for layout '${layoutName}' in Firestore. Generating initial nurses.`);
@@ -30,7 +48,8 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
-        // Fallback to in-memory generation on error
+        if (layoutName !== 'default') return [];
+        // Fallback to in-memory generation on error for default layout
         const initialNurses = generateInitialNurses();
         const availableSpectra = spectraPool.filter(s => s.inService);
         return initialNurses.map((nurse, index) => ({
@@ -41,12 +60,17 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
 }
 
 export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promise<void> {
+    if (!nurses || nurses.length === 0) {
+        // You could potentially clear the collection here if needed, or just do nothing.
+        // For now, we'll just prevent writing an empty array.
+        return;
+    }
     const collectionRef = getCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
         nurses.forEach(nurse => {
             const docRef = doc(collectionRef, nurse.id);
-            batch.set(docRef, nurse);
+            batch.set(docRef, cleanDataForFirestore(nurse));
         });
         await batch.commit();
     } catch (error) {
@@ -98,7 +122,7 @@ export function addNurse(
     const newNurse: Nurse = {
         id: `nurse-${Date.now()}`,
         name: formData.name,
-        relief: formData.relief,
+        relief: formData.relief || undefined,
         spectra: assignedSpectra.id,
         assignedPatientIds: Array(6).fill(null),
         gridRow: position.row,

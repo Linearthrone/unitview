@@ -1,72 +1,23 @@
 
-import type { Patient, LayoutName } from '@/types/patient';
-import { getPerimeterCells, NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
+import type { Patient } from '@/types/patient';
 
 // Helper function to get a copy of base patients to avoid direct mutation
 const getClonedPatients = (basePatients: Patient[]): Patient[] =>
   basePatients.map(p => ({ ...p }));
 
-// Default layout: Uses the initial positions from generateInitialPatients logic (now centralized)
+// Default layout: Now just returns the base patients, which is a minimal set.
 export const defaultLayout = (basePatients: Patient[]): Patient[] => {
-  const clonedPatients = getClonedPatients(basePatients);
-  const perimeterCells = getPerimeterCells();
-  return clonedPatients.map((patient, index) => {
-    const pos = perimeterCells[index % perimeterCells.length];
-    patient.gridRow = pos.row;
-    patient.gridColumn = pos.col;
-    return patient;
-  });
+  return getClonedPatients(basePatients);
 };
 
-// 8th Floor Layout: Example - groups patients in the top-right quadrant
+// 8th Floor Layout: Starts empty
 export const eighthFloorLayout = (basePatients: Patient[]): Patient[] => {
-  const clonedPatients = getClonedPatients(basePatients);
-  let patientIndex = 0;
-  const startCol = Math.ceil(NUM_COLS_GRID / 2);
-  
-  // Fill top-right quadrant first
-  for (let r = 1; r <= Math.floor(NUM_ROWS_GRID / 2) + 2 && patientIndex < clonedPatients.length; r++) {
-    for (let c = startCol; c <= NUM_COLS_GRID && patientIndex < clonedPatients.length; c++) {
-      clonedPatients[patientIndex].gridRow = r;
-      clonedPatients[patientIndex].gridColumn = c;
-      patientIndex++;
-    }
-  }
-  // Place remaining patients (if any) in a secondary area (top-left)
-  for (let r = 1; r <= NUM_ROWS_GRID && patientIndex < clonedPatients.length; r++) {
-    for (let c = 1; c < startCol && patientIndex < clonedPatients.length; c++) {
-        clonedPatients[patientIndex].gridRow = r;
-        clonedPatients[patientIndex].gridColumn = c;
-        patientIndex++;
-    }
-  }
-  return clonedPatients;
+  return []; // Return an empty array
 };
 
-// 10th Floor Layout: Example - groups patients in the bottom-right quadrant
+// 10th Floor Layout: Starts empty
 export const tenthFloorLayout = (basePatients: Patient[]): Patient[] => {
-  const clonedPatients = getClonedPatients(basePatients);
-  let patientIndex = 0;
-  const startRow = Math.floor(NUM_ROWS_GRID / 2) + 1;
-  const startCol = Math.floor(NUM_COLS_GRID / 2) + 1;
-
-  // Fill bottom-right quadrant
-  for (let r = startRow; r <= NUM_ROWS_GRID && patientIndex < clonedPatients.length; r++) {
-    for (let c = startCol; c <= NUM_COLS_GRID && patientIndex < clonedPatients.length; c++) {
-      clonedPatients[patientIndex].gridRow = r;
-      clonedPatients[patientIndex].gridColumn = c;
-      patientIndex++;
-    }
-  }
-  // Place remaining patients (if any) in the top-left as a fallback
-  for (let r = 1; r <= Math.floor(NUM_ROWS_GRID/2) && patientIndex < clonedPatients.length; r++) {
-    for (let c = 1; c <= Math.floor(NUM_COLS_GRID/2) && patientIndex < clonedPatients.length; c++) {
-        clonedPatients[patientIndex].gridRow = r;
-        clonedPatients[patientIndex].gridColumn = c;
-        patientIndex++;
-    }
-  }
-  return clonedPatients;
+  return []; // Return an empty array
 };
 
 export const layouts: Record<string, (basePatients: Patient[]) => Patient[]> = {

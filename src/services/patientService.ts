@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import type { Patient, LayoutName } from '@/types/patient';
@@ -7,16 +8,28 @@ import { layouts as appLayouts } from '@/lib/layouts';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 import type { Nurse } from '@/types/nurse';
 
-const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
+// Helper to remove undefined fields from an object before Firestore write
+const cleanDataForFirestore = (data: Record<string, any>) => {
+    const cleanedData: Record<string, any> = {};
+    for (const key in data) {
+        if (data[key] !== undefined) {
+            cleanedData[key] = data[key];
+        }
+    }
+    return cleanedData;
+};
 
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
+    const patientData = data as Patient;
     return {
-        ...data,
+        ...patientData,
         admitDate: (data.admitDate as Timestamp)?.toDate ? (data.admitDate as Timestamp).toDate() : new Date(),
         dischargeDate: (data.dischargeDate as Timestamp)?.toDate ? (data.dischargeDate as Timestamp).toDate() : new Date(),
-    } as Patient;
+    };
 }
+
+const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
 
 export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
     const collectionRef = getCollectionRef(layoutName);
@@ -26,32 +39,43 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
             return snapshot.docs.map(doc => patientFromFirestore(doc.data()));
         }
 
-        // If empty, generate, save, and return initial data for this layout
-        console.log(`No data for layout '${layoutName}' in Firestore. Generating initial layout.`);
-        const basePatients = generateInitialPatients();
-        const initialLayoutPatients = appLayouts[layoutName] 
-            ? appLayouts[layoutName](basePatients) 
-            : basePatients;
-        
-        await savePatients(layoutName, initialLayoutPatients);
-        return initialLayoutPatients;
+        // Apply predefined layouts only if the layout is not custom
+        if (appLayouts[layoutName]) {
+            console.log(`No data for layout '${layoutName}' in Firestore. Generating initial layout.`);
+            const basePatients = generateInitialPatients();
+            const initialLayoutPatients = appLayouts[layoutName](basePatients);
+            
+            await savePatients(layoutName, initialLayoutPatients);
+            return initialLayoutPatients;
+        }
+
+        // For custom layouts that might be empty
+        return [];
 
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
         // Fallback to in-memory generation on error
-        const basePatients = generateInitialPatients();
-        return appLayouts[layoutName] ? appLayouts[layoutName](basePatients) : basePatients;
+        if (appLayouts[layoutName]) {
+            const basePatients = generateInitialPatients();
+            return appLayouts[layoutName](basePatients);
+        }
+        return [];
     }
 }
 
 export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
+    if (!patients || patients.length === 0) {
+        // To handle clearing a layout, you might want to delete existing docs.
+        // For now, we'll just not write anything if the array is empty.
+        return;
+    }
     const collectionRef = getCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
         patients.forEach(patient => {
             const docRef = doc(collectionRef, patient.id);
             // The Firebase SDK handles JS Date conversion to Timestamp automatically.
-            batch.set(docRef, { ...patient });
+            batch.set(docRef, cleanDataForFirestore(patient));
         });
         await batch.commit();
     } catch (error) {

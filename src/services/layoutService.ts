@@ -1,5 +1,6 @@
+
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName, Patient } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
@@ -72,10 +73,15 @@ export async function getUserLayoutLockState(): Promise<boolean> {
     // This value is needed synchronously on page load to prevent UI flickering and layout changes.
     // For this reason, we'll leave it in localStorage for instant access.
     // A full migration would require a global loading state for the app config.
-    return localStorage.getItem('userLayoutLockState') === 'true';
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('userLayoutLockState') === 'true';
+    }
+    return false;
 }
 
 export function setUserLayoutLockState(isLocked: boolean): void {
     // Sticking with localStorage for synchronous access.
-    localStorage.setItem('userLayoutLockState', String(isLocked));
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('userLayoutLockState', String(isLocked));
+    }
 }

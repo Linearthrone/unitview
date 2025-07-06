@@ -64,48 +64,75 @@ export default function Home() {
   useEffect(() => {
     const initializeApp = async () => {
       setIsLoading(true);
-      setCurrentYear(new Date().getFullYear());
-      
-      const lockState = await layoutService.getUserLayoutLockState();
-      setIsLayoutLocked(lockState);
+      try {
+        setCurrentYear(new Date().getFullYear());
+        
+        const lockState = await layoutService.getUserLayoutLockState();
+        setIsLayoutLocked(lockState);
 
-      const [initialSpectra, allLayouts] = await Promise.all([
-        spectraService.getSpectraPool(),
-        layoutService.getAvailableLayouts()
-      ]);
-      
-      setSpectraPool(initialSpectra);
-      setAvailableLayouts(allLayouts);
+        const [initialSpectra, allLayouts, savedLayout] = await Promise.all([
+          spectraService.getSpectraPool(),
+          layoutService.getAvailableLayouts(),
+          layoutService.getLastSelectedLayout()
+        ]);
+        
+        setSpectraPool(initialSpectra);
+        setAvailableLayouts(allLayouts);
 
-      const savedLayout = await layoutService.getLastSelectedLayout();
-      if (savedLayout && allLayouts.includes(savedLayout)) {
-          setCurrentLayoutName(savedLayout);
-      } else {
-          setCurrentLayoutName('default');
+        if (savedLayout && allLayouts.includes(savedLayout)) {
+            setCurrentLayoutName(savedLayout);
+        } else {
+            setCurrentLayoutName('default');
+        }
+      } catch (error) {
+          console.error("Initialization failed:", error);
+          toast({
+              variant: "destructive",
+              title: "Initialization Failed",
+              description: "Could not load essential app configuration. Please try again.",
+          });
       }
-      // The data-loading useEffect will now trigger based on currentLayoutName changing
+      // The data-loading useEffect will trigger based on currentLayoutName changing
     };
     initializeApp();
-  }, []);
+  }, [toast]);
 
   // Load patient and nurse data when layout changes
   useEffect(() => {
-    if (!currentLayoutName || spectraPool.length === 0) {
-        return;
-    }
+    if (!currentLayoutName) return;
+
     const loadData = async () => {
-        setIsInitialized(false);
+      setIsLoading(true);
+      setIsInitialized(false);
+      try {
         const [patientData, nurseData] = await Promise.all([
             patientService.getPatients(currentLayoutName),
             nurseService.getNurses(currentLayoutName, spectraPool)
         ]);
+
+        // Ensure nurse data is valid before setting state
+        const validNurses = nurseData.map(n => ({
+          ...n,
+          assignedPatientIds: Array.isArray(n.assignedPatientIds) ? n.assignedPatientIds : Array(6).fill(null)
+        }));
+
         setPatients(patientData);
-        setNurses(nurseData);
+        setNurses(validNurses);
         setIsInitialized(true);
+      } catch (error) {
+        console.error("Failed to load layout data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error Loading Layout",
+          description: `Could not load data for "${currentLayoutName}".`,
+        });
+      } finally {
         setIsLoading(false);
+      }
     };
+
     loadData();
-  }, [currentLayoutName, spectraPool]);
+  }, [currentLayoutName, spectraPool, toast]);
 
   const handleSelectLayout = async (newLayoutName: LayoutName) => {
     setIsLoading(true);
