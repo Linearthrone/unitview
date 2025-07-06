@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,6 +18,7 @@ import IconExplanationDialog from './icon-explanation-dialog';
 interface AppHeaderProps {
   title: string;
   activePatientCount: number;
+  totalRoomCount: number;
   isLayoutLocked: boolean;
   onToggleLayoutLock: () => void;
   currentLayoutName: LayoutName;
@@ -29,11 +30,13 @@ interface AppHeaderProps {
   onAddNurse: () => void;
   onManageSpectra: () => void;
   onAddRoom: () => void;
+  onCreateUnit: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   activePatientCount,
+  totalRoomCount,
   isLayoutLocked,
   onToggleLayoutLock,
   currentLayoutName,
@@ -45,6 +48,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onAddNurse,
   onManageSpectra,
   onAddRoom,
+  onCreateUnit,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
@@ -64,7 +68,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               <Stethoscope className="h-8 w-8 text-primary" />
               <div>
                 <h1 className="text-2xl font-headline font-bold text-primary">{title}</h1>
-                <p className="text-sm text-muted-foreground">{activePatientCount} Patient(s) in Unit</p>
+                <p className="text-sm text-muted-foreground">{activePatientCount} Patients / {totalRoomCount} Rooms</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -120,6 +124,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCreateUnit}
+              title="Create a new unit layout with pre-generated rooms"
+            >
+              <Building2 className="mr-2 h-4 w-4" />
+              Create Unit
+            </Button>
             <Button
               variant="outline"
               size="sm"

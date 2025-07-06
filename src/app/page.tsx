@@ -13,6 +13,7 @@ import DischargeConfirmationDialog from '@/components/discharge-confirmation-dia
 import AddNurseDialog, { type AddNurseFormValues } from '@/components/add-nurse-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
+import CreateUnitDialog from '@/components/create-unit-dialog';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
@@ -58,6 +59,7 @@ export default function Home() {
   const [isAddNurseDialogOpen, setIsAddNurseDialogOpen] = useState(false);
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
+  const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
 
   // Initial setup on mount
@@ -92,9 +94,11 @@ export default function Home() {
               description: "Could not load essential app configuration. Please try again.",
           });
       } finally {
+        // The data-loading useEffect will trigger based on currentLayoutName changing
+        // but we set loading to false here to avoid being stuck if that fails.
+        // The next effect has its own loading management.
         setIsLoading(false);
       }
-      // The data-loading useEffect will trigger based on currentLayoutName changing
     };
     initializeApp();
   }, [toast]);
@@ -251,6 +255,29 @@ export default function Home() {
         description: result.error,
       });
     }
+  };
+
+  const handleCreateUnit = async ({ designation, numRooms }: { designation: string; numRooms: number }) => {
+      setIsLoading(true);
+      try {
+          const updatedLayouts = await layoutService.createNewUnitLayout(designation, numRooms);
+          setAvailableLayouts(updatedLayouts);
+          setCurrentLayoutName(designation);
+          await layoutService.setLastSelectedLayout(designation);
+          toast({
+              title: "Unit Created",
+              description: `Unit "${designation}" with ${numRooms} rooms has been created.`,
+          });
+      } catch (error) {
+          console.error("Failed to create new unit:", error);
+          toast({
+              variant: "destructive",
+              title: "Error Creating Unit",
+              description: error instanceof Error ? error.message : "An unknown error occurred.",
+          });
+      } finally {
+          setIsLoading(false);
+      }
   };
 
   const handlePrint = () => {
@@ -439,6 +466,7 @@ export default function Home() {
   }, []);
 
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
+  const totalRoomCount = patients.length;
 
   if (isLoading) {
     return (
@@ -454,6 +482,7 @@ export default function Home() {
       <AppHeader
         title="UnitView"
         activePatientCount={activePatientCount}
+        totalRoomCount={totalRoomCount}
         isLayoutLocked={isLayoutLocked}
         onToggleLayoutLock={toggleLayoutLock}
         currentLayoutName={currentLayoutName}
@@ -465,6 +494,7 @@ export default function Home() {
         onAddNurse={() => setIsAddNurseDialogOpen(true)}
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
+        onCreateUnit={() => setIsCreateUnitDialogOpen(true)}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -517,6 +547,12 @@ export default function Home() {
         onOpenChange={setIsAddRoomDialogOpen}
         onSave={handleCreateRoom}
         existingDesignations={patients.map(p => p.roomDesignation)}
+      />
+      <CreateUnitDialog
+        open={isCreateUnitDialogOpen}
+        onOpenChange={setIsCreateUnitDialogOpen}
+        onSave={handleCreateUnit}
+        existingLayoutNames={availableLayouts}
       />
       <ManageSpectraDialog
         open={isManageSpectraDialogOpen}

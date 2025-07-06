@@ -6,6 +6,7 @@ import type { LayoutName, Patient } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 import { saveNurses } from './nurseService';
 import { savePatients } from './patientService';
+import { getPerimeterCells } from '@/lib/grid-utils';
 
 const appConfigDocRef = doc(db, 'appState', 'config');
 
@@ -50,6 +51,57 @@ export async function saveNewLayout(layoutName: string, patients: Patient[], nur
     } catch (error) {
         console.error("Error saving new layout name:", error);
     }
+
+    return Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts]));
+}
+
+
+export async function createNewUnitLayout(designation: string, numRooms: number): Promise<LayoutName[]> {
+    const perimeterCells = getPerimeterCells();
+    if (numRooms > perimeterCells.length) {
+        throw new Error(`Cannot create ${numRooms} rooms. The grid supports a maximum of ${perimeterCells.length} perimeter rooms.`);
+    }
+
+    const newPatients: Patient[] = [];
+    for (let i = 0; i < numRooms; i++) {
+        const cell = perimeterCells[i];
+        
+        const newRoom: Patient = {
+            id: `patient-${designation}-${Date.now()}-${i}`,
+            bedNumber: i + 1,
+            roomDesignation: `${designation}-${String(i + 1).padStart(2, '0')}`,
+            name: 'Vacant',
+            age: 0,
+            admitDate: new Date(),
+            dischargeDate: new Date(),
+            chiefComplaint: 'N/A',
+            ldas: [],
+            diet: 'N/A',
+            mobility: 'Independent',
+            codeStatus: 'Full Code',
+            orientationStatus: 'N/A',
+            isFallRisk: false,
+            isSeizureRisk: false,
+            isAspirationRisk: false,
+            isIsolation: false,
+            isInRestraints: false,
+            isComfortCareDNR: false,
+            gridRow: cell.row,
+            gridColumn: cell.col,
+        };
+        newPatients.push(newRoom);
+    }
+    
+    const newNurses: Nurse[] = [];
+    const layoutName = designation;
+    await savePatients(layoutName, newPatients);
+    await saveNurses(layoutName, newNurses);
+
+    const config = await getAppConfig();
+    const customLayoutNames = config.customLayoutNames || [];
+    const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, layoutName]));
+    
+    await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
 
     return Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts]));
 }
