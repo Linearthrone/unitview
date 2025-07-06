@@ -56,6 +56,7 @@ const formSchema = z.object({
   admitDate: z.date(),
   dischargeDate: z.date(),
   ldas: z.string().optional(),
+  notes: z.string().optional(),
   diet: z.string().min(1, "Diet is required."),
   mobility: z.enum(MOBILITY_STATUSES),
   codeStatus: z.enum(CODE_STATUSES),
@@ -87,6 +88,8 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
       dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
       assignedNurse: 'To Be Assigned',
       orientationStatus: 'x4',
+      ldas: '',
+      notes: '',
       isFallRisk: false,
       isSeizureRisk: false,
       isAspirationRisk: false,
@@ -110,6 +113,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
         bedNumber: undefined,
         chiefComplaint: '',
         ldas: '',
+        notes: '',
         assignedNurse: 'To Be Assigned',
         orientationStatus: 'x4',
         isFallRisk: false,
@@ -276,7 +280,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                 <Separator />
                 
                 <section>
-                    <h3 className="text-lg font-medium mb-2">Clinical Status</h3>
+                    <h3 className="text-lg font-medium mb-2">Clinical Status & Notes</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <FormField control={form.control} name="diet" render={({ field }) => (
                           <FormItem>
@@ -327,7 +331,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                             </FormItem>
                         )}/>
                        <FormField control={form.control} name="ldas" render={({ field }) => (
-                          <FormItem>
+                          <FormItem className="md:col-span-2">
                             <FormLabel>LDAs</FormLabel>
                             <FormControl><Input placeholder="PICC, Foley..." {...field} /></FormControl>
                             <FormDescription>Lines, Drains, Airways (comma-separated).</FormDescription>
@@ -335,6 +339,13 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                           </FormItem>
                         )} />
                     </div>
+                     <FormField control={form.control} name="notes" render={({ field }) => (
+                        <FormItem className="mt-4">
+                            <FormLabel>Pending Procedures/Treatments</FormLabel>
+                            <FormControl><Textarea placeholder="e.g., MRI of brain, consult with Cardiology..." {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )} />
                 </section>
 
                 <Separator />

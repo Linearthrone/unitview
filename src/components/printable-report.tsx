@@ -92,6 +92,13 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
                 <div className="col-span-2"><span className="font-semibold">LDAs:</span> {patient.ldas.join(', ') || 'None'}</div>
               </div>
               
+              {patient.notes && (
+                <div className="border-t border-black/50 mt-1 pt-1">
+                  <span className="font-semibold">Notes:</span>
+                  <p className="text-[11px] italic whitespace-pre-wrap">{patient.notes}</p>
+                </div>
+              )}
+
               {alerts.length > 0 && <div className="border-t border-black/50 mt-1 pt-1 flex items-center gap-2">
                  <span className="font-semibold">Alerts:</span>
                  <div className="flex flex-wrap gap-1.5">

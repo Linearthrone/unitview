@@ -120,6 +120,17 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
             <Separator />
 
             <section>
+              <h3 className="font-semibold text-lg mb-3 text-primary">Notes / Pending</h3>
+              {patient.notes ? (
+                 <p className="text-sm whitespace-pre-wrap">{patient.notes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">No notes or pending procedures entered.</p>
+              )}
+            </section>
+
+            <Separator />
+
+            <section>
               <h3 className="font-semibold text-lg mb-3 text-primary">Alerts & Status</h3>
               <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-3">

@@ -156,6 +156,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({ patient, isDragging, onSele
         </div>
         {patient.notes && (
           <p className="text-xs pt-1 border-t mt-2 italic">
+            <span className="font-semibold not-italic">Notes: </span>
             {patient.notes.length > 50 ? `${patient.notes.substring(0, 47)}...` : patient.notes}
           </p>
         )}

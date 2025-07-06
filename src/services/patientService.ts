@@ -106,7 +106,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 isIsolation: formData.isIsolation,
                 isInRestraints: formData.isInRestraints,
                 isComfortCareDNR: formData.isComfortCareDNR,
-                notes: '',
+                notes: formData.notes,
             };
         }
         return p;
