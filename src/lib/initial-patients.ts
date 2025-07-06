@@ -24,6 +24,7 @@ export const generateInitialPatients = (): Patient[] => {
       isIsolation: false,
       isInRestraints: false,
       isComfortCareDNR: false,
+      orientationStatus: 'N/A',
       notes: undefined,
       gridRow: 1,
       gridColumn: 2,

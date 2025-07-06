@@ -29,6 +29,7 @@ import {
   BedDouble,
   Accessibility,
   UserRound,
+  Info,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -111,6 +112,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-3"><Utensils className="h-4 w-4 text-muted-foreground" /> <span>Diet: {patient.diet}</span></div>
                 <div className="flex items-center gap-3"><MobilityIcon className="h-4 w-4 text-muted-foreground" /> <span>Mobility: {patient.mobility}</span></div>
+                <div className="flex items-center gap-3"><Info className="h-4 w-4 text-muted-foreground" /> <span>Alert & Oriented: {patient.orientationStatus.toUpperCase()}</span></div>
                 <div className="flex items-start gap-3"><FileHeart className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" /> <div><span className="font-medium">LDAs:</span> {patient.ldas.length > 0 ? patient.ldas.join(', ') : 'None'}</div></div>
               </div>
             </section>

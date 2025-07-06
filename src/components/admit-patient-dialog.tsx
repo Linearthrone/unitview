@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from "date-fns";
 import { CalendarIcon, UserPlus } from 'lucide-react';
-import type { Patient, MobilityStatus, PatientGender, CodeStatus } from '@/types/patient';
+import type { Patient, MobilityStatus, PatientGender, CodeStatus, OrientationStatus } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ const DIETS = [
     "Regular", "NPO (Nothing by mouth)", "Cardiac Diet", "Diabetic Diet (ADA)", "Renal Diet", "Clear Liquids",
     "Full Liquids", "Mechanical Soft", "Pureed"
 ];
+const ORIENTATION_STATUSES: OrientationStatus[] = ['x1', 'x2', 'x3', 'x4'];
 
 const formSchema = z.object({
   bedNumber: z.coerce.number().min(1, "Bed number is required."),
@@ -58,6 +59,7 @@ const formSchema = z.object({
   diet: z.string().min(1, "Diet is required."),
   mobility: z.enum(MOBILITY_STATUSES),
   codeStatus: z.enum(CODE_STATUSES),
+  orientationStatus: z.enum(ORIENTATION_STATUSES),
   assignedNurse: z.string().min(1, "Nurse assignment is required."),
   isFallRisk: z.boolean().default(false),
   isSeizureRisk: z.boolean().default(false),
@@ -84,6 +86,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
       admitDate: new Date(),
       dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
       assignedNurse: 'To Be Assigned',
+      orientationStatus: 'x4',
       isFallRisk: false,
       isSeizureRisk: false,
       isAspirationRisk: false,
@@ -108,6 +111,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
         chiefComplaint: '',
         ldas: '',
         assignedNurse: 'To Be Assigned',
+        orientationStatus: 'x4',
         isFallRisk: false,
         isSeizureRisk: false,
         isAspirationRisk: false,
@@ -310,6 +314,18 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                             <FormMessage/>
                           </FormItem>
                        )}/>
+                        <FormField control={form.control} name="orientationStatus" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Alert & Oriented</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {ORIENTATION_STATUSES.map(s => <SelectItem key={s} value={s}>{s.toUpperCase()}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage/>
+                            </FormItem>
+                        )}/>
                        <FormField control={form.control} name="ldas" render={({ field }) => (
                           <FormItem>
                             <FormLabel>LDAs</FormLabel>

@@ -1,10 +1,10 @@
-
 import type { LucideIcon } from 'lucide-react';
 
 export type MobilityStatus = 'Bed Rest' | 'Assisted' | 'Independent';
 export type PatientGender = 'Male' | 'Female';
 export type CodeStatus = 'Full Code' | 'DNR' | 'DNI' | 'DNR/DNI';
 export type LayoutName = string;
+export type OrientationStatus = 'x1' | 'x2' | 'x3' | 'x4' | 'N/A';
 
 export interface Patient {
   id: string;
@@ -20,6 +20,7 @@ export interface Patient {
   diet: string;
   mobility: MobilityStatus;
   codeStatus: CodeStatus;
+  orientationStatus: OrientationStatus;
   assignedNurse?: string;
   isFallRisk: boolean;
   isSeizureRisk: boolean;

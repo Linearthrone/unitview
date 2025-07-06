@@ -87,6 +87,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
                 <div><span className="font-semibold">Diet:</span> {patient.diet}</div>
                 <div className="flex items-center gap-1"><span className="font-semibold">Mobility:</span> <MobilityIcon className="h-3 w-3"/> {patient.mobility}</div>
                 <div><span className="font-semibold">Code:</span> {patient.codeStatus}</div>
+                <div><span className="font-semibold">A&O:</span> {patient.orientationStatus.toUpperCase()}</div>
                 <div><span className="font-semibold">Nurse:</span> {patient.assignedNurse || 'N/A'}</div>
                 <div className="col-span-2"><span className="font-semibold">LDAs:</span> {patient.ldas.join(', ') || 'None'}</div>
               </div>

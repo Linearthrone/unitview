@@ -99,6 +99,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 diet: formData.diet,
                 mobility: formData.mobility,
                 codeStatus: formData.codeStatus,
+                orientationStatus: formData.orientationStatus,
                 isFallRisk: formData.isFallRisk,
                 isSeizureRisk: formData.isSeizureRisk,
                 isAspirationRisk: formData.isAspirationRisk,
@@ -132,6 +133,7 @@ export function dischargePatient(patientToDischarge: Patient, patients: Patient[
       isIsolation: false,
       isInRestraints: false,
       isComfortCareDNR: false,
+      orientationStatus: 'N/A',
       notes: '',
     };
     return patients.map(p => (p.id === patientToDischarge.id ? vacantPatient : p));
@@ -196,6 +198,7 @@ export function createRoom(designation: string, patients: Patient[], nurses: Nur
       isIsolation: false,
       isInRestraints: false,
       isComfortCareDNR: false,
+      orientationStatus: 'N/A',
       notes: undefined,
       gridRow: position.row,
       gridColumn: position.col,
