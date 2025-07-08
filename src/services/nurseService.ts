@@ -3,7 +3,7 @@ import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import type { Nurse, Spectra } from '@/types/nurse';
 import type { Patient } from '@/types/patient';
-import type { AddNurseFormValues } from '@/components/add-nurse-dialog';
+import type { AddNurseFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
 import { generateInitialNurses } from '@/lib/initial-nurses';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';

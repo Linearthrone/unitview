@@ -4,8 +4,8 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { UserPlus } from 'lucide-react';
+import { AddNurseFormSchema, type AddNurseFormValues } from '@/types/forms';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,13 +26,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  relief: z.string().optional(),
-});
-
-export type AddNurseFormValues = z.infer<typeof formSchema>;
-
 interface AddNurseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,7 +34,7 @@ interface AddNurseDialogProps {
 
 export default function AddNurseDialog({ open, onOpenChange, onSave }: AddNurseDialogProps) {
   const form = useForm<AddNurseFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(AddNurseFormSchema),
     defaultValues: {
       name: '',
       relief: '',

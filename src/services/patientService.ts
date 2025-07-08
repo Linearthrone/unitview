@@ -2,7 +2,7 @@
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
 import type { Patient, LayoutName } from '@/types/patient';
-import type { AdmitPatientFormValues } from '@/components/admit-patient-dialog';
+import type { AdmitPatientFormValues } from '@/types/forms';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { layouts as appLayouts } from '@/lib/layouts';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';

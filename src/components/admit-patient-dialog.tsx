@@ -4,11 +4,11 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { format } from "date-fns";
 import { CalendarIcon, UserPlus, Edit } from 'lucide-react';
-import type { Patient, MobilityStatus, PatientGender, CodeStatus, OrientationStatus } from '@/types/patient';
+import type { Patient } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
+import { AdmitPatientFormSchema, type AdmitPatientFormValues, MOBILITY_STATUSES, GENDERS, CODE_STATUSES, DIETS, ORIENTATION_STATUSES } from '@/types/forms';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,40 +38,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
-const MOBILITY_STATUSES: MobilityStatus[] = ['Bed Rest', 'Assisted', 'Independent'];
-const GENDERS: PatientGender[] = ['Male', 'Female'];
-const CODE_STATUSES: CodeStatus[] = ['Full Code', 'DNR', 'DNI', 'DNR/DNI'];
-const DIETS = [
-    "Regular", "NPO (Nothing by mouth)", "Cardiac Diet", "Diabetic Diet (ADA)", "Renal Diet", "Clear Liquids",
-    "Full Liquids", "Mechanical Soft", "Pureed"
-];
-const ORIENTATION_STATUSES: OrientationStatus[] = ['x1', 'x2', 'x3', 'x4'];
-
-const formSchema = z.object({
-  bedNumber: z.coerce.number().min(1, "Bed number is required."),
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  age: z.coerce.number().min(0, "Age must be a positive number.").max(130),
-  gender: z.enum(GENDERS),
-  chiefComplaint: z.string().min(1, "Chief complaint is required."),
-  admitDate: z.date(),
-  dischargeDate: z.date(),
-  ldas: z.string().optional(),
-  notes: z.string().optional(),
-  diet: z.string().min(1, "Diet is required."),
-  mobility: z.enum(MOBILITY_STATUSES),
-  codeStatus: z.enum(CODE_STATUSES),
-  orientationStatus: z.enum(ORIENTATION_STATUSES),
-  assignedNurse: z.string().min(1, "Nurse assignment is required."),
-  isFallRisk: z.boolean().default(false),
-  isSeizureRisk: z.boolean().default(false),
-  isAspirationRisk: z.boolean().default(false),
-  isIsolation: z.boolean().default(false),
-  isInRestraints: z.boolean().default(false),
-  isComfortCareDNR: z.boolean().default(false),
-});
-
-export type AdmitPatientFormValues = z.infer<typeof formSchema>;
-
 interface AdmitPatientDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -92,7 +58,7 @@ export default function AdmitPatientDialog({
   isUpdateMode,
 }: AdmitPatientDialogProps) {
   const form = useForm<AdmitPatientFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(AdmitPatientFormSchema),
     defaultValues: {
       admitDate: new Date(),
       dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
