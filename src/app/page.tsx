@@ -99,15 +99,14 @@ export default function Home() {
       try {
         setCurrentYear(new Date().getFullYear());
         
-        const lockState = await layoutService.getUserLayoutLockState();
-        setIsLayoutLocked(lockState);
-
-        const [initialSpectra, allLayouts, savedLayout] = await Promise.all([
+        const [lockState, initialSpectra, allLayouts, savedLayout] = await Promise.all([
+          layoutService.getUserLayoutLockState(),
           spectraService.getSpectraPool(),
           layoutService.getAvailableLayouts(),
           layoutService.getLastSelectedLayout()
         ]);
         
+        setIsLayoutLocked(lockState);
         setSpectraPool(initialSpectra);
         setAvailableLayouts(allLayouts);
 
