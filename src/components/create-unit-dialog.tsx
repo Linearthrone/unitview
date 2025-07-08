@@ -46,6 +46,10 @@ export default function CreateUnitDialog({ open, onOpenChange, onSave, existingL
         setError('A layout with this designation already exists.');
         return;
     }
+    if (trimmedDesignation.includes('/')) {
+        setError('Unit designation cannot contain slashes (/).');
+        return;
+    }
     if (numRooms <= 0) {
         setError('Number of rooms must be greater than zero.');
         return;

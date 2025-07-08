@@ -42,6 +42,10 @@ export default function SaveLayoutDialog({ open, onOpenChange, onSave, existingL
         setError('A layout with this name already exists.');
         return;
     }
+    if (trimmedName.includes('/')) {
+        setError('Layout name cannot contain slashes (/).');
+        return;
+    }
     onSave(trimmedName);
     onOpenChange(false);
   };
