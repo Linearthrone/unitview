@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /patients/{patientId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.role == "charge_nurse" || request.auth.token.admin == true;
+    }
+
+    match /nurses/{nurseId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.admin == true;
+    }
+
+    match /assignments/{assignmentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.role == "charge_nurse" || request.auth.token.admin == true;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.admin == true;
+    }
+
+    match /spectralink/{deviceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.admin == true;
+    }
+  }
+}

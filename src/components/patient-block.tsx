@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 interface PatientBlockProps {
   patient: Patient;
   isDragging?: boolean;
+  isEffectivelyLocked?: boolean;
   onSelectPatient: (patient: Patient) => void;
   onAdmit: (patient: Patient) => void;
   onUpdate: (patient: Patient) => void;
@@ -52,6 +53,7 @@ const mobilityIcons: Record<MobilityStatus, LucideIcon> = {
 const PatientBlock: React.FC<PatientBlockProps> = ({ 
   patient, 
   isDragging, 
+  isEffectivelyLocked,
   onSelectPatient,
   onAdmit,
   onUpdate,
@@ -70,7 +72,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
   if (isVacant && !isBlocked) {
     return (
        <ContextMenu>
-        <ContextMenuTrigger>
+        <ContextMenuTrigger disabled={isEffectivelyLocked}>
           <Card 
             onClick={handleCardClick}
             className="flex flex-col h-full shadow-lg bg-gray-200 dark:bg-gray-800 border-gray-400 cursor-pointer"
@@ -152,7 +154,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
   
   return (
     <ContextMenu>
-      <ContextMenuTrigger disabled={isLayoutLocked}>
+      <ContextMenuTrigger disabled={isEffectivelyLocked}>
         <Card 
           onClick={handleCardClick}
           className={cn(

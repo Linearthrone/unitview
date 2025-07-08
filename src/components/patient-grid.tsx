@@ -114,6 +114,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
                 <PatientBlock 
                   patient={patientInCell} 
                   isDragging={draggingPatientInfo?.id === patientInCell.id && !isEffectivelyLocked}
+                  isEffectivelyLocked={isEffectivelyLocked}
                   onSelectPatient={onSelectPatient}
                   onAdmit={onAdmitPatient}
                   onUpdate={onUpdatePatient}

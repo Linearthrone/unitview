@@ -1,0 +1,12 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roomDesignation", "order": "ASCENDING" },
+        { "fieldPath": "admitDate", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}
