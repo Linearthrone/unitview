@@ -4,22 +4,42 @@ export const NUM_ROWS_GRID = 10;
 
 export const getPerimeterCells = (): { row: number; col: number }[] => {
   const cells: { row: number; col: number }[] = [];
+  const added = new Set<string>();
 
-  // Top row (left to right)
-  for (let c = 1; c <= NUM_COLS_GRID; c++) {
-    cells.push({ row: 1, col: c });
+  const addCell = (r: number, c: number) => {
+    const key = `${r}-${c}`;
+    if (r > 0 && r <= NUM_ROWS_GRID && c > 0 && c <= NUM_COLS_GRID && !added.has(key)) {
+      cells.push({ row: r, col: c });
+      added.add(key);
+    }
+  };
+
+  const halfWidth = Math.ceil(NUM_COLS_GRID / 2);
+  const halfHeight = Math.ceil(NUM_ROWS_GRID / 2);
+
+  // Iteratively add cells from the outside-in for a balanced layout
+  
+  // 1. Fill top and bottom rows, moving from the edges to the center
+  for (let i = 0; i < halfWidth; i++) {
+    addCell(1, 1 + i); // Top-left towards center
+    addCell(1, NUM_COLS_GRID - i); // Top-right towards center
   }
-  // Right column (top to bottom, skipping already added top-right corner)
-  for (let r = 2; r <= NUM_ROWS_GRID; r++) {
-    cells.push({ row: r, col: NUM_COLS_GRID });
+  for (let i = 0; i < halfWidth; i++) {
+     addCell(NUM_ROWS_GRID, 1 + i); // Bottom-left towards center
+     addCell(NUM_ROWS_GRID, NUM_COLS_GRID - i); // Bottom-right towards center
   }
-  // Bottom row (right to left, skipping already added bottom-right corner)
-  for (let c = NUM_COLS_GRID - 1; c >= 1; c--) {
-    cells.push({ row: NUM_ROWS_GRID, col: c });
+
+  // 2. Fill left and right columns, moving from top to bottom
+  // Start from row 2 and end at row NUM_ROWS_GRID - 1 to avoid corners
+  for (let i = 1; i < halfHeight; i++) {
+     addCell(1 + i, 1); // Top-left-side down
+     addCell(NUM_ROWS_GRID - i, 1); // Bottom-left-side up
   }
-  // Left column (bottom to top, skipping already added bottom-left and top-left corners)
-  for (let r = NUM_ROWS_GRID - 1; r >= 2; r--) {
-    cells.push({ row: r, col: 1 });
+
+  for (let i = 1; i < halfHeight; i++) {
+    addCell(1 + i, NUM_COLS_GRID); // Top-right-side down
+    addCell(NUM_ROWS_GRID - i, NUM_COLS_GRID); // Bottom-right-side up
   }
+
   return cells;
 };
