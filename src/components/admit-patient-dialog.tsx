@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from "date-fns";
-import { CalendarIcon, UserPlus } from 'lucide-react';
+import { CalendarIcon, UserPlus, Edit } from 'lucide-react';
 import type { Patient, MobilityStatus, PatientGender, CodeStatus, OrientationStatus } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 
@@ -78,9 +78,19 @@ interface AdmitPatientDialogProps {
   onSave: (data: AdmitPatientFormValues) => void;
   patients: Patient[];
   nurses: Nurse[];
+  patientToEdit: Patient | null;
+  isUpdateMode: boolean;
 }
 
-export default function AdmitPatientDialog({ open, onOpenChange, onSave, patients, nurses }: AdmitPatientDialogProps) {
+export default function AdmitPatientDialog({
+  open,
+  onOpenChange,
+  onSave,
+  patients,
+  nurses,
+  patientToEdit,
+  isUpdateMode,
+}: AdmitPatientDialogProps) {
   const form = useForm<AdmitPatientFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -104,41 +114,54 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
   }, [nurses]);
 
   useEffect(() => {
-    if (open) {
-      form.reset({
-        admitDate: new Date(),
-        dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
-        name: '',
-        age: undefined,
-        bedNumber: undefined,
-        chiefComplaint: '',
-        ldas: '',
-        notes: '',
-        assignedNurse: 'To Be Assigned',
-        orientationStatus: 'x4',
-        isFallRisk: false,
-        isSeizureRisk: false,
-        isAspirationRisk: false,
-        isIsolation: false,
-        isInRestraints: false,
-        isComfortCareDNR: false,
-      });
+    if (open && patientToEdit) {
+      if (isUpdateMode) {
+        // Update mode: populate form with existing patient data
+        form.reset({
+          ...patientToEdit,
+          ldas: Array.isArray(patientToEdit.ldas) ? patientToEdit.ldas.join(', ') : '',
+          assignedNurse: patientToEdit.assignedNurse || 'To Be Assigned',
+        });
+      } else {
+        // Admit mode into a specific (vacant) bed
+        form.reset({
+          bedNumber: patientToEdit.bedNumber,
+          admitDate: new Date(),
+          dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
+          assignedNurse: 'To Be Assigned',
+          orientationStatus: 'x4',
+        });
+      }
+    } else if (open && !patientToEdit) {
+        // Admit mode into any bed
+        form.reset({
+            admitDate: new Date(),
+            dischargeDate: new Date(new Date().setDate(new Date().getDate() + 3)),
+            assignedNurse: 'To Be Assigned',
+            orientationStatus: 'x4',
+        });
     }
-  }, [open, form]);
+  }, [open, patientToEdit, isUpdateMode, form]);
 
   const onSubmit = (values: AdmitPatientFormValues) => {
     onSave(values);
   };
   
-  const allBedNumbers = Array.from({ length: 48 }, (_, i) => i + 1);
+  const vacantBedNumbers = patients
+    .filter(p => p.name === 'Vacant' && !p.isBlocked)
+    .map(p => p.bedNumber)
+    .sort((a, b) => a - b);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Admit / Transfer-In Patient</DialogTitle>
+          <DialogTitle>{isUpdateMode ? `Update Patient: ${patientToEdit?.name}` : 'Admit / Transfer-In Patient'}</DialogTitle>
           <DialogDescription>
-            Fill out the form to admit a new patient to an assigned bed. This will overwrite any existing patient data in that bed.
+            {isUpdateMode 
+              ? `Update the information for the patient in ${patientToEdit?.roomDesignation}.`
+              : 'Fill out the form to admit a new patient to a vacant bed.'
+            }
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -166,17 +189,25 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                     <FormField control={form.control} name="bedNumber" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Bed Number</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value?.toString()}
+                          disabled={isUpdateMode}
+                        >
                           <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select a bed" /></SelectTrigger>
+                            <SelectTrigger><SelectValue placeholder="Select a vacant bed" /></SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {allBedNumbers.map(bed => {
+                            {isUpdateMode && patientToEdit && (
+                               <SelectItem key={patientToEdit.bedNumber} value={patientToEdit.bedNumber.toString()}>
+                                 {patientToEdit.roomDesignation} (Bed {patientToEdit.bedNumber})
+                               </SelectItem>
+                            )}
+                            {!isUpdateMode && vacantBedNumbers.map(bed => {
                               const patientInBed = patients.find(p => p.bedNumber === bed);
-                              const isVacant = !patientInBed || patientInBed.name === 'Vacant';
                               return (
                                 <SelectItem key={bed} value={bed.toString()}>
-                                  Bed {bed} {isVacant ? '(Empty)' : `(Occupied: ${patientInBed.name})`}
+                                  {patientInBed?.roomDesignation} (Bed {bed})
                                 </SelectItem>
                               )
                             })}
@@ -205,7 +236,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
                             <FormLabel>Assigned Nurse</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select a nurse" />
@@ -285,7 +316,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                        <FormField control={form.control} name="diet" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Diet</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl><SelectTrigger><SelectValue placeholder="Select diet"/></SelectTrigger></FormControl>
                               <SelectContent>
                                 {DIETS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -297,7 +328,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                         <FormField control={form.control} name="mobility" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Mobility</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl><SelectTrigger><SelectValue placeholder="Select mobility"/></SelectTrigger></FormControl>
                               <SelectContent>
                                 {MOBILITY_STATUSES.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
@@ -309,7 +340,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                        <FormField control={form.control} name="codeStatus" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Code Status</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl><SelectTrigger><SelectValue placeholder="Select code status"/></SelectTrigger></FormControl>
                               <SelectContent>
                                 {CODE_STATUSES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -321,7 +352,7 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
                         <FormField control={form.control} name="orientationStatus" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Alert & Oriented</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select status"/></SelectTrigger></FormControl>
                                     <SelectContent>
                                         {ORIENTATION_STATUSES.map(s => <SelectItem key={s} value={s}>{s.toUpperCase()}</SelectItem>)}
@@ -389,8 +420,8 @@ export default function AdmitPatientDialog({ open, onOpenChange, onSave, patient
             <DialogFooter className="pt-6">
               <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">
-                <UserPlus className="mr-2 h-4 w-4" />
-                Admit Patient
+                {isUpdateMode ? <Edit className="mr-2 h-4 w-4" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                {isUpdateMode ? 'Update Patient' : 'Admit Patient'}
               </Button>
             </DialogFooter>
           </form>

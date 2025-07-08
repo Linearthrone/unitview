@@ -14,6 +14,7 @@ import AddNurseDialog, { type AddNurseFormValues } from '@/components/add-nurse-
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
+import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
@@ -55,12 +56,15 @@ export default function Home() {
   const { toast } = useToast();
   
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-  const [isAdmitDialogOpen, setIsAdmitDialogOpen] = useState(false);
+  const [admitOrUpdatePatient, setAdmitOrUpdatePatient] = useState<Patient | null>(null);
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isAddNurseDialogOpen, setIsAddNurseDialogOpen] = useState(false);
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
   const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
+  const [patientToEditDesignation, setPatientToEditDesignation] = useState<Patient | null>(null);
+
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
       setIsLoading(true);
@@ -165,20 +169,35 @@ export default function Home() {
     });
   };
 
-  const handleSaveAdmittedPatient = (formData: AdmitPatientFormValues) => {
+  const handleOpenAdmitDialog = (patient: Patient) => {
+    setIsUpdateMode(false);
+    setAdmitOrUpdatePatient(patient);
+  };
+
+  const handleOpenUpdateDialog = (patient: Patient) => {
+    setIsUpdateMode(true);
+    setAdmitOrUpdatePatient(patient);
+  };
+
+  const handleSavePatient = (formData: AdmitPatientFormValues) => {
     const updatedPatients = patientService.admitPatient(formData, patients);
     setPatients(updatedPatients);
-    setIsAdmitDialogOpen(false);
+    setAdmitOrUpdatePatient(null);
     
-    const admittedToPatient = updatedPatients.find(p => p.bedNumber === formData.bedNumber);
-    
+    const verb = isUpdateMode ? 'updated' : 'admitted';
+    const patientRecord = updatedPatients.find(p => p.bedNumber === formData.bedNumber);
     toast({
-      title: "Patient Admitted",
-      description: `${formData.name} has been admitted to ${admittedToPatient?.roomDesignation}.`,
+      title: `Patient ${verb.charAt(0).toUpperCase() + verb.slice(1)}`,
+      description: `${formData.name} has been ${verb} to ${patientRecord?.roomDesignation}.`,
     });
   };
 
-  const handleDischargePatient = () => {
+  const handleDischargeRequest = (patient: Patient) => {
+    if (patient.name === 'Vacant') return;
+    setPatientToDischarge(patient);
+  };
+  
+  const handleConfirmDischarge = () => {
     if (!patientToDischarge) return;
     setPatients(patientService.dischargePatient(patientToDischarge, patients));
     toast({
@@ -188,6 +207,31 @@ export default function Home() {
     setPatientToDischarge(null);
     setSelectedPatient(null);
   };
+
+  const handleToggleBlockRoom = (patientId: string) => {
+    setPatients(prev => prev.map(p =>
+      p.id === patientId ? { ...p, isBlocked: !p.isBlocked } : p
+    ));
+    const patient = patients.find(p => p.id === patientId);
+    if (patient) {
+        toast({
+            title: `Room ${!patient.isBlocked ? "Blocked" : "Unblocked"}`,
+            description: `${patient.roomDesignation} is now ${!patient.isBlocked ? "out of service" : "in service"}.`,
+        });
+    }
+  };
+  
+  const handleSaveRoomDesignation = (patientId: string, newDesignation: string) => {
+    setPatients(prev => prev.map(p =>
+      p.id === patientId ? { ...p, roomDesignation: newDesignation } : p
+    ));
+    setPatientToEditDesignation(null);
+    toast({
+      title: "Room Designation Updated",
+      description: `Room has been renamed to "${newDesignation}".`,
+    });
+  };
+
   
   const handleSaveNurse = (formData: AddNurseFormValues) => {
     const result = nurseService.addNurse(formData, nurses, patients, spectraPool);
@@ -478,7 +522,7 @@ export default function Home() {
         availableLayouts={availableLayouts}
         onPrint={handlePrint}
         onSaveLayout={handleOpenSaveDialog}
-        onAdmitPatient={() => setIsAdmitDialogOpen(true)}
+        onAdmitPatient={() => handleOpenAdmitDialog(null)}
         onAddNurse={() => setIsAddNurseDialogOpen(true)}
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
@@ -499,6 +543,11 @@ export default function Home() {
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
           onDragEnd={handleDragEnd}
+          onAdmitPatient={handleOpenAdmitDialog}
+          onUpdatePatient={handleOpenUpdateDialog}
+          onDischargePatient={handleDischargeRequest}
+          onToggleBlockRoom={handleToggleBlockRoom}
+          onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
         />
       </main>
       <PrintableReport patients={patients} />
@@ -510,7 +559,7 @@ export default function Home() {
             setSelectedPatient(null);
           }
         }}
-        onDischarge={(patient) => setPatientToDischarge(patient)}
+        onDischarge={handleDischargeRequest}
       />
       <SaveLayoutDialog
         open={isSaveDialogOpen}
@@ -519,11 +568,13 @@ export default function Home() {
         existingLayoutNames={availableLayouts}
       />
       <AdmitPatientDialog
-        open={isAdmitDialogOpen}
-        onOpenChange={setIsAdmitDialogOpen}
-        onSave={handleSaveAdmittedPatient}
+        open={!!admitOrUpdatePatient}
+        onOpenChange={(isOpen) => !isOpen && setAdmitOrUpdatePatient(null)}
+        onSave={handleSavePatient}
         patients={patients}
         nurses={nurses}
+        patientToEdit={admitOrUpdatePatient}
+        isUpdateMode={isUpdateMode}
       />
       <AddNurseDialog
         open={isAddNurseDialogOpen}
@@ -542,6 +593,13 @@ export default function Home() {
         onSave={handleCreateUnit}
         existingLayoutNames={availableLayouts}
       />
+       <EditRoomDesignationDialog
+        open={!!patientToEditDesignation}
+        onOpenChange={(isOpen) => !isOpen && setPatientToEditDesignation(null)}
+        patient={patientToEditDesignation}
+        onSave={handleSaveRoomDesignation}
+        existingDesignations={patients.map(p => p.roomDesignation)}
+      />
       <ManageSpectraDialog
         open={isManageSpectraDialogOpen}
         onOpenChange={setIsManageSpectraDialogOpen}
@@ -553,7 +611,7 @@ export default function Home() {
         open={!!patientToDischarge}
         onOpenChange={(isOpen) => !isOpen && setPatientToDischarge(null)}
         patient={patientToDischarge}
-        onConfirm={handleDischargePatient}
+        onConfirm={handleConfirmDischarge}
       />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}

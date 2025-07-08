@@ -32,6 +32,11 @@ interface PatientGridProps {
   onDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
   onClearNurseAssignments: (nurseId: string) => void;
   onDragEnd: () => void;
+  onAdmitPatient: (patient: Patient) => void;
+  onUpdatePatient: (patient: Patient) => void;
+  onDischargePatient: (patient: Patient) => void;
+  onToggleBlockRoom: (patientId: string) => void;
+  onEditDesignation: (patient: Patient) => void;
 }
 
 const PatientGrid: React.FC<PatientGridProps> = ({
@@ -48,6 +53,11 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   onDropOnNurseSlot,
   onClearNurseAssignments,
   onDragEnd,
+  onAdmitPatient,
+  onUpdatePatient,
+  onDischargePatient,
+  onToggleBlockRoom,
+  onEditDesignation,
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -90,12 +100,12 @@ const PatientGrid: React.FC<PatientGridProps> = ({
           >
             {patientInCell && (
               <div
-                draggable={!isEffectivelyLocked}
+                draggable={!isEffectivelyLocked && !patientInCell.isBlocked}
                 onDragStart={(e) => onPatientDragStart(e, patientInCell.id, patientInCell.gridRow, patientInCell.gridColumn)}
                 onDragEnd={onDragEnd}
                 className={cn(
                   "w-full h-full",
-                  !isEffectivelyLocked && "cursor-grab",
+                  !isEffectivelyLocked && !patientInCell.isBlocked && "cursor-grab",
                   draggingPatientInfo?.id === patientInCell.id && "opacity-50"
                 )}
                 data-patient-id={patientInCell.id}
@@ -103,7 +113,12 @@ const PatientGrid: React.FC<PatientGridProps> = ({
                 <PatientBlock 
                   patient={patientInCell} 
                   isDragging={draggingPatientInfo?.id === patientInCell.id && !isEffectivelyLocked}
-                  onSelectPatient={() => onSelectPatient(patientInCell)}
+                  onSelectPatient={onSelectPatient}
+                  onAdmit={onAdmitPatient}
+                  onUpdate={onUpdatePatient}
+                  onDischarge={onDischargePatient}
+                  onToggleBlock={onToggleBlockRoom}
+                  onEditDesignation={onEditDesignation}
                 />
               </div>
             )}

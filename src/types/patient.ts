@@ -28,6 +28,7 @@ export interface Patient {
   isIsolation: boolean;
   isInRestraints: boolean;
   isComfortCareDNR: boolean;
+  isBlocked?: boolean;
   notes?: string;
   gridRow: number; // 1-indexed
   gridColumn: number; // 1-indexed

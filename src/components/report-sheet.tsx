@@ -30,6 +30,7 @@ import {
   Accessibility,
   UserRound,
   Info,
+  Ban,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -71,16 +72,20 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
   };
   
   const isVacant = patient.name === 'Vacant';
+  const { isBlocked } = patient;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
         <SheetHeader className="bg-secondary p-4 text-left sticky top-0 z-10 border-b">
-          <SheetTitle className="text-2xl">{patient.name}</SheetTitle>
+          <SheetTitle className="text-2xl flex items-center gap-3">
+             {patient.name}
+             {isBlocked && <Badge variant="destructive"><Ban className="mr-2 h-4 w-4" />Blocked</Badge>}
+          </SheetTitle>
           <SheetDescription>{patient.roomDesignation} - Charge Nurse Report</SheetDescription>
         </SheetHeader>
         
-        {!isVacant && (
+        {!isVacant && !isBlocked && (
           <div className="p-6 space-y-6 flex-grow overflow-y-auto">
             <section>
               <h3 className="font-semibold text-lg mb-3 text-primary">Patient Information</h3>
@@ -172,9 +177,12 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
           </div>
         )}
 
-        {isVacant && (
+        {(isVacant || isBlocked) && (
             <div className="flex-grow flex items-center justify-center text-center p-6">
-                <p className="text-muted-foreground">This room is currently vacant.</p>
+                 {isBlocked 
+                    ? <p className="text-destructive font-semibold">This room is blocked and out of service.</p>
+                    : <p className="text-muted-foreground">This room is currently vacant.</p>
+                 }
             </div>
         )}
         
@@ -183,7 +191,7 @@ const ReportSheet: React.FC<ReportSheetProps> = ({ patient, open, onOpenChange, 
             variant="destructive"
             className="w-full"
             onClick={() => onDischarge(patient)}
-            disabled={isVacant}
+            disabled={isVacant || isBlocked}
           >
             <UserMinus className="mr-2 h-4 w-4" />
             Discharge / Transfer-Out Patient

@@ -64,9 +64,7 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
 }
 
 export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
-    if (!patients || patients.length === 0) {
-        // To handle clearing a layout, you might want to delete existing docs.
-        // For now, we'll just not write anything if the array is empty.
+    if (!patients) { // Can be an empty array
         return;
     }
     const collectionRef = getCollectionRef(layoutName);
@@ -107,6 +105,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 isInRestraints: formData.isInRestraints,
                 isComfortCareDNR: formData.isComfortCareDNR,
                 notes: formData.notes,
+                isBlocked: false, // Admitting unblocks the room
             };
         }
         return p;
@@ -135,6 +134,7 @@ export function dischargePatient(patientToDischarge: Patient, patients: Patient[
       isComfortCareDNR: false,
       orientationStatus: 'N/A',
       notes: '',
+      isBlocked: patientToDischarge.isBlocked, // Preserve blocked status
     };
     return patients.map(p => (p.id === patientToDischarge.id ? vacantPatient : p));
 }
