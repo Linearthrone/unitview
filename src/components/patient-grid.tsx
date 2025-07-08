@@ -6,6 +6,7 @@ import type { Patient } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 import PatientBlock from './patient-block';
 import NurseAssignmentCard from './nurse-assignment-card';
+import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 
@@ -129,8 +130,31 @@ const PatientGrid: React.FC<PatientGridProps> = ({
     return cells;
   };
 
-   if (!isInitialized) {
-      return <div className="flex-grow flex items-center justify-center text-center p-8">Initializing patient grid...</div>;
+  if (!isInitialized) {
+    return (
+      <div className="flex-grow flex overflow-auto p-2">
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `repeat(${NUM_COLS_GRID}, minmax(12rem, 1fr))`,
+            gridTemplateRows: `repeat(${NUM_ROWS_GRID}, minmax(12rem, auto))`,
+            alignContent: 'start',
+            gap: '0.25rem',
+          }}
+        >
+          {Array.from({ length: 48 }).map((_, index) => (
+            <div key={index} className="border border-border/30 rounded-md bg-card p-3 space-y-3">
+               <div className="flex justify-between items-center">
+                 <Skeleton className="h-5 w-1/3" />
+                 <Skeleton className="h-5 w-1/4" />
+               </div>
+               <Skeleton className="h-8 w-full" />
+               <Skeleton className="h-5 w-1/2" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

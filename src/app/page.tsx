@@ -51,7 +51,6 @@ export default function Home() {
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
   
@@ -67,7 +66,6 @@ export default function Home() {
 
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
-      setIsLoading(true);
       setIsInitialized(false);
       try {
         const [patientData, nurseData] = await Promise.all([
@@ -83,7 +81,6 @@ export default function Home() {
         setPatients(patientData);
         setNurses(validNurses);
         setCurrentLayoutName(layoutName);
-        setIsInitialized(true);
       } catch (error) {
         console.error(`Failed to load data for layout "${layoutName}":`, error);
         toast({
@@ -92,14 +89,13 @@ export default function Home() {
           description: `Could not load data for "${layoutName}".`,
         });
       } finally {
-        setIsLoading(false);
+        setIsInitialized(true);
       }
   }, [toast]);
 
   // Initial setup on mount
   useEffect(() => {
     const initializeApp = async () => {
-      setIsLoading(true);
       try {
         setCurrentYear(new Date().getFullYear());
         
@@ -117,7 +113,6 @@ export default function Home() {
 
         const layoutToLoad = (savedLayout && allLayouts.includes(savedLayout)) ? savedLayout : 'default';
         
-        // The loading(false) is handled inside loadLayoutData
         await loadLayoutData(layoutToLoad, initialSpectra);
 
       } catch (error) {
@@ -127,7 +122,8 @@ export default function Home() {
               title: "Initialization Failed",
               description: "Could not load essential app configuration. Please try again.",
           });
-          setIsLoading(false); // Ensure loading is false on catastrophic init failure
+          // Still set initialized to true on failure to unblock the UI
+          setIsInitialized(true);
       }
     };
     initializeApp();
@@ -136,7 +132,6 @@ export default function Home() {
 
   const handleSelectLayout = async (newLayoutName: LayoutName) => {
     await layoutService.setLastSelectedLayout(newLayoutName);
-    // The loading state is managed inside loadLayoutData
     await loadLayoutData(newLayoutName, spectraPool);
   };
 
@@ -291,7 +286,7 @@ export default function Home() {
   };
 
   const handleCreateUnit = async ({ designation, numRooms }: { designation: string; numRooms: number }) => {
-      setIsLoading(true);
+      setIsInitialized(false);
       try {
           const updatedLayouts = await layoutService.createNewUnitLayout(designation, numRooms);
           setAvailableLayouts(updatedLayouts);
@@ -308,7 +303,7 @@ export default function Home() {
               description: error instanceof Error ? error.message : "An unknown error occurred.",
           });
       } finally {
-          setIsLoading(false);
+          setIsInitialized(true);
       }
   };
 
@@ -499,15 +494,6 @@ export default function Home() {
 
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-background items-center justify-center">
-        <Stethoscope className="h-16 w-16 text-primary animate-pulse" />
-        <p className="text-lg text-muted-foreground mt-4">Loading Unit Data from Firestore...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
