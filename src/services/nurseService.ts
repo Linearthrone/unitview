@@ -9,18 +9,6 @@ import { generateInitialNurses } from '@/lib/initial-nurses';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 import { layouts as appLayouts } from '@/lib/layouts';
 
-// Helper to remove undefined fields from an object before Firestore write
-const cleanDataForFirestore = (data: Record<string, any>) => {
-    const cleanedData: Record<string, any> = {};
-    for (const key in data) {
-        if (data[key] !== undefined) {
-            cleanedData[key] = data[key];
-        }
-    }
-    return cleanedData;
-};
-
-
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 
 export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
@@ -70,7 +58,8 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
     try {
         nurses.forEach(nurse => {
             const docRef = doc(collectionRef, nurse.id);
-            batch.set(docRef, cleanDataForFirestore(nurse));
+            // Undefined fields are handled by the initializeFirestore setting.
+            batch.set(docRef, nurse);
         });
         await batch.commit();
     } catch (error) {

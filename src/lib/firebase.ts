@@ -2,7 +2,7 @@
 "use client";
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 // IMPORTANT: Replace with your actual configuration values
@@ -18,6 +18,12 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
+
+// Initialize Firestore with the setting to ignore undefined properties.
+// This is a more robust way to prevent errors when writing data that might
+// contain undefined fields, which Firestore does not support.
+const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+});
 
 export { db };

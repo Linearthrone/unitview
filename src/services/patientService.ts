@@ -8,17 +8,6 @@ import { layouts as appLayouts } from '@/lib/layouts';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 import type { Nurse } from '@/types/nurse';
 
-// Helper to remove undefined fields from an object before Firestore write
-const cleanDataForFirestore = (data: Record<string, any>) => {
-    const cleanedData: Record<string, any> = {};
-    for (const key in data) {
-        if (data[key] !== undefined) {
-            cleanedData[key] = data[key];
-        }
-    }
-    return cleanedData;
-};
-
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
     const patientData = data as Patient;
@@ -73,7 +62,8 @@ export async function savePatients(layoutName: LayoutName, patients: Patient[]):
         patients.forEach(patient => {
             const docRef = doc(collectionRef, patient.id);
             // The Firebase SDK handles JS Date conversion to Timestamp automatically.
-            batch.set(docRef, cleanDataForFirestore(patient));
+            // Undefined fields are handled by the initializeFirestore setting.
+            batch.set(docRef, patient);
         });
         await batch.commit();
     } catch (error) {
