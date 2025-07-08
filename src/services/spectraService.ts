@@ -13,9 +13,9 @@ export async function getSpectraPool(): Promise<Spectra[]> {
             // The data is stored under a 'pool' key in the document
             return docSnap.data().pool as Spectra[];
         } else {
-            // Document doesn't exist, create it with initial data
+            // Document doesn't exist, return initial data without writing.
+            // It will be saved when the user first modifies it.
             const initialSpectra = generateInitialSpectra();
-            await saveSpectraPool(initialSpectra);
             return initialSpectra;
         }
     } catch (error) {

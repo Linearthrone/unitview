@@ -45,7 +45,7 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
             const basePatients = generateInitialPatients();
             const initialLayoutPatients = appLayouts[layoutName](basePatients);
             
-            await savePatients(layoutName, initialLayoutPatients);
+            // Removed the slow initial write operation. Data will be saved on first user change.
             return initialLayoutPatients;
         }
 

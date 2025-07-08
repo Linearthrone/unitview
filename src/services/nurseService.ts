@@ -43,7 +43,7 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
             spectra: availableSpectra[index]?.id || 'N/A',
         })) as Nurse[];
         
-        await saveNurses(layoutName, nursesWithSpectra);
+        // Removed the slow initial write operation. Data will be saved on first user change.
         return nursesWithSpectra;
 
     } catch (error) {
