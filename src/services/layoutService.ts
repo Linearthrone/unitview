@@ -67,7 +67,7 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
         const cell = perimeterCells[i];
         
         const newRoom: Patient = {
-            id: `patient-${designation}-${Date.now()}-${i}`,
+            id: `room-${designation.replace(/\s+/g, '-')}-${i}-${Math.random().toString(36).slice(2, 9)}`,
             bedNumber: i + 1,
             roomDesignation: `${designation}-${String(i + 1).padStart(2, '0')}`,
             name: 'Vacant',

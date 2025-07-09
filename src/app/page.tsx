@@ -285,27 +285,25 @@ export default function Home() {
   };
 
   const handleCreateUnit = async ({ designation, numRooms }: { designation: string; numRooms: number }) => {
-      setIsInitialized(false);
-      try {
-          const updatedLayouts = await layoutService.createNewUnitLayout(designation, numRooms);
-          setAvailableLayouts(updatedLayouts);
-          await handleSelectLayout(designation);
-          toast({
-              title: "Unit Created",
-              description: `Unit "${designation}" with ${numRooms} rooms has been created.`,
-          });
-      } catch (error) {
-          console.error("Failed to create new unit:", error);
-          const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-          toast({
-              variant: "destructive",
-              title: "Error Creating Unit",
-              description: errorMessage,
-          });
-          throw error; // Re-throw the error so the dialog can catch it
-      } finally {
-          setIsInitialized(true);
-      }
+    try {
+        const updatedLayouts = await layoutService.createNewUnitLayout(designation, numRooms);
+        setAvailableLayouts(updatedLayouts);
+        // After creating the unit, select it, which will trigger a full data reload and handle the loading state.
+        await handleSelectLayout(designation); 
+        toast({
+            title: "Unit Created",
+            description: `Unit "${designation}" with ${numRooms} rooms has been created.`,
+        });
+    } catch (error) {
+        console.error("Failed to create new unit:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+            variant: "destructive",
+            title: "Error Creating Unit",
+            description: errorMessage,
+        });
+        throw error; // Re-throw the error so the dialog can catch it
+    }
   };
 
   const handlePrint = () => {

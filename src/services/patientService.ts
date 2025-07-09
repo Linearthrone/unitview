@@ -168,7 +168,7 @@ export function createRoom(designation: string, patients: Patient[], nurses: Nur
     const newBedNumber = Math.max(0, ...patients.map(p => p.bedNumber)) + 1;
     
     const newRoom: Patient = {
-      id: `patient-${Date.now()}`,
+      id: `room-${designation.trim().replace(/\s+/g, '-')}-${Math.random().toString(36).slice(2, 9)}`,
       bedNumber: newBedNumber,
       roomDesignation: designation,
       name: 'Vacant',
