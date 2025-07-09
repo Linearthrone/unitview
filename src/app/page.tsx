@@ -296,11 +296,13 @@ export default function Home() {
           });
       } catch (error) {
           console.error("Failed to create new unit:", error);
+          const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
           toast({
               variant: "destructive",
               title: "Error Creating Unit",
-              description: error instanceof Error ? error.message : "An unknown error occurred.",
+              description: errorMessage,
           });
+          throw error; // Re-throw the error so the dialog can catch it
       } finally {
           setIsInitialized(true);
       }

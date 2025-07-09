@@ -14,12 +14,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2 } from 'lucide-react';
+import { Building2, Loader2 } from 'lucide-react';
 
 interface CreateUnitDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: { designation: string; numRooms: number }) => void;
+  onSave: (data: { designation: string; numRooms: number }) => Promise<void>;
   existingLayoutNames: string[];
 }
 
@@ -27,16 +27,19 @@ export default function CreateUnitDialog({ open, onOpenChange, onSave, existingL
   const [designation, setDesignation] = useState('');
   const [numRooms, setNumRooms] = useState(24);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setDesignation('');
       setNumRooms(24);
       setError(null);
+      setIsSaving(false);
     }
   }, [open]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setError(null);
     const trimmedDesignation = designation.trim();
     if (!trimmedDesignation) {
       setError('Unit designation cannot be empty.');
@@ -55,8 +58,20 @@ export default function CreateUnitDialog({ open, onOpenChange, onSave, existingL
         return;
     }
 
-    onSave({ designation: trimmedDesignation, numRooms });
-    onOpenChange(false);
+    setIsSaving(true);
+    try {
+      await onSave({ designation: trimmedDesignation, numRooms });
+      onOpenChange(false);
+    } catch (e) {
+      console.error("Error during unit creation:", e);
+      if (e instanceof Error) {
+          setError(`Failed to create unit: ${e.message}`);
+      } else {
+          setError("An unknown error occurred while creating the unit.");
+      }
+    } finally {
+        setIsSaving(false);
+    }
   };
   
   return (
@@ -76,8 +91,8 @@ export default function CreateUnitDialog({ open, onOpenChange, onSave, existingL
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}
               placeholder="e.g., 8th Floor, 10C, West Wing"
+              disabled={isSaving}
             />
-             {error && <p className="text-sm text-destructive pt-1">{error}</p>}
           </div>
            <div className="space-y-2">
             <Label htmlFor="num-rooms">Number of Rooms</Label>
@@ -87,18 +102,29 @@ export default function CreateUnitDialog({ open, onOpenChange, onSave, existingL
               value={numRooms}
               onChange={(e) => setNumRooms(parseInt(e.target.value, 10) || 0)}
               placeholder="e.g., 24"
+              disabled={isSaving}
             />
           </div>
+          {error && <p className="text-sm text-destructive pt-1">{error}</p>}
         </div>
         <DialogFooter>
           <DialogClose asChild>
-             <Button type="button" variant="secondary">
+             <Button type="button" variant="secondary" disabled={isSaving}>
                 Cancel
              </Button>
           </DialogClose>
-          <Button type="button" onClick={handleSave}>
-            <Building2 className="mr-2 h-4 w-4" />
-            Create Unit
+          <Button type="button" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Building2 className="mr-2 h-4 w-4" />
+                Create Unit
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
