@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Patient, MobilityStatus, AlertDisplayInfo } from '@/types/patient';
+import type { Patient, MobilityStatus } from '@/types/patient';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -30,6 +30,12 @@ import {
   type LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface AlertDisplayInfo {
+  IconComponent: LucideIcon;
+  colorClass: string;
+  tooltipText: string;
+}
 
 interface PatientBlockProps {
   patient: Patient;

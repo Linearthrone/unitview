@@ -1,4 +1,3 @@
-import type { LucideIcon } from 'lucide-react';
 
 export type MobilityStatus = 'Bed Rest' | 'Assisted' | 'Independent';
 export type PatientGender = 'Male' | 'Female';
@@ -32,10 +31,4 @@ export interface Patient {
   notes?: string;
   gridRow: number; // 1-indexed
   gridColumn: number; // 1-indexed
-}
-
-export interface AlertDisplayInfo {
-  IconComponent: LucideIcon;
-  colorClass: string;
-  tooltipText: string;
 }
