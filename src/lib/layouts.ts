@@ -15,51 +15,56 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
     const layoutPatients: Patient[] = [];
 
     const roomCoordinates: { [key: number]: { row: number; col: number } } = {
-        // Left side, outer columns
+        // Row 1: 26 down to 19 (left side)
         26: { row: 1, col: 1 },
-        25: { row: 2, col: 1 },
-        24: { row: 3, col: 1 },
-        23: { row: 4, col: 1 },
-        22: { row: 5, col: 1 },
-        21: { row: 6, col: 1 },
-        20: { row: 7, col: 1 },
-        19: { row: 8, col: 1 },
-        18: { row: 1, col: 3 },
-        17: { row: 2, col: 3 },
-        16: { row: 3, col: 3 },
-        15: { row: 4, col: 3 },
-        14: { row: 5, col: 3 },
-        13: { row: 6, col: 3 },
-        12: { row: 7, col: 3 },
-        11: { row: 8, col: 3 },
-        27: { row: 1, col: 2 },
-        28: { row: 2, col: 2 },
-        29: { row: 3, col: 2 },
-        30: { row: 4, col: 2 },
-        // Left side, inner columns (moving right)
-        31: { row: 1, col: 6 },
-        32: { row: 2, col: 6 },
-        33: { row: 3, col: 6 },
-        34: { row: 4, col: 6 },
+        25: { row: 1, col: 2 },
+        24: { row: 1, col: 3 },
+        23: { row: 1, col: 4 },
+        22: { row: 1, col: 5 },
+        21: { row: 1, col: 6 },
+        20: { row: 1, col: 7 },
+        19: { row: 1, col: 8 },
+        // Row 1: 18 down to 11 (right side)
+        18: { row: 1, col: 9 },
+        17: { row: 1, col: 10 },
+        16: { row: 1, col: 11 },
+        15: { row: 1, col: 12 },
+        14: { row: 1, col: 13 },
+        13: { row: 1, col: 14 },
+        12: { row: 1, col: 15 },
+        11: { row: 1, col: 16 },
+
+        // Vertical rooms on the sides
+        27: { row: 2, col: 1 },
+        10: { row: 2, col: 16 },
+        28: { row: 3, col: 1 },
+        9:  { row: 3, col: 16 },
+        29: { row: 4, col: 1 },
+        8:  { row: 4, col: 16 },
+
+        // Row 5: 30 to 36 (left side)
+        30: { row: 5, col: 1 },
+        31: { row: 5, col: 2 },
+        32: { row: 5, col: 3 },
+        33: { row: 5, col: 4 },
+        34: { row: 5, col: 5 },
         35: { row: 5, col: 6 },
-        36: { row: 6, col: 6 },
-        // Bottom row
-        37: { row: 7, col: 7 },
-        38: { row: 7, col: 8 },
-        39: { row: 7, col: 9 },
-        40: { row: 7, col: 10 },
-        // Right side, outer columns
-        10: { row: 1, col: 16 },
-        9: { row: 2, col: 16 },
-        8: { row: 3, col: 16 },
-        7: { row: 4, col: 16 },
-        // Right side, inner columns (moving left)
-        6: { row: 1, col: 11 },
-        5: { row: 2, col: 11 },
-        4: { row: 3, col: 11 },
-        3: { row: 4, col: 11 },
-        2: { row: 5, col: 11 },
-        1: { row: 6, col: 11 },
+        36: { row: 5, col: 7 },
+
+        // Row 5: 7 down to 1 (right side)
+        7: { row: 5, col: 10 },
+        6: { row: 5, col: 11 },
+        5: { row: 5, col: 12 },
+        4: { row: 5, col: 13 },
+        3: { row: 5, col: 14 },
+        2: { row: 5, col: 15 },
+        1: { row: 5, col: 16 },
+
+        // Vertical rooms on the left below row 5
+        37: { row: 6, col: 7 },
+        38: { row: 7, col: 7 },
+        39: { row: 8, col: 7 },
+        40: { row: 9, col: 7 },
     };
 
     let bedCounter = 1;
