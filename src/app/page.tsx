@@ -110,7 +110,7 @@ export default function Home() {
         setSpectraPool(initialSpectra);
         setAvailableLayouts(allLayouts);
 
-        const layoutToLoad = (savedLayout && allLayouts.includes(savedLayout)) ? savedLayout : '8 North South';
+        const layoutToLoad = (savedLayout && allLayouts.includes(savedLayout)) ? savedLayout : '*: North South';
         
         await loadLayoutData(layoutToLoad, initialSpectra);
 

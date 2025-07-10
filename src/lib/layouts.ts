@@ -112,5 +112,5 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
 
 export const layouts: Record<string, (basePatients: Patient[]) => Patient[]> = {
   'default': defaultLayout,
-  '8 North South': northSouthLayout,
+  '*: North South': northSouthLayout,
 };
