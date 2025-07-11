@@ -6,6 +6,8 @@ import type { Patient } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 import PatientBlock from './patient-block';
 import NurseAssignmentCard from './nurse-assignment-card';
+import UnitClerkCard from './unit-clerk-card';
+import ChargeNurseCard from './charge-nurse-card';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -76,12 +78,26 @@ const PatientGrid: React.FC<PatientGridProps> = ({
     }
   });
 
+  // Reserve space for the new cards
+  const staticCardOccupiedCells = new Set<string>();
+  // Unit Clerk Card (2x1 at 2,8)
+  staticCardOccupiedCells.add('2-8');
+  staticCardOccupiedCells.add('2-9');
+  // Charge Nurse Card (3x2 at 4,8)
+  staticCardOccupiedCells.add('4-8');
+  staticCardOccupiedCells.add('4-9');
+  staticCardOccupiedCells.add('4-10');
+  staticCardOccupiedCells.add('5-8');
+  staticCardOccupiedCells.add('5-9');
+  staticCardOccupiedCells.add('5-10');
+
+
   const renderGridCells = () => {
     const cells = [];
     for (let r = 1; r <= NUM_ROWS_GRID; r++) {
       for (let c = 1; c <= NUM_COLS_GRID; c++) {
         // If a nurse card starts here, or this cell is occupied by a nurse card, skip rendering a patient/empty cell
-        if (nurseOccupiedCells.has(`${r}-${c}`)) {
+        if (nurseOccupiedCells.has(`${r}-${c}`) || staticCardOccupiedCells.has(`${r}-${c}`)) {
           continue;
         }
 
@@ -170,6 +186,11 @@ const PatientGrid: React.FC<PatientGridProps> = ({
         }}
       >
         {renderGridCells()}
+        
+        {/* Static Cards */}
+        <div style={{ gridRow: '2 / span 1', gridColumn: '8 / span 2' }}><UnitClerkCard /></div>
+        <div style={{ gridRow: '4 / span 2', gridColumn: '8 / span 3' }}><ChargeNurseCard /></div>
+
         {nurses.map(nurse => (
           <div 
             key={nurse.id}
