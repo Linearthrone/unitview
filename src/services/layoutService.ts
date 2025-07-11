@@ -2,7 +2,7 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { layouts as appLayouts } from '@/lib/layouts';
-import type { LayoutName, Patient } from '@/types/patient';
+import type { LayoutName, Patient, WidgetCard } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 import { saveNurses } from './nurseService';
 import { savePatients } from './patientService';
@@ -35,10 +35,11 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     return Array.from(new Set(allNames));
 }
 
-export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[]): Promise<LayoutName[]> {
+export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], widgets: WidgetCard[]): Promise<LayoutName[]> {
     // Save the actual layout data to their respective collections
     await savePatients(layoutName, patients);
     await saveNurses(layoutName, nurses);
+    await saveWidgets(layoutName, widgets);
 
     // Update the list of custom layout names in the central config doc
     const config = await getAppConfig();
@@ -104,6 +105,29 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
     await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
 
     return Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts]));
+}
+
+export async function getWidgets(layoutName: string): Promise<WidgetCard[] | null> {
+    const widgetsDocRef = doc(db, 'layouts', layoutName, 'widgets', 'positions');
+    try {
+        const docSnap = await getDoc(widgetsDocRef);
+        if (docSnap.exists()) {
+            return docSnap.data().widgets as WidgetCard[];
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error fetching widgets for layout ${layoutName}:`, error);
+        return null;
+    }
+}
+
+export async function saveWidgets(layoutName: string, widgets: WidgetCard[]): Promise<void> {
+    const widgetsDocRef = doc(db, 'layouts', layoutName, 'widgets', 'positions');
+    try {
+        await setDoc(widgetsDocRef, { widgets });
+    } catch (error) {
+        console.error(`Error saving widgets for layout ${layoutName}:`, error);
+    }
 }
 
 

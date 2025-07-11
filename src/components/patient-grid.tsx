@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import type { Patient } from '@/types/patient';
+import type { Patient, WidgetCard } from '@/types/patient';
 import type { Nurse } from '@/types/nurse';
 import PatientBlock from './patient-block';
 import NurseAssignmentCard from './nurse-assignment-card';
@@ -20,17 +20,23 @@ interface DraggingPatientInfo {
 interface DraggingNurseInfo {
   id: string;
 }
+interface DraggingWidgetInfo {
+  id: string;
+}
 
 interface PatientGridProps {
   patients: Patient[];
   nurses: Nurse[];
+  widgetCards: WidgetCard[];
   isInitialized: boolean;
   isEffectivelyLocked: boolean;
   draggingPatientInfo: DraggingPatientInfo | null;
   draggingNurseInfo: DraggingNurseInfo | null;
+  draggingWidgetInfo: DraggingWidgetInfo | null;
   onSelectPatient: (patient: Patient) => void;
   onPatientDragStart: (e: React.DragEvent<HTMLDivElement>, patientId: string, row: number, col: number) => void;
   onNurseDragStart: (e: React.DragEvent<HTMLDivElement>, nurseId: string) => void;
+  onWidgetDragStart: (e: React.DragEvent<HTMLDivElement>, widgetId: string) => void;
   onDropOnCell: (targetRow: number, targetCol: number) => void;
   onDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
   onClearNurseAssignments: (nurseId: string) => void;
@@ -45,13 +51,16 @@ interface PatientGridProps {
 const PatientGrid: React.FC<PatientGridProps> = ({
   patients,
   nurses,
+  widgetCards,
   isInitialized,
   isEffectivelyLocked,
   draggingPatientInfo,
   draggingNurseInfo,
+  draggingWidgetInfo,
   onSelectPatient,
   onPatientDragStart,
   onNurseDragStart,
+  onWidgetDragStart,
   onDropOnCell,
   onDropOnNurseSlot,
   onClearNurseAssignments,
@@ -64,40 +73,35 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if ((draggingPatientInfo || draggingNurseInfo) && !isEffectivelyLocked) {
+    if ((draggingPatientInfo || draggingNurseInfo || draggingWidgetInfo) && !isEffectivelyLocked) {
       e.dataTransfer.dropEffect = 'move';
     } else {
       e.dataTransfer.dropEffect = 'none';
     }
   };
 
-  const nurseOccupiedCells = new Set<string>();
+  const occupiedCells = new Set<string>();
+  
   nurses.forEach(nurse => {
     for (let i = 0; i < 3; i++) {
-        nurseOccupiedCells.add(`${nurse.gridRow + i}-${nurse.gridColumn}`);
+        occupiedCells.add(`${nurse.gridRow + i}-${nurse.gridColumn}`);
     }
   });
 
-  // Reserve space for the new cards
-  const staticCardOccupiedCells = new Set<string>();
-  // Unit Clerk Card (2x1 at 2,8)
-  staticCardOccupiedCells.add('2-8');
-  staticCardOccupiedCells.add('2-9');
-  // Charge Nurse Card (3x2 at 4,8)
-  staticCardOccupiedCells.add('4-8');
-  staticCardOccupiedCells.add('4-9');
-  staticCardOccupiedCells.add('4-10');
-  staticCardOccupiedCells.add('5-8');
-  staticCardOccupiedCells.add('5-9');
-  staticCardOccupiedCells.add('5-10');
+  widgetCards.forEach(widget => {
+    for (let r = 0; r < widget.height; r++) {
+        for (let c = 0; c < widget.width; c++) {
+            occupiedCells.add(`${widget.gridRow + r}-${widget.gridColumn + c}`);
+        }
+    }
+  });
 
 
   const renderGridCells = () => {
     const cells = [];
     for (let r = 1; r <= NUM_ROWS_GRID; r++) {
       for (let c = 1; c <= NUM_COLS_GRID; c++) {
-        // If a nurse card starts here, or this cell is occupied by a nurse card, skip rendering a patient/empty cell
-        if (nurseOccupiedCells.has(`${r}-${c}`) || staticCardOccupiedCells.has(`${r}-${c}`)) {
+        if (occupiedCells.has(`${r}-${c}`)) {
           continue;
         }
 
@@ -108,7 +112,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
             className={cn(
               "border border-border/30 min-h-[12rem] rounded-md",
               "flex items-stretch justify-stretch",
-              (draggingPatientInfo || draggingNurseInfo) && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
+              (draggingPatientInfo || draggingNurseInfo || draggingWidgetInfo) && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
               !patientInCell && "bg-card"
             )}
             onDragOver={!isEffectivelyLocked ? handleDragOverCell : undefined}
@@ -174,6 +178,14 @@ const PatientGrid: React.FC<PatientGridProps> = ({
     );
   }
 
+  const renderWidget = (widget: WidgetCard) => {
+    switch (widget.type) {
+      case 'UnitClerk': return <UnitClerkCard />;
+      case 'ChargeNurse': return <ChargeNurseCard />;
+      default: return null;
+    }
+  };
+
   return (
     <div className="flex-grow flex overflow-auto p-2">
       <div
@@ -187,9 +199,24 @@ const PatientGrid: React.FC<PatientGridProps> = ({
       >
         {renderGridCells()}
         
-        {/* Static Cards */}
-        <div style={{ gridRow: '2 / span 1', gridColumn: '8 / span 2' }}><UnitClerkCard /></div>
-        <div style={{ gridRow: '4 / span 2', gridColumn: '8 / span 3' }}><ChargeNurseCard /></div>
+        {widgetCards.map(widget => (
+          <div
+              key={widget.id}
+              draggable={!isEffectivelyLocked}
+              onDragStart={(e) => onWidgetDragStart(e, widget.id)}
+              onDragEnd={onDragEnd}
+              className={cn(
+                  "cursor-grab",
+                  draggingWidgetInfo?.id === widget.id && "opacity-50"
+              )}
+              style={{
+                  gridRow: `${widget.gridRow} / span ${widget.height}`,
+                  gridColumn: `${widget.gridColumn} / span ${widget.width}`,
+              }}
+          >
+              {renderWidget(widget)}
+          </div>
+        ))}
 
         {nurses.map(nurse => (
           <div 
