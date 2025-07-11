@@ -487,6 +487,7 @@ export default function Home() {
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
       case 'default': return 'Default Layout';
+      case '*: North South': return 'North/South View';
       default: return layoutName;
     }
   }, []);

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2 } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2, TestTube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -55,6 +55,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   const getFriendlyLayoutName = (layoutName: LayoutName): string => {
     switch (layoutName) {
       case 'default': return 'Default Layout';
+      case '*: North South': return 'North/South View';
       default: return layoutName;
     }
   };
@@ -63,6 +64,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
     <>
       <header className="bg-card text-card-foreground shadow-md p-4 sticky top-0 z-50 print-hide">
         <div className="container mx-auto flex items-center justify-between">
+          
+          {/* Left Section */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <Stethoscope className="h-8 w-8 text-primary" />
@@ -71,58 +74,61 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <p className="text-sm text-muted-foreground">{activePatientCount} Patients / {totalRoomCount} Rooms</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <LayoutGrid className="mr-2 h-4 w-4" />
-                    {getFriendlyLayoutName(currentLayoutName)}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Select Unit Layout</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {availableLayouts.map((layoutName) => (
-                    <DropdownMenuItem
-                      key={layoutName}
-                      onClick={() => onSelectLayout(layoutName)}
-                      disabled={layoutName === currentLayoutName}
-                    >
-                      {getFriendlyLayoutName(layoutName)}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onAdmitPatient}
-                title="Admit or Transfer-In a new patient"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Admit Patient
-              </Button>
-               <Button
-                variant="outline"
-                size="sm"
-                onClick={onAddNurse}
-                title="Add a new nurse to the unit"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Nurse
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onPrint}
-                title="Print Charge Report"
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Print Report
-              </Button>
-            </div>
+          </div>
+          
+          {/* Center Section */}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  {getFriendlyLayoutName(currentLayoutName)}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Select Unit Layout</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {availableLayouts.map((layoutName) => (
+                  <DropdownMenuItem
+                    key={layoutName}
+                    onClick={() => onSelectLayout(layoutName)}
+                    disabled={layoutName === currentLayoutName}
+                  >
+                    {getFriendlyLayoutName(layoutName)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAdmitPatient}
+              title="Admit or Transfer-In a new patient"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Admit Patient
+            </Button>
+             <Button
+              variant="outline"
+              size="sm"
+              onClick={onAddNurse}
+              title="Add a new nurse to the unit"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Nurse
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrint}
+              title="Print Charge Report"
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print Report
+            </Button>
           </div>
 
+          {/* Right Section */}
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -145,41 +151,41 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={onSaveLayout}
-              disabled={isLayoutLocked}
-              title={isLayoutLocked ? "Unlock to save changes" : "Save current layout as a new template"}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save As...
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={onToggleLayoutLock}
               title={isLayoutLocked ? 'Unlock Layout' : 'Lock Layout'}
             >
               {isLayoutLocked ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
-              {isLayoutLocked ? 'Layout Locked' : 'Lock Layout'}
+              {isLayoutLocked ? 'Locked' : 'Lock'}
             </Button>
             <div className="border-l h-6"></div>
-             <Button
-              variant="outline"
-              size="sm"
-              onClick={onManageSpectra}
-              title="Manage Spectra Pool"
-            >
-              <ListTodo className="mr-2 h-4 w-4" />
-              Manage Spectra
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsExplanationOpen(true)}
-              title="Icon Explanation"
-            >
-              <HelpCircle className="mr-2 h-4 w-4" />
-              Icon Explanation
-            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <TestTube className="mr-2 h-4 w-4" />
+                    Dev Tools
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Demo & Dev Tools</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onSaveLayout} disabled={isLayoutLocked}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Layout As...
+                  </DropdownMenuItem>
+                   <DropdownMenuItem disabled>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Insert Mock Patient Data
+                  </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => onManageSpectra()}>
+                    <ListTodo className="mr-2 h-4 w-4" />
+                    Manage Spectra Pool
+                  </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => setIsExplanationOpen(true)}>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Icon Explanation
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
         </div>
       </header>

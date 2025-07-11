@@ -25,22 +25,22 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
         20: { row: 1, col: 7 },
         19: { row: 1, col: 8 },
         // Row 1: 18 down to 11 (right side)
-        18: { row: 1, col: 9 },
-        17: { row: 1, col: 10 },
-        16: { row: 1, col: 11 },
-        15: { row: 1, col: 12 },
-        14: { row: 1, col: 13 },
-        13: { row: 1, col: 14 },
-        12: { row: 1, col: 15 },
-        11: { row: 1, col: 16 },
+        18: { row: 1, col: 10 },
+        17: { row: 1, col: 11 },
+        16: { row: 1, col: 12 },
+        15: { row: 1, col: 13 },
+        14: { row: 1, col: 14 },
+        13: { row: 1, col: 15 },
+        12: { row: 1, col: 16 },
+        11: { row: 1, col: 17 },
 
         // Vertical rooms on the sides
         27: { row: 2, col: 1 },
-        10: { row: 2, col: 16 },
+        10: { row: 2, col: 17 },
         28: { row: 3, col: 1 },
-        9:  { row: 3, col: 16 },
+        9:  { row: 3, col: 17 },
         29: { row: 4, col: 1 },
-        8:  { row: 4, col: 16 },
+        8:  { row: 4, col: 17 },
 
         // Row 5: 30 to 36 (left side)
         30: { row: 5, col: 1 },
@@ -52,13 +52,13 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
         36: { row: 5, col: 7 },
 
         // Row 5: 7 down to 1 (right side)
-        7: { row: 5, col: 10 },
-        6: { row: 5, col: 11 },
-        5: { row: 5, col: 12 },
-        4: { row: 5, col: 13 },
-        3: { row: 5, col: 14 },
-        2: { row: 5, col: 15 },
-        1: { row: 5, col: 16 },
+        7: { row: 5, col: 11 },
+        6: { row: 5, col: 12 },
+        5: { row: 5, col: 13 },
+        4: { row: 5, col: 14 },
+        3: { row: 5, col: 15 },
+        2: { row: 5, col: 16 },
+        1: { row: 5, col: 17 },
 
         // Vertical rooms on the left below row 5
         37: { row: 6, col: 7 },
@@ -102,7 +102,7 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
         
         patient.gridRow = coords.row;
         patient.gridColumn = coords.col;
-        patient.roomDesignation = `Room ${roomNum}`;
+        patient.roomDesignation = `${roomNum < 10 ? '80' : '8'}${roomNum}`;
         layoutPatients.push(patient);
         bedCounter++;
     }
