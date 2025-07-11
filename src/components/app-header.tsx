@@ -31,6 +31,7 @@ interface AppHeaderProps {
   onManageSpectra: () => void;
   onAddRoom: () => void;
   onCreateUnit: () => void;
+  onInsertMockData: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({
@@ -49,6 +50,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onManageSpectra,
   onAddRoom,
   onCreateUnit,
+  onInsertMockData,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
@@ -172,7 +174,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                     <Save className="mr-2 h-4 w-4" />
                     Save Layout As...
                   </DropdownMenuItem>
-                   <DropdownMenuItem disabled>
+                   <DropdownMenuItem onClick={onInsertMockData}>
                     <UserPlus className="mr-2 h-4 w-4" />
                     Insert Mock Patient Data
                   </DropdownMenuItem>

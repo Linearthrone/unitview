@@ -318,6 +318,23 @@ export default function Home() {
     }
   };
 
+  const handleInsertMockData = () => {
+    const { updatedPatients, insertedCount } = patientService.insertMockPatients(patients);
+    if (insertedCount > 0) {
+      setPatients(updatedPatients);
+      toast({
+        title: "Mock Data Inserted",
+        description: `${insertedCount} mock patients have been added to vacant rooms.`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "No Vacant Rooms",
+        description: "Could not insert mock data because there are no available vacant rooms.",
+      });
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -562,6 +579,7 @@ export default function Home() {
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
         onCreateUnit={() => setIsCreateUnitDialogOpen(true)}
+        onInsertMockData={handleInsertMockData}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid

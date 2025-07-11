@@ -4,6 +4,7 @@ import { collection, doc, getDocs, writeBatch, Timestamp } from 'firebase/firest
 import type { Patient, LayoutName } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/types/forms';
 import { generateInitialPatients } from '@/lib/initial-patients';
+import { mockPatientData } from '@/lib/mock-patients';
 import { layouts as appLayouts } from '@/lib/layouts';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 import type { Nurse } from '@/types/nurse';
@@ -195,4 +196,33 @@ export function createRoom(designation: string, patients: Patient[], nurses: Nur
     };
 
     return { newPatients: [...patients, newRoom] };
+}
+
+export function insertMockPatients(currentPatients: Patient[]): { updatedPatients: Patient[], insertedCount: number } {
+  const vacantRooms = currentPatients.filter(p => p.name === 'Vacant' && !p.isBlocked);
+  
+  if (vacantRooms.length === 0) {
+    return { updatedPatients: currentPatients, insertedCount: 0 };
+  }
+
+  const newPatients = [...currentPatients];
+  let insertedCount = 0;
+
+  for (let i = 0; i < mockPatientData.length && i < vacantRooms.length; i++) {
+    const mockData = mockPatientData[i];
+    const vacantRoom = vacantRooms[i];
+    const patientIndex = newPatients.findIndex(p => p.id === vacantRoom.id);
+
+    if (patientIndex !== -1) {
+      newPatients[patientIndex] = {
+        ...newPatients[patientIndex],
+        ...mockData,
+        admitDate: new Date(new Date().setDate(new Date().getDate() - Math.floor(Math.random() * 5))),
+        dischargeDate: new Date(new Date().setDate(new Date().getDate() + Math.floor(Math.random() * 10) + 2)),
+      };
+      insertedCount++;
+    }
+  }
+
+  return { updatedPatients: newPatients, insertedCount };
 }
