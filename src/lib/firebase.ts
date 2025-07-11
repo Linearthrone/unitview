@@ -5,16 +5,16 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
-// IMPORTANT: Replace with your actual configuration values
-// It's recommended to store these in environment variables
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDkfXVHFo7tR9oV0Cd-lVtXhDFDe9_yO_I",
+  authDomain: "unitview.firebaseapp.com",
+  databaseURL: "https://unitview-default-rtdb.firebaseio.com",
+  projectId: "unitview",
+  storageBucket: "unitview.appspot.com",
+  messagingSenderId: "185648925766",
+  appId: "1:185648925766:web:db77442c38ea400f158e47"
 };
+
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
