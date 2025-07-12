@@ -198,6 +198,17 @@ export function createRoom(designation: string, patients: Patient[], nurses: Nur
     return { newPatients: [...patients, newRoom] };
 }
 
+// Fisher-Yates shuffle algorithm
+const shuffleArray = (array: any[]) => {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+};
+
 export function insertMockPatients(currentPatients: Patient[]): { updatedPatients: Patient[], insertedCount: number } {
   const vacantRooms = currentPatients.filter(p => p.name === 'Vacant' && !p.isBlocked);
   
@@ -205,11 +216,12 @@ export function insertMockPatients(currentPatients: Patient[]): { updatedPatient
     return { updatedPatients: currentPatients, insertedCount: 0 };
   }
 
+  const shuffledMockData = shuffleArray([...mockPatientData]);
   const newPatients = [...currentPatients];
   let insertedCount = 0;
 
-  for (let i = 0; i < mockPatientData.length && i < vacantRooms.length; i++) {
-    const mockData = mockPatientData[i];
+  for (let i = 0; i < vacantRooms.length; i++) {
+    const mockData = shuffledMockData[i % shuffledMockData.length]; // Loop through mock data if more vacant rooms than mocks
     const vacantRoom = vacantRooms[i];
     const patientIndex = newPatients.findIndex(p => p.id === vacantRoom.id);
 
