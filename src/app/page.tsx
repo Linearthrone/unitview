@@ -575,44 +575,71 @@ export default function Home() {
     if (!draggingPatientInfo) return;
     const { id: draggedPatientId } = draggingPatientInfo;
 
-    let newPatients = [...patients];
-    let newNurses = [...nurses];
-    
-    const draggedPatient = newPatients.find(p => p.id === draggedPatientId);
-    const targetNurse = newNurses.find(n => n.id === targetNurseId);
+    // Use functional updates to ensure we have the latest state
+    setPatients(currentPatients => {
+      setNurses(currentNurses => {
+        const draggedPatient = currentPatients.find(p => p.id === draggedPatientId);
+        const targetNurse = currentNurses.find(n => n.id === targetNurseId);
 
-    if (!draggedPatient || !targetNurse) return;
-
-    newNurses = newNurses.map(nurse => ({
-        ...nurse,
-        assignedPatientIds: nurse.assignedPatientIds.map(id => (id === draggedPatientId ? null : id))
-    }));
-
-    const oldPatientIdInSlot = targetNurse.assignedPatientIds[slotIndex];
-    if (oldPatientIdInSlot) {
-        newPatients = newPatients.map(p => p.id === oldPatientIdInSlot ? { ...p, assignedNurse: undefined } : p);
-    }
-    
-    newNurses = newNurses.map(nurse => {
-        if (nurse.id === targetNurseId) {
-            const newAssignments = [...nurse.assignedPatientIds];
-            newAssignments[slotIndex] = draggedPatientId;
-            return { ...nurse, assignedPatientIds: newAssignments };
+        if (!draggedPatient || !targetNurse) {
+          return currentNurses; // No change if patient or nurse not found
         }
-        return nurse;
-    });
+        
+        // 1. Get the list of all patients currently assigned to the target nurse
+        const currentAssignedIds = targetNurse.assignedPatientIds.filter(id => id !== null && id !== draggedPatientId);
+        
+        // 2. Add the newly dragged patient to this list
+        const newAssignedIds = [...currentAssignedIds, draggedPatientId];
 
-    newPatients = newPatients.map(p => {
-        if (p.id === draggedPatientId) {
+        // 3. Create a map of patients for easy lookup
+        const patientMap = new Map(currentPatients.map(p => [p.id, p]));
+
+        // 4. Sort the assigned IDs based on the patient's bed number
+        const sortedPatientIds = newAssignedIds.sort((idA, idB) => {
+          const patientA = patientMap.get(idA);
+          const patientB = patientMap.get(idB);
+          if (!patientA || !patientB) return 0;
+          return patientA.bedNumber - patientB.bedNumber;
+        });
+
+        // 5. Pad the array with nulls to fill all 6 slots
+        const finalPaddedIds = Array(6).fill(null);
+        sortedPatientIds.forEach((id, index) => {
+          if (index < 6) {
+            finalPaddedIds[index] = id;
+          }
+        });
+
+        // 6. Update all nurses: remove the dragged patient from any other nurse and update the target nurse
+        const newNurses = currentNurses.map(nurse => {
+          if (nurse.id === targetNurseId) {
+            return { ...nurse, assignedPatientIds: finalPaddedIds };
+          }
+          // Remove the patient from any other nurse who might have had them assigned
+          const updatedIds = nurse.assignedPatientIds.map(id => (id === draggedPatientId ? null : id));
+          return { ...nurse, assignedPatientIds: updatedIds };
+        });
+
+        // 7. Update all patients to reflect their new nurse assignment
+        const newPatients = currentPatients.map(p => {
+          if (finalPaddedIds.includes(p.id)) {
             return { ...p, assignedNurse: targetNurse.name };
-        }
-        return p;
+          }
+          if (p.assignedNurse === targetNurse.name && !finalPaddedIds.includes(p.id)) {
+            return { ...p, assignedNurse: undefined };
+          }
+          return p;
+        });
+        
+        // Set the new state for patients first, then nurses
+        setPatients(newPatients);
+        return newNurses;
+      });
+      return currentPatients; // Return original patients for this updater, the inner one handles it
     });
 
-    setNurses(newNurses);
-    setPatients(newPatients);
     setDraggingPatientInfo(null);
-  }, [draggingPatientInfo, patients, nurses]);
+  }, [draggingPatientInfo]);
 
   const handleClearNurseAssignments = useCallback((nurseId: string) => {
     let newPatients = [...patients];
