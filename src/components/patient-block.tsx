@@ -81,7 +81,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
         <ContextMenuTrigger disabled={isEffectivelyLocked}>
           <Card 
             onClick={handleCardClick}
-            className="flex flex-col h-full shadow-lg bg-gray-200 dark:bg-gray-800 border-gray-400 cursor-pointer"
+            className="flex flex-col h-full shadow-lg bg-green-200 dark:bg-green-900 border-green-400 cursor-pointer"
             title={`View report for ${patient.roomDesignation}`}
           >
             <CardHeader className="p-3">
@@ -122,21 +122,19 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
     }
   };
 
-  const getCardColors = () => {
-    if (isBlocked) {
-      return "bg-slate-400 dark:bg-slate-700 border-slate-600 dark:border-slate-800";
-    }
+  const getNameBadgeColor = () => {
     if (patient.isComfortCareDNR) {
-      return "bg-purple-300 dark:bg-purple-900 border-purple-500 dark:border-purple-700";
+      return "bg-purple-300 dark:bg-purple-900 border-purple-500 dark:border-purple-700 text-purple-900 dark:text-purple-100";
     }
     if (patient.gender === 'Male') {
-      return "bg-sky-300 dark:bg-sky-900 border-sky-500 dark:border-sky-700";
+      return "bg-sky-300 dark:bg-sky-900 border-sky-500 dark:border-sky-700 text-sky-900 dark:text-sky-100";
     }
     if (patient.gender === 'Female') {
-      return "bg-pink-300 dark:bg-pink-900 border-pink-500 dark:border-pink-700";
+      return "bg-pink-300 dark:bg-pink-900 border-pink-500 dark:border-pink-700 text-pink-900 dark:text-pink-100";
     }
-    return "bg-card border-border";
+    return "bg-slate-300 dark:bg-slate-600 text-slate-800 dark:text-slate-200";
   };
+
 
   const alerts: AlertDisplayInfo[] = [];
   if (patient.isFallRisk) {
@@ -165,9 +163,8 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
           onClick={handleCardClick}
           className={cn(
             "flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200",
-            isBlocked ? "cursor-not-allowed" : "cursor-pointer",
-            isDragging ? "opacity-50 ring-2 ring-primary" : "",
-            getCardColors()
+            isBlocked ? "cursor-not-allowed bg-black dark:bg-gray-900 border-gray-700" : "cursor-pointer bg-gray-200 dark:bg-gray-800",
+            isDragging ? "opacity-50 ring-2 ring-primary" : ""
           )}
           data-patient-id={patient.id}
           title={isBlocked ? `${patient.roomDesignation} is blocked` : `View report for ${patient.name} in ${patient.roomDesignation}`}
@@ -198,10 +195,10 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
                 </div>
                  <div className="pt-1">
                     <Badge
-                      variant={isVacant ? "secondary" : "default"}
+                      variant={"outline"}
                       className={cn(
-                        "font-semibold text-base truncate block w-full text-center py-1 px-2",
-                        isVacant && "bg-slate-300 dark:bg-slate-600 text-slate-800 dark:text-slate-200"
+                        "font-semibold text-base truncate block w-full text-center py-1 px-2 border",
+                        getNameBadgeColor()
                       )}
                       title={patient.name}
                     >
