@@ -2,7 +2,7 @@
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import type { Nurse, Spectra } from '@/types/nurse';
-import type { Patient } from '@/types/patient';
+import type { Patient, WidgetCard } from '@/types/patient';
 import type { AddStaffMemberFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
 import { generateInitialNurses } from '@/lib/initial-nurses';
@@ -68,36 +68,57 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
     }
 }
 
-function findEmptySlotForNurse(patients: Patient[], nurses: Nurse[]): { row: number; col: number } | null {
-    const occupiedCells = new Set<string>();
-    patients.forEach(p => {
-        occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
-    });
-    nurses.forEach(n => {
-        for (let i = 0; i < 3; i++) {
-            occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
-        }
-    });
+function findEmptySlotForNurse(
+  patients: Patient[],
+  nurses: Nurse[],
+  widgets: WidgetCard[]
+): { row: number; col: number } | null {
+  const occupiedCells = new Set<string>();
 
-    for (let c = 1; c <= NUM_COLS_GRID; c++) {
-      for (let r = 1; r <= NUM_ROWS_GRID - 2; r++) {
-        if (
-          !occupiedCells.has(`${r}-${c}`) &&
-          !occupiedCells.has(`${r + 1}-${c}`) &&
-          !occupiedCells.has(`${r + 2}-${c}`)
-        ) {
-          return { row: r, col: c };
-        }
+  patients.forEach(p => {
+    if (p.gridRow > 0 && p.gridColumn > 0) {
+      occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
+    }
+  });
+
+  nurses.forEach(n => {
+    for (let i = 0; i < 3; i++) { // Nurse card is 3 rows high
+      occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
+    }
+  });
+
+  widgets.forEach(w => {
+    for (let r = 0; r < w.height; r++) {
+      for (let c = 0; c < w.width; c++) {
+        occupiedCells.add(`${w.gridRow + r}-${w.gridColumn + c}`);
       }
     }
-    return null;
+  });
+
+  // Iterate through the grid to find a suitable empty slot
+  for (let c = 1; c <= NUM_COLS_GRID; c++) {
+    for (let r = 1; r <= NUM_ROWS_GRID - 2; r++) {
+      const isSlotAvailable =
+        !occupiedCells.has(`${r}-${c}`) &&
+        !occupiedCells.has(`${r + 1}-${c}`) &&
+        !occupiedCells.has(`${r + 2}-${c}`);
+
+      if (isSlotAvailable) {
+        return { row: r, col: c };
+      }
+    }
+  }
+
+  return null; // No available slot found
 }
+
 
 export function addStaffMember(
     formData: AddStaffMemberFormValues, 
     nurses: Nurse[], 
     patients: Patient[], 
-    spectraPool: Spectra[]
+    spectraPool: Spectra[],
+    widgets: WidgetCard[]
 ): { newNurses?: Nurse[] | null; success?: boolean; error?: string } {
     const isNursingRole = ['Staff Nurse', 'Charge Nurse', 'Float Pool Nurse'].includes(formData.role);
 
@@ -113,7 +134,7 @@ export function addStaffMember(
         return { newNurses: null, error: "No Spectra Available" };
     }
     
-    const position = findEmptySlotForNurse(patients, nurses);
+    const position = findEmptySlotForNurse(patients, nurses, widgets);
     if (!position) {
         return { newNurses: null, error: "No Space Available" };
     }

@@ -240,7 +240,7 @@ export default function Home() {
 
   
   const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
-    const result = nurseService.addStaffMember(formData, nurses, patients, spectraPool);
+    const result = nurseService.addStaffMember(formData, nurses, patients, spectraPool, widgetCards);
     if (result.newNurses) {
         setNurses(result.newNurses);
         setIsAddStaffMemberDialogOpen(false);
@@ -285,7 +285,7 @@ export default function Home() {
   };
 
   const handleCreateRoom = (designation: string) => {
-    const result = patientService.createRoom(designation, patients, nurses);
+    const result = patientService.createRoom(designation, patients, nurses, widgetCards);
     if (result.newPatients) {
       setPatients(result.newPatients);
       setIsAddRoomDialogOpen(false);
