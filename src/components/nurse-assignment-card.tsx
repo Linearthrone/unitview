@@ -7,7 +7,7 @@ import type { Patient } from '@/types/patient';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { User, Shield, Users, Trash2 } from 'lucide-react';
+import { User, Shield, Users, Trash2, XSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NurseAssignmentCardProps {
@@ -15,6 +15,7 @@ interface NurseAssignmentCardProps {
   patients: Patient[];
   onDropOnSlot: (nurseId: string, slotIndex: number) => void;
   onClearAssignments: (nurseId: string) => void;
+  onRemoveNurse: (nurseId: string) => void;
   isEffectivelyLocked: boolean;
 }
 
@@ -23,6 +24,7 @@ const NurseAssignmentCard: React.FC<NurseAssignmentCardProps> = ({
   patients,
   onDropOnSlot,
   onClearAssignments,
+  onRemoveNurse,
   isEffectivelyLocked
 }) => {
   const patientMap = new Map(patients.map(p => [p.id, p]));
@@ -39,13 +41,30 @@ const NurseAssignmentCard: React.FC<NurseAssignmentCardProps> = ({
     if (isEffectivelyLocked) return;
     onDropOnSlot(nurse.id, slotIndex);
   };
+  
+  const handleRemoveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isEffectivelyLocked) return;
+    onRemoveNurse(nurse.id);
+  }
 
   return (
     <Card className={cn(
-      "flex flex-col h-full shadow-lg bg-secondary/50 border-primary/50",
+      "flex flex-col h-full shadow-lg bg-secondary/50 border-primary/50 relative",
       !isEffectivelyLocked && "cursor-grab"
     )}>
-      <CardHeader className="p-3">
+       {!isEffectivelyLocked && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-1 right-1 h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={handleRemoveClick}
+          title={`Remove ${nurse.name}`}
+        >
+          <XSquare className="h-4 w-4" />
+        </Button>
+      )}
+      <CardHeader className="p-3 pr-8">
         <CardTitle className="text-lg flex items-center gap-2">
           <User className="h-5 w-5 text-primary" />
           <span>{nurse.name}</span>

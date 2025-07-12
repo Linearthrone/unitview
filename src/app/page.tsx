@@ -276,6 +276,36 @@ export default function Home() {
         });
     }
   };
+
+  const handleRemoveNurse = (nurseId: string) => {
+    const nurseToRemove = nurses.find(n => n.id === nurseId);
+    if (!nurseToRemove) return;
+
+    // Unassign patients from the nurse being removed
+    const patientIdsToUnassign = nurseToRemove.assignedPatientIds.filter(id => id !== null);
+    setPatients(prevPatients =>
+      prevPatients.map(p =>
+        patientIdsToUnassign.includes(p.id) ? { ...p, assignedNurse: undefined } : p
+      )
+    );
+
+    setNurses(prevNurses => prevNurses.filter(n => n.id !== nurseId));
+    toast({
+      title: "Nurse Removed",
+      description: `${nurseToRemove.name} has been removed from the unit.`,
+    });
+  };
+
+  const handleRemoveTech = (techId: string) => {
+    const techToRemove = techs.find(t => t.id === techId);
+    if (!techToRemove) return;
+
+    setTechs(prevTechs => prevTechs.filter(t => t.id !== techId));
+    toast({
+      title: "Tech Removed",
+      description: `${techToRemove.name} has been removed from the unit.`,
+    });
+  };
   
   const handleAddSpectra = async (newId: string) => {
     const result = await spectraService.addSpectra(newId, spectraPool);
@@ -511,7 +541,7 @@ export default function Home() {
     setDraggingNurseInfo(null);
     setDraggingWidgetInfo(null);
     setDraggingTechInfo(null);
-  }, [draggingPatientInfo, draggingNurseInfo, draggingWidgetInfo, draggingTechInfo, isLayoutLocked, patients, nurses, techs, toast]);
+  }, [draggingPatientInfo, draggingNurseInfo, draggingWidgetInfo, draggingTechInfo, isLayoutLocked, patients, toast]);
   
   const handleDragEnd = useCallback(() => {
     setDraggingPatientInfo(null);
@@ -674,6 +704,8 @@ export default function Home() {
           onDischargePatient={handleDischargeRequest}
           onToggleBlockRoom={handleToggleBlockRoom}
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
+          onRemoveNurse={handleRemoveNurse}
+          onRemoveTech={handleRemoveTech}
         />
       </main>
       <PrintableReport patients={patients} />

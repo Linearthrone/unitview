@@ -53,6 +53,8 @@ interface PatientGridProps {
   onDischargePatient: (patient: Patient) => void;
   onToggleBlockRoom: (patientId: string) => void;
   onEditDesignation: (patient: Patient) => void;
+  onRemoveNurse: (nurseId: string) => void;
+  onRemoveTech: (techId: string) => void;
 }
 
 const PatientGrid: React.FC<PatientGridProps> = ({
@@ -80,6 +82,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   onDischargePatient,
   onToggleBlockRoom,
   onEditDesignation,
+  onRemoveNurse,
+  onRemoveTech,
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -252,6 +256,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
               patients={patients}
               onDropOnSlot={onDropOnNurseSlot}
               onClearAssignments={onClearNurseAssignments}
+              onRemoveNurse={onRemoveNurse}
               isEffectivelyLocked={isEffectivelyLocked}
             />
           </div>
@@ -274,6 +279,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
           >
             <PatientCareTechCard
               tech={tech}
+              onRemoveTech={onRemoveTech}
               isEffectivelyLocked={isEffectivelyLocked}
             />
           </div>
