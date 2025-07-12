@@ -45,3 +45,8 @@ export interface WidgetCard {
   width: number;
   height: number;
 }
+
+export interface StaffAssignments {
+    chargeNurseName: string;
+    unitClerkName: string;
+}

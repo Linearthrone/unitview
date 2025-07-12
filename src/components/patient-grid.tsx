@@ -33,6 +33,8 @@ interface PatientGridProps {
   nurses: Nurse[];
   techs: PatientCareTech[];
   widgetCards: WidgetCard[];
+  chargeNurseName: string;
+  unitClerkName: string;
   isInitialized: boolean;
   isEffectivelyLocked: boolean;
   draggingPatientInfo: DraggingPatientInfo | null;
@@ -62,6 +64,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   nurses,
   techs,
   widgetCards,
+  chargeNurseName,
+  unitClerkName,
   isInitialized,
   isEffectivelyLocked,
   draggingPatientInfo,
@@ -198,8 +202,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 
   const renderWidget = (widget: WidgetCard) => {
     switch (widget.type) {
-      case 'UnitClerk': return <UnitClerkCard />;
-      case 'ChargeNurse': return <ChargeNurseCard />;
+      case 'UnitClerk': return <UnitClerkCard name={unitClerkName} />;
+      case 'ChargeNurse': return <ChargeNurseCard name={chargeNurseName} />;
       default: return null;
     }
   };

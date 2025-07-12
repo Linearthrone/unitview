@@ -49,11 +49,18 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
 
 export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promise<void> {
     if (!nurses || nurses.length === 0) {
-        return;
+        // We still want to write an empty array to clear the collection if all nurses are removed
+        const snapshot = await getDocs(getNurseCollectionRef(layoutName));
+        if (snapshot.empty) return; // Nothing to do if it's already empty
     }
     const collectionRef = getNurseCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
+        // First, delete existing documents
+        const snapshot = await getDocs(collectionRef);
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+
+        // Then, add new documents
         nurses.forEach(nurse => {
             const docRef = doc(collectionRef, nurse.id);
             batch.set(docRef, nurse);
@@ -80,11 +87,14 @@ export async function getTechs(layoutName: LayoutName, spectraPool: Spectra[]): 
 
 export async function saveTechs(layoutName: LayoutName, techs: PatientCareTech[]): Promise<void> {
     if (!techs) {
-        return;
+       return;
     }
     const collectionRef = getTechCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
+        const snapshot = await getDocs(collectionRef);
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+
         techs.forEach(tech => {
             const docRef = doc(collectionRef, tech.id);
             batch.set(docRef, tech);
@@ -148,15 +158,29 @@ export function addStaffMember(
     patients: Patient[], 
     spectraPool: Spectra[],
     widgets: WidgetCard[]
-): { newNurses?: Nurse[] | null; newTechs?: PatientCareTech[] | null; success?: boolean; error?: string } {
-    const isNursingRole = ['Staff Nurse', 'Charge Nurse', 'Float Pool Nurse'].includes(formData.role);
-    const isTechRole = formData.role === 'Patient Care Tech';
+): { 
+    newNurses?: Nurse[] | null; 
+    newTechs?: PatientCareTech[] | null; 
+    chargeNurseName?: string;
+    unitClerkName?: string;
+    success?: boolean; 
+    error?: string 
+} {
+    const { name, role } = formData;
 
-    if (!isNursingRole && !isTechRole) {
-        console.log(`Added non-nursing/non-tech staff: ${formData.name} (${formData.role})`);
+    if (role === 'Charge Nurse') {
+        return { chargeNurseName: name };
+    }
+    if (role === 'Unit Clerk') {
+        return { unitClerkName: name };
+    }
+    if (role === 'Sitter') {
         return { success: true };
     }
-    
+
+    const isNursingRole = ['Staff Nurse', 'Float Pool Nurse'].includes(role);
+    const isTechRole = role === 'Patient Care Tech';
+
     const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
     const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));
 

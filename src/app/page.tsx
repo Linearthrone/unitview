@@ -59,6 +59,9 @@ export default function Home() {
     { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 8, width: 2, height: 1 },
   ]);
   
+  const [chargeNurseName, setChargeNurseName] = useState<string>('Unassigned');
+  const [unitClerkName, setUnitClerkName] = useState<string>('Unassigned');
+
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
   const [draggingWidgetInfo, setDraggingWidgetInfo] = useState<DraggingWidgetInfo | null>(null);
@@ -81,11 +84,12 @@ export default function Home() {
   const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
       setIsInitialized(false);
       try {
-        const [patientData, nurseData, techData, layoutWidgets] = await Promise.all([
+        const [patientData, nurseData, techData, layoutWidgets, staffData] = await Promise.all([
             patientService.getPatients(layoutName),
             nurseService.getNurses(layoutName, currentSpectra),
             nurseService.getTechs(layoutName, currentSpectra),
             layoutService.getWidgets(layoutName),
+            layoutService.getStaff(layoutName),
         ]);
 
         const validNurses = nurseData.map(n => ({
@@ -98,6 +102,13 @@ export default function Home() {
         setTechs(techData);
         if (layoutWidgets) {
             setWidgetCards(layoutWidgets);
+        }
+        if (staffData) {
+            setChargeNurseName(staffData.chargeNurseName || 'Unassigned');
+            setUnitClerkName(staffData.unitClerkName || 'Unassigned');
+        } else {
+            setChargeNurseName('Unassigned');
+            setUnitClerkName('Unassigned');
         }
         setCurrentLayoutName(layoutName);
       } catch (error) {
@@ -172,7 +183,8 @@ export default function Home() {
   };
   
   const handleSaveNewLayout = async (newLayoutName: string) => {
-    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs, widgetCards);
+    const staffData = { chargeNurseName, unitClerkName };
+    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs, widgetCards, staffData);
     setAvailableLayouts(updatedLayouts);
     await handleSelectLayout(newLayoutName);
     
@@ -248,27 +260,24 @@ export default function Home() {
   
   const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
     const result = nurseService.addStaffMember(formData, nurses, techs, patients, spectraPool, widgetCards);
+    
+    setIsAddStaffMemberDialogOpen(false);
+
     if (result.newNurses) {
         setNurses(result.newNurses);
-        setIsAddStaffMemberDialogOpen(false);
-        toast({
-            title: "Nurse Added",
-            description: `${formData.name} (${formData.role}) has been added to the unit.`,
-        });
+        toast({ title: "Nurse Added", description: `${formData.name} (${formData.role}) has been added to the unit.` });
     } else if (result.newTechs) {
         setTechs(result.newTechs);
-        setIsAddStaffMemberDialogOpen(false);
-        toast({
-            title: "Tech Added",
-            description: `${formData.name} (${formData.role}) has been added to the unit.`,
-        });
+        toast({ title: "Tech Added", description: `${formData.name} (${formData.role}) has been added to the unit.` });
+    } else if (result.chargeNurseName) {
+        setChargeNurseName(result.chargeNurseName);
+        toast({ title: "Charge Nurse Assigned", description: `${formData.name} is now the Charge Nurse.` });
+    } else if (result.unitClerkName) {
+        setUnitClerkName(result.unitClerkName);
+        toast({ title: "Unit Clerk Assigned", description: `${formData.name} is now the Unit Clerk.` });
     } else if (result.success) {
-        setIsAddStaffMemberDialogOpen(false);
-        toast({
-            title: "Staff Member Added",
-            description: `${formData.name} (${formData.role}) has been added.`,
-        });
-    } else {
+        toast({ title: "Staff Member Added", description: `${formData.name} (${formData.role}) has been added.` });
+    } else if (result.error) {
         toast({
             variant: "destructive",
             title: result.error === "No Spectra Available" ? "No Spectra Available" : "No Space Available",
@@ -552,13 +561,15 @@ export default function Home() {
 
   const handleAutoSave = useCallback(async () => {
     if (isLayoutLocked || !isInitialized) return;
+    const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
       patientService.savePatients(currentLayoutName, patients),
       nurseService.saveNurses(currentLayoutName, nurses),
       nurseService.saveTechs(currentLayoutName, techs),
       layoutService.saveWidgets(currentLayoutName, widgetCards),
+      layoutService.saveStaff(currentLayoutName, staffData),
     ]);
-  }, [patients, nurses, techs, widgetCards, isLayoutLocked, currentLayoutName, isInitialized]);
+  }, [patients, nurses, techs, widgetCards, isLayoutLocked, currentLayoutName, isInitialized, chargeNurseName, unitClerkName]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -635,7 +646,7 @@ export default function Home() {
     if (isInitialized && !isLayoutLocked) {
       handleAutoSave();
     }
-  }, [patients, nurses, techs, widgetCards, isInitialized, isLayoutLocked, handleAutoSave]);
+  }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
       if (techs.length > 0) {
@@ -684,6 +695,8 @@ export default function Home() {
           nurses={nurses}
           techs={techs}
           widgetCards={widgetCards}
+          chargeNurseName={chargeNurseName}
+          unitClerkName={unitClerkName}
           isInitialized={isInitialized}
           isEffectivelyLocked={isLayoutLocked}
           draggingPatientInfo={draggingPatientInfo}
