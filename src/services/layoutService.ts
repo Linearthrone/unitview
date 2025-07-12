@@ -3,8 +3,8 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { layouts as appLayouts } from '@/lib/layouts';
 import type { LayoutName, Patient, WidgetCard } from '@/types/patient';
-import type { Nurse } from '@/types/nurse';
-import { saveNurses } from './nurseService';
+import type { Nurse, PatientCareTech } from '@/types/nurse';
+import { saveNurses, saveTechs } from './nurseService';
 import { savePatients } from './patientService';
 import { getPerimeterCells } from '@/lib/grid-utils';
 
@@ -35,10 +35,11 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     return Array.from(new Set(allNames));
 }
 
-export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], widgets: WidgetCard[]): Promise<LayoutName[]> {
+export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], widgets: WidgetCard[]): Promise<LayoutName[]> {
     // Save the actual layout data to their respective collections
     await savePatients(layoutName, patients);
     await saveNurses(layoutName, nurses);
+    await saveTechs(layoutName, techs);
     await saveWidgets(layoutName, widgets);
 
     // Update the list of custom layout names in the central config doc
@@ -94,9 +95,11 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
     }
     
     const newNurses: Nurse[] = [];
+    const newTechs: PatientCareTech[] = [];
     const layoutName = designation;
     await savePatients(layoutName, newPatients);
     await saveNurses(layoutName, newNurses);
+    await saveTechs(layoutName, newTechs);
 
     const config = await getAppConfig();
     const customLayoutNames = config.customLayoutNames || [];

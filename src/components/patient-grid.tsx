@@ -3,11 +3,12 @@
 
 import React from 'react';
 import type { Patient, WidgetCard } from '@/types/patient';
-import type { Nurse } from '@/types/nurse';
+import type { Nurse, PatientCareTech } from '@/types/nurse';
 import PatientBlock from './patient-block';
 import NurseAssignmentCard from './nurse-assignment-card';
 import UnitClerkCard from './unit-clerk-card';
 import ChargeNurseCard from './charge-nurse-card';
+import PatientCareTechCard from './patient-care-tech-card';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -20,6 +21,9 @@ interface DraggingPatientInfo {
 interface DraggingNurseInfo {
   id: string;
 }
+interface DraggingTechInfo {
+  id: string;
+}
 interface DraggingWidgetInfo {
   id: string;
 }
@@ -27,15 +31,18 @@ interface DraggingWidgetInfo {
 interface PatientGridProps {
   patients: Patient[];
   nurses: Nurse[];
+  techs: PatientCareTech[];
   widgetCards: WidgetCard[];
   isInitialized: boolean;
   isEffectivelyLocked: boolean;
   draggingPatientInfo: DraggingPatientInfo | null;
   draggingNurseInfo: DraggingNurseInfo | null;
+  draggingTechInfo: DraggingTechInfo | null;
   draggingWidgetInfo: DraggingWidgetInfo | null;
   onSelectPatient: (patient: Patient) => void;
   onPatientDragStart: (e: React.DragEvent<HTMLDivElement>, patientId: string, row: number, col: number) => void;
   onNurseDragStart: (e: React.DragEvent<HTMLDivElement>, nurseId: string) => void;
+  onTechDragStart: (e: React.DragEvent<HTMLDivElement>, techId: string) => void;
   onWidgetDragStart: (e: React.DragEvent<HTMLDivElement>, widgetId: string) => void;
   onDropOnCell: (targetRow: number, targetCol: number) => void;
   onDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
@@ -51,15 +58,18 @@ interface PatientGridProps {
 const PatientGrid: React.FC<PatientGridProps> = ({
   patients,
   nurses,
+  techs,
   widgetCards,
   isInitialized,
   isEffectivelyLocked,
   draggingPatientInfo,
   draggingNurseInfo,
+  draggingTechInfo,
   draggingWidgetInfo,
   onSelectPatient,
   onPatientDragStart,
   onNurseDragStart,
+  onTechDragStart,
   onWidgetDragStart,
   onDropOnCell,
   onDropOnNurseSlot,
@@ -73,7 +83,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if ((draggingPatientInfo || draggingNurseInfo || draggingWidgetInfo) && !isEffectivelyLocked) {
+    if ((draggingPatientInfo || draggingNurseInfo || draggingTechInfo || draggingWidgetInfo) && !isEffectivelyLocked) {
       e.dataTransfer.dropEffect = 'move';
     } else {
       e.dataTransfer.dropEffect = 'none';
@@ -86,6 +96,10 @@ const PatientGrid: React.FC<PatientGridProps> = ({
     for (let i = 0; i < 3; i++) {
         occupiedCells.add(`${nurse.gridRow + i}-${nurse.gridColumn}`);
     }
+  });
+
+  techs.forEach(tech => {
+    occupiedCells.add(`${tech.gridRow}-${tech.gridColumn}`);
   });
 
   widgetCards.forEach(widget => {
@@ -112,7 +126,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
             className={cn(
               "border border-border/30 min-h-[12rem] rounded-md",
               "flex items-stretch justify-stretch",
-              (draggingPatientInfo || draggingNurseInfo || draggingWidgetInfo) && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
+              (draggingPatientInfo || draggingNurseInfo || draggingTechInfo || draggingWidgetInfo) && !isEffectivelyLocked && "hover:bg-secondary/50 transition-colors",
               !patientInCell && "bg-card"
             )}
             onDragOver={!isEffectivelyLocked ? handleDragOverCell : undefined}
@@ -238,6 +252,28 @@ const PatientGrid: React.FC<PatientGridProps> = ({
               patients={patients}
               onDropOnSlot={onDropOnNurseSlot}
               onClearAssignments={onClearNurseAssignments}
+              isEffectivelyLocked={isEffectivelyLocked}
+            />
+          </div>
+        ))}
+        
+        {techs.map(tech => (
+          <div 
+            key={tech.id}
+            draggable={!isEffectivelyLocked}
+            onDragStart={(e) => onTechDragStart(e, tech.id)}
+            onDragEnd={onDragEnd}
+            className={cn(
+              "min-h-[6rem]", // Give it a min height to be visible when empty
+              draggingTechInfo?.id === tech.id && "opacity-50"
+            )}
+            style={{ 
+              gridRowStart: tech.gridRow, 
+              gridColumnStart: tech.gridColumn,
+            }}
+          >
+            <PatientCareTechCard
+              tech={tech}
               isEffectivelyLocked={isEffectivelyLocked}
             />
           </div>

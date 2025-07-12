@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import type { Nurse, Spectra } from '@/types/nurse';
+import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 import { generateInitialSpectra } from '@/lib/initial-spectra';
 
 const spectraDocRef = doc(db, 'appState', 'spectraPool');
@@ -45,9 +45,13 @@ export async function addSpectra(newId: string, pool: Spectra[]): Promise<{ newP
     return { newPool };
 }
 
-export async function toggleSpectraStatus(id: string, inService: boolean, pool: Spectra[], nurses: Nurse[]): Promise<{ newPool: Spectra[] | null; error?: string }> {
-    if (!inService && nurses.some(n => n.spectra === id)) {
-        return { newPool: null, error: "This Spectra is currently assigned to a nurse." };
+export async function toggleSpectraStatus(id: string, inService: boolean, pool: Spectra[], nurses: Nurse[], techs: PatientCareTech[]): Promise<{ newPool: Spectra[] | null; error?: string }> {
+    if (!inService) {
+        const isAssignedToNurse = nurses.some(n => n.spectra === id);
+        const isAssignedToTech = techs.some(t => t.spectra === id);
+        if (isAssignedToNurse || isAssignedToTech) {
+            return { newPool: null, error: "This Spectra is currently assigned to a staff member." };
+        }
     }
     const newPool = pool.map(s => s.id === id ? { ...s, inService } : s);
     await saveSpectraPool(newPool);

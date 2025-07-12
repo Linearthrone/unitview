@@ -16,3 +16,12 @@ export interface Nurse {
   gridRow: number;
   gridColumn: number;
 }
+
+export interface PatientCareTech {
+    id: string;
+    name: string;
+    spectra: string;
+    assignmentGroup: string;
+    gridRow: number;
+    gridColumn: number;
+}

@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, WidgetCard } from '@/types/patient';
-import type { Nurse, Spectra } from '@/types/nurse';
+import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
@@ -40,6 +40,9 @@ interface DraggingNurseInfo {
 interface DraggingWidgetInfo {
   id: string;
 }
+interface DraggingTechInfo {
+  id: string;
+}
 
 export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
@@ -49,6 +52,7 @@ export default function Home() {
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
+  const [techs, setTechs] = useState<PatientCareTech[]>([]);
   const [spectraPool, setSpectraPool] = useState<Spectra[]>([]);
   const [widgetCards, setWidgetCards] = useState<WidgetCard[]>([
     { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 8, width: 2, height: 1 },
@@ -58,6 +62,7 @@ export default function Home() {
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
   const [draggingWidgetInfo, setDraggingWidgetInfo] = useState<DraggingWidgetInfo | null>(null);
+  const [draggingTechInfo, setDraggingTechInfo] = useState<DraggingTechInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
@@ -76,9 +81,10 @@ export default function Home() {
   const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
       setIsInitialized(false);
       try {
-        const [patientData, nurseData, layoutWidgets] = await Promise.all([
+        const [patientData, nurseData, techData, layoutWidgets] = await Promise.all([
             patientService.getPatients(layoutName),
             nurseService.getNurses(layoutName, currentSpectra),
+            nurseService.getTechs(layoutName, currentSpectra),
             layoutService.getWidgets(layoutName),
         ]);
 
@@ -89,6 +95,7 @@ export default function Home() {
 
         setPatients(patientData);
         setNurses(validNurses);
+        setTechs(techData);
         if (layoutWidgets) {
             setWidgetCards(layoutWidgets);
         }
@@ -165,7 +172,7 @@ export default function Home() {
   };
   
   const handleSaveNewLayout = async (newLayoutName: string) => {
-    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, widgetCards);
+    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs, widgetCards);
     setAvailableLayouts(updatedLayouts);
     await handleSelectLayout(newLayoutName);
     
@@ -240,12 +247,19 @@ export default function Home() {
 
   
   const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
-    const result = nurseService.addStaffMember(formData, nurses, patients, spectraPool, widgetCards);
+    const result = nurseService.addStaffMember(formData, nurses, techs, patients, spectraPool, widgetCards);
     if (result.newNurses) {
         setNurses(result.newNurses);
         setIsAddStaffMemberDialogOpen(false);
         toast({
             title: "Nurse Added",
+            description: `${formData.name} (${formData.role}) has been added to the unit.`,
+        });
+    } else if (result.newTechs) {
+        setTechs(result.newTechs);
+        setIsAddStaffMemberDialogOpen(false);
+        toast({
+            title: "Tech Added",
             description: `${formData.name} (${formData.role}) has been added to the unit.`,
         });
     } else if (result.success) {
@@ -258,9 +272,7 @@ export default function Home() {
         toast({
             variant: "destructive",
             title: result.error === "No Spectra Available" ? "No Spectra Available" : "No Space Available",
-            description: result.error === "No Spectra Available" 
-                ? "Could not add nurse. Please add or enable a Spectra device in the pool."
-                : "Cannot add new nurse, the grid is full.",
+            description: result.error,
         });
     }
   };
@@ -276,7 +288,7 @@ export default function Home() {
   };
   
   const handleToggleSpectraStatus = async (id: string, inService: boolean) => {
-    const result = await spectraService.toggleSpectraStatus(id, inService, spectraPool, nurses);
+    const result = await spectraService.toggleSpectraStatus(id, inService, spectraPool, nurses, techs);
     if (result.newPool) {
         setSpectraPool(result.newPool);
     } else if (result.error) {
@@ -285,7 +297,7 @@ export default function Home() {
   };
 
   const handleCreateRoom = (designation: string) => {
-    const result = patientService.createRoom(designation, patients, nurses, widgetCards);
+    const result = patientService.createRoom(designation, patients, nurses, techs, widgetCards);
     if (result.newPatients) {
       setPatients(result.newPatients);
       setIsAddRoomDialogOpen(false);
@@ -357,6 +369,7 @@ export default function Home() {
     }
     setDraggingNurseInfo(null);
     setDraggingWidgetInfo(null);
+    setDraggingTechInfo(null);
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
     e.dataTransfer.effectAllowed = 'move';
@@ -369,6 +382,7 @@ export default function Home() {
     }
     setDraggingPatientInfo(null);
     setDraggingWidgetInfo(null);
+    setDraggingTechInfo(null);
     setDraggingNurseInfo({ id: nurseId });
     e.dataTransfer.setData('text/plain', nurseId);
     e.dataTransfer.effectAllowed = 'move';
@@ -381,8 +395,22 @@ export default function Home() {
     }
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
+    setDraggingTechInfo(null);
     setDraggingWidgetInfo({ id: widgetId });
     e.dataTransfer.setData('text/plain', widgetId);
+    e.dataTransfer.effectAllowed = 'move';
+  }, [isLayoutLocked]);
+
+  const handleTechDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, techId: string) => {
+    if (isLayoutLocked) {
+      e.preventDefault();
+      return;
+    }
+    setDraggingPatientInfo(null);
+    setDraggingNurseInfo(null);
+    setDraggingWidgetInfo(null);
+    setDraggingTechInfo({ id: techId });
+    e.dataTransfer.setData('text/plain', techId);
     e.dataTransfer.effectAllowed = 'move';
   }, [isLayoutLocked]);
 
@@ -439,6 +467,26 @@ export default function Home() {
       });
     }
 
+    if (draggingTechInfo) {
+        const { id: draggedTechId } = draggingTechInfo;
+        setTechs(prevTechs => {
+            const newTechs = prevTechs.map(t => ({...t}));
+            const draggedTech = newTechs.find(t => t.id === draggedTechId);
+            if (!draggedTech) return prevTechs;
+
+            // Check for conflicts
+            const isOccupiedByPatient = patients.some(p => p.gridRow === targetRow && p.gridColumn === targetCol);
+            if (isOccupiedByPatient) {
+                toast({ variant: "destructive", title: "Cannot Move Tech", description: "The target location is occupied by a patient." });
+                return prevTechs;
+            }
+    
+            draggedTech.gridRow = targetRow;
+            draggedTech.gridColumn = targetCol;
+            return newTechs;
+        });
+    }
+
     if (draggingWidgetInfo) {
       const { id: draggedWidgetId } = draggingWidgetInfo;
       setWidgetCards(prevWidgets => {
@@ -457,17 +505,19 @@ export default function Home() {
           draggedWidget.gridColumn = targetCol;
           return newWidgets;
       });
-  }
+    }
 
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
     setDraggingWidgetInfo(null);
-  }, [draggingPatientInfo, draggingNurseInfo, draggingWidgetInfo, isLayoutLocked, patients, nurses, toast]);
+    setDraggingTechInfo(null);
+  }, [draggingPatientInfo, draggingNurseInfo, draggingWidgetInfo, draggingTechInfo, isLayoutLocked, patients, nurses, techs, toast]);
   
   const handleDragEnd = useCallback(() => {
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
     setDraggingWidgetInfo(null);
+    setDraggingTechInfo(null);
   }, []);
 
   const handleAutoSave = useCallback(async () => {
@@ -475,9 +525,10 @@ export default function Home() {
     await Promise.all([
       patientService.savePatients(currentLayoutName, patients),
       nurseService.saveNurses(currentLayoutName, nurses),
+      nurseService.saveTechs(currentLayoutName, techs),
       layoutService.saveWidgets(currentLayoutName, widgetCards),
     ]);
-  }, [patients, nurses, widgetCards, isLayoutLocked, currentLayoutName, isInitialized]);
+  }, [patients, nurses, techs, widgetCards, isLayoutLocked, currentLayoutName, isInitialized]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -554,7 +605,17 @@ export default function Home() {
     if (isInitialized && !isLayoutLocked) {
       handleAutoSave();
     }
-  }, [patients, nurses, widgetCards, isInitialized, isLayoutLocked, handleAutoSave]);
+  }, [patients, nurses, techs, widgetCards, isInitialized, isLayoutLocked, handleAutoSave]);
+
+  useEffect(() => {
+      if (techs.length > 0) {
+          const updatedTechs = nurseService.calculateTechAssignments(techs, patients);
+          // Only update state if assignments have actually changed to prevent infinite loops
+          if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
+              setTechs(updatedTechs);
+          }
+      }
+  }, [patients, techs]);
     
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
@@ -591,15 +652,18 @@ export default function Home() {
         <PatientGrid
           patients={patients}
           nurses={nurses}
+          techs={techs}
           widgetCards={widgetCards}
           isInitialized={isInitialized}
           isEffectivelyLocked={isLayoutLocked}
           draggingPatientInfo={draggingPatientInfo}
           draggingNurseInfo={draggingNurseInfo}
+          draggingTechInfo={draggingTechInfo}
           draggingWidgetInfo={draggingWidgetInfo}
           onSelectPatient={setSelectedPatient}
           onPatientDragStart={handlePatientDragStart}
           onNurseDragStart={handleNurseDragStart}
+          onTechDragStart={handleTechDragStart}
           onWidgetDragStart={handleWidgetDragStart}
           onDropOnCell={handleDropOnCell}
           onDropOnNurseSlot={handleDropOnNurseSlot}

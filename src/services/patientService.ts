@@ -7,7 +7,7 @@ import { generateInitialPatients } from '@/lib/initial-patients';
 import { mockPatientData } from '@/lib/mock-patients';
 import { layouts as appLayouts } from '@/lib/layouts';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
-import type { Nurse } from '@/types/nurse';
+import type { Nurse, PatientCareTech } from '@/types/nurse';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
@@ -133,6 +133,7 @@ export function dischargePatient(patientToDischarge: Patient, patients: Patient[
 function findEmptySlotForPatient(
   patients: Patient[],
   nurses: Nurse[],
+  techs: PatientCareTech[],
   widgets: WidgetCard[]
 ): { row: number; col: number } | null {
   const occupiedCells = new Set<string>();
@@ -147,6 +148,10 @@ function findEmptySlotForPatient(
     for (let i = 0; i < 3; i++) { // Nurse card is 3 rows high
       occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
     }
+  });
+  
+  techs.forEach(t => {
+      occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
   });
 
   widgets.forEach(w => {
@@ -182,9 +187,10 @@ export function createRoom(
   designation: string,
   patients: Patient[],
   nurses: Nurse[],
+  techs: PatientCareTech[],
   widgets: WidgetCard[]
 ): { newPatients: Patient[] | null; error?: string } {
-  const position = findEmptySlotForPatient(patients, nurses, widgets);
+  const position = findEmptySlotForPatient(patients, nurses, techs, widgets);
   if (!position) {
     return { newPatients: null, error: "No empty space on the grid to add a new room." };
   }
