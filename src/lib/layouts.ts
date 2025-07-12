@@ -51,14 +51,14 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
         35: { row: 5, col: 6 },
         36: { row: 5, col: 7 },
 
-        // Row 5: 7 down to 1 (right side)
-        7: { row: 5, col: 11 },
-        6: { row: 5, col: 12 },
-        5: { row: 5, col: 13 },
+        // Row 5: 1 up to 7 (right side) - REVERSED
+        1: { row: 5, col: 11 },
+        2: { row: 5, col: 12 },
+        3: { row: 5, col: 13 },
         4: { row: 5, col: 14 },
-        3: { row: 5, col: 15 },
-        2: { row: 5, col: 16 },
-        1: { row: 5, col: 17 },
+        5: { row: 5, col: 15 },
+        6: { row: 5, col: 16 },
+        7: { row: 5, col: 17 },
 
         // Vertical rooms on the left below row 5
         37: { row: 6, col: 7 },
@@ -102,7 +102,7 @@ const northSouthLayout = (basePatients: Patient[]): Patient[] => {
         
         patient.gridRow = coords.row;
         patient.gridColumn = coords.col;
-        patient.roomDesignation = `${roomNum < 10 ? '80' : '8'}${roomNum}`;
+        patient.roomDesignation = `${roomNum < 10 ? '80' : '8'}${String(roomNum).padStart(2, '0')}`;
         layoutPatients.push(patient);
         bedCounter++;
     }
