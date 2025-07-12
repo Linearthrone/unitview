@@ -10,7 +10,7 @@ import PrintableReport from '@/components/printable-report';
 import SaveLayoutDialog from '@/components/save-layout-dialog';
 import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
-import AddNurseDialog, { type AddNurseFormValues } from '@/components/add-nurse-dialog';
+import AddStaffMemberDialog, { type AddStaffMemberFormValues } from '@/components/add-staff-member-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
@@ -65,7 +65,7 @@ export default function Home() {
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [admitOrUpdatePatient, setAdmitOrUpdatePatient] = useState<Patient | null>(null);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
-  const [isAddNurseDialogOpen, setIsAddNurseDialogOpen] = useState(false);
+  const [isAddStaffMemberDialogOpen, setIsAddStaffMemberDialogOpen] = useState(false);
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
   const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
@@ -239,14 +239,20 @@ export default function Home() {
   };
 
   
-  const handleSaveNurse = (formData: AddNurseFormValues) => {
-    const result = nurseService.addNurse(formData, nurses, patients, spectraPool);
+  const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
+    const result = nurseService.addStaffMember(formData, nurses, patients, spectraPool);
     if (result.newNurses) {
         setNurses(result.newNurses);
-        setIsAddNurseDialogOpen(false);
+        setIsAddStaffMemberDialogOpen(false);
         toast({
             title: "Nurse Added",
-            description: `${formData.name} has been added to the unit.`,
+            description: `${formData.name} (${formData.role}) has been added to the unit.`,
+        });
+    } else if (result.success) {
+        setIsAddStaffMemberDialogOpen(false);
+        toast({
+            title: "Staff Member Added",
+            description: `${formData.name} (${formData.role}) has been added.`,
         });
     } else {
         toast({
@@ -575,7 +581,7 @@ export default function Home() {
         onPrint={handlePrint}
         onSaveLayout={handleOpenSaveDialog}
         onAdmitPatient={() => handleOpenAdmitDialog(null)}
-        onAddNurse={() => setIsAddNurseDialogOpen(true)}
+        onAddStaffMember={() => setIsAddStaffMemberDialogOpen(true)}
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
         onCreateUnit={() => setIsCreateUnitDialogOpen(true)}
@@ -632,10 +638,10 @@ export default function Home() {
         patientToEdit={admitOrUpdatePatient}
         isUpdateMode={isUpdateMode}
       />
-      <AddNurseDialog
-        open={isAddNurseDialogOpen}
-        onOpenChange={setIsAddNurseDialogOpen}
-        onSave={handleSaveNurse}
+      <AddStaffMemberDialog
+        open={isAddStaffMemberDialogOpen}
+        onOpenChange={setIsAddStaffMemberDialogOpen}
+        onSave={handleSaveStaffMember}
       />
       <AddRoomDialog
         open={isAddRoomDialogOpen}

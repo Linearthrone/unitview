@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2, TestTube } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -27,7 +27,7 @@ interface AppHeaderProps {
   onPrint: () => void;
   onSaveLayout: () => void;
   onAdmitPatient: () => void;
-  onAddNurse: () => void;
+  onAddStaffMember: () => void;
   onManageSpectra: () => void;
   onAddRoom: () => void;
   onCreateUnit: () => void;
@@ -46,7 +46,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onPrint,
   onSaveLayout,
   onAdmitPatient,
-  onAddNurse,
+  onAddStaffMember,
   onManageSpectra,
   onAddRoom,
   onCreateUnit,
@@ -113,11 +113,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({
              <Button
               variant="outline"
               size="sm"
-              onClick={onAddNurse}
-              title="Add a new nurse to the unit"
+              onClick={onAddStaffMember}
+              title="Add a new staff member to the unit"
             >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add Nurse
+              <Users className="mr-2 h-4 w-4" />
+              + Staff Member
             </Button>
             <Button
               variant="outline"

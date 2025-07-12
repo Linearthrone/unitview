@@ -5,7 +5,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UserPlus } from 'lucide-react';
-import { AddNurseFormSchema, type AddNurseFormValues } from '@/types/forms';
+import { AddStaffMemberFormSchema, type AddStaffMemberFormValues, STAFF_ROLES } from '@/types/forms';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,19 +25,21 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-interface AddNurseDialogProps {
+interface AddStaffMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: AddNurseFormValues) => void;
+  onSave: (data: AddStaffMemberFormValues) => void;
 }
 
-export default function AddNurseDialog({ open, onOpenChange, onSave }: AddNurseDialogProps) {
-  const form = useForm<AddNurseFormValues>({
-    resolver: zodResolver(AddNurseFormSchema),
+export default function AddStaffMemberDialog({ open, onOpenChange, onSave }: AddStaffMemberDialogProps) {
+  const form = useForm<AddStaffMemberFormValues>({
+    resolver: zodResolver(AddStaffMemberFormSchema),
     defaultValues: {
       name: '',
       relief: '',
+      role: 'Staff Nurse',
     },
   });
 
@@ -47,7 +49,7 @@ export default function AddNurseDialog({ open, onOpenChange, onSave }: AddNurseD
     }
   }, [open, form]);
 
-  const onSubmit = (values: AddNurseFormValues) => {
+  const onSubmit = (values: AddStaffMemberFormValues) => {
     onSave(values);
   };
 
@@ -55,9 +57,9 @@ export default function AddNurseDialog({ open, onOpenChange, onSave }: AddNurseD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Nurse</DialogTitle>
+          <DialogTitle>Add Staff Member</DialogTitle>
           <DialogDescription>
-            Enter the nurse's details. An available Spectra number will be assigned automatically.
+            Enter the staff member's details. For nursing roles, an available Spectra will be assigned.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -65,14 +67,32 @@ export default function AddNurseDialog({ open, onOpenChange, onSave }: AddNurseD
              <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
                 <FormLabel>Full Name</FormLabel>
-                <FormControl><Input placeholder="e.g., RN Jane Smith" {...field} /></FormControl>
+                <FormControl><Input placeholder="e.g., Jane Smith" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
+             <FormField control={form.control} name="role" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {STAFF_ROLES.map(role => (
+                                <SelectItem key={role} value={role}>{role}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+             )} />
              <FormField control={form.control} name="relief" render={({ field }) => (
               <FormItem>
-                <FormLabel>Relief Nurse (Optional)</FormLabel>
-                <FormControl><Input placeholder="e.g., RN John Doe" {...field} /></FormControl>
+                <FormLabel>Relief Staff (Optional)</FormLabel>
+                <FormControl><Input placeholder="e.g., John Doe" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -80,7 +100,7 @@ export default function AddNurseDialog({ open, onOpenChange, onSave }: AddNurseD
               <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit">
                 <UserPlus className="mr-2 h-4 w-4" />
-                Add Nurse
+                Add Staff
               </Button>
             </DialogFooter>
           </form>

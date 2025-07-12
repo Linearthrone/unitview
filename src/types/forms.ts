@@ -2,7 +2,7 @@
 "use client";
 
 import * as z from 'zod';
-import type { MobilityStatus, PatientGender, CodeStatus, OrientationStatus } from '@/types/patient';
+import type { MobilityStatus, PatientGender, CodeStatus, OrientationStatus, StaffRole } from '@/types/patient';
 
 // From admit-patient-dialog.tsx
 export const MOBILITY_STATUSES: MobilityStatus[] = ['Bed Rest', 'Assisted', 'Independent'];
@@ -40,10 +40,16 @@ export const AdmitPatientFormSchema = z.object({
 export type AdmitPatientFormValues = z.infer<typeof AdmitPatientFormSchema>;
 
 
-// From add-nurse-dialog.tsx
-export const AddNurseFormSchema = z.object({
+// From add-staff-member-dialog.tsx
+export const STAFF_ROLES: StaffRole[] = [
+    'Staff Nurse', 'Charge Nurse', 'Float Pool Nurse', 
+    'Unit Clerk', 'Patient Care Tech', 'Sitter'
+];
+
+export const AddStaffMemberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  role: z.enum(STAFF_ROLES),
   relief: z.string().optional(),
 });
 
-export type AddNurseFormValues = z.infer<typeof AddNurseFormSchema>;
+export type AddStaffMemberFormValues = z.infer<typeof AddStaffMemberFormSchema>;

@@ -3,7 +3,7 @@ import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import type { Nurse, Spectra } from '@/types/nurse';
 import type { Patient } from '@/types/patient';
-import type { AddNurseFormValues } from '@/types/forms';
+import type { AddStaffMemberFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
 import { generateInitialNurses } from '@/lib/initial-nurses';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -19,8 +19,9 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
             return snapshot.docs.map(doc => doc.data() as Nurse);
         }
 
-        if (layoutName !== 'default') {
-            return []; // Return empty for non-default layouts if they don't exist
+        if (layoutName !== 'default' && layoutName !== '*: North South') {
+             // Return empty for non-default layouts if they don't exist
+            return [];
         }
 
         console.log(`No nurse data for layout '${layoutName}' in Firestore. Generating initial nurses.`);
@@ -36,7 +37,7 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
-        if (layoutName !== 'default') return [];
+        if (layoutName !== 'default' && layoutName !== '*: North South') return [];
         // Fallback to in-memory generation on error for default layout
         const initialNurses = generateInitialNurses();
         const availableSpectra = spectraPool.filter(s => s.inService);
@@ -92,12 +93,21 @@ function findEmptySlotForNurse(patients: Patient[], nurses: Nurse[]): { row: num
     return null;
 }
 
-export function addNurse(
-    formData: AddNurseFormValues, 
+export function addStaffMember(
+    formData: AddStaffMemberFormValues, 
     nurses: Nurse[], 
     patients: Patient[], 
     spectraPool: Spectra[]
-): { newNurses: Nurse[] | null; error?: string } {
+): { newNurses?: Nurse[] | null; success?: boolean; error?: string } {
+    const isNursingRole = ['Staff Nurse', 'Charge Nurse', 'Float Pool Nurse'].includes(formData.role);
+
+    if (!isNursingRole) {
+        // For non-nursing roles, we just acknowledge the addition for now.
+        // In a real scenario, you might add them to a different list or database collection.
+        console.log(`Added non-nursing staff: ${formData.name} (${formData.role})`);
+        return { success: true };
+    }
+
     const assignedSpectra = spectraPool.find(s => s.inService && !nurses.some(n => n.spectra === s.id));
     if (!assignedSpectra) {
         return { newNurses: null, error: "No Spectra Available" };
@@ -111,6 +121,7 @@ export function addNurse(
     const newNurse: Nurse = {
         id: `nurse-${Date.now()}`,
         name: formData.name,
+        role: formData.role,
         relief: formData.relief || undefined,
         spectra: assignedSpectra.id,
         assignedPatientIds: Array(6).fill(null),
