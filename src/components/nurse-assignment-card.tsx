@@ -83,7 +83,7 @@ const NurseAssignmentCard: React.FC<NurseAssignmentCardProps> = ({
         </div>
       </CardHeader>
       <Separator />
-      <CardContent className="p-3 flex-grow grid grid-cols-2 grid-rows-3 gap-2">
+      <CardContent className="p-2 flex-grow grid grid-cols-1 gap-1">
         {nurse.assignedPatientIds.map((patientId, index) => {
           const patient = patientId ? patientMap.get(patientId) : null;
           return (
@@ -92,7 +92,7 @@ const NurseAssignmentCard: React.FC<NurseAssignmentCardProps> = ({
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, index)}
               className={cn(
-                "border-2 border-dashed rounded-md flex items-center justify-center text-sm font-semibold",
+                "border-2 border-dashed rounded-md flex items-center justify-center text-sm font-semibold h-8",
                 isEffectivelyLocked ? "border-gray-400" : "border-primary/60 hover:bg-primary/10",
                 patient ? "border-solid bg-card" : ""
               )}
