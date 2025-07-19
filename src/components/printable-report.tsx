@@ -49,7 +49,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
   const sortedPatients = [...activePatients].sort((a, b) => a.bedNumber - b.bedNumber);
 
   return (
-    <div className="hidden print:block text-black font-sans">
+    <div id="printable-charge-report" className="hidden print:block text-black font-sans">
       <h1 className="text-xl font-bold text-center mb-2">Unit Charge Report</h1>
       <p className="text-center text-sm mb-4">
         {generatedDate && `Generated on: ${generatedDate}`}
@@ -89,7 +89,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
                 <div><span className="font-semibold">Code:</span> {patient.codeStatus}</div>
                 <div><span className="font-semibold">A&O:</span> {patient.orientationStatus.toUpperCase()}</div>
                 <div><span className="font-semibold">Nurse:</span> {patient.assignedNurse || 'N/A'}</div>
-                <div className="col-span-2"><span className="font-semibold">LDAs:</span> {patient.ldas.join(', ') || 'None'}</div>
+                <div className="col-span-2"><span className="font-semibold">LDAs:</span> {(Array.isArray(patient.ldas) ? patient.ldas.join(', ') : '') || 'None'}</div>
               </div>
               
               {patient.notes && (
@@ -114,3 +114,5 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
 };
 
 export default PrintableReport;
+
+    

@@ -7,6 +7,7 @@ import AppHeader from '@/components/app-header';
 import PatientGrid from '@/components/patient-grid';
 import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
+import PrintableAssignments from '@/components/printable-assignments';
 import SaveLayoutDialog from '@/components/save-layout-dialog';
 import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
@@ -15,11 +16,12 @@ import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
+import AssignStaffDialog from '@/components/assign-staff-dialog';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
-import type { LayoutName, Patient, WidgetCard } from '@/types/patient';
+import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 // Services
 import * as layoutService from '@/services/layoutService';
@@ -79,6 +81,7 @@ export default function Home() {
   const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
   const [patientToEditDesignation, setPatientToEditDesignation] = useState<Patient | null>(null);
+  const [roleToAssign, setRoleToAssign] = useState<StaffRole | null>(null);
 
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
@@ -286,6 +289,28 @@ export default function Home() {
     }
   };
 
+  const handleAssignSpecificRole = (name: string, role: StaffRole) => {
+    if (role === 'Charge Nurse') {
+      setChargeNurseName(name);
+      toast({ title: "Charge Nurse Assigned", description: `${name} is now the Charge Nurse.` });
+    } else if (role === 'Unit Clerk') {
+      setUnitClerkName(name);
+      toast({ title: "Unit Clerk Assigned", description: `${name} is now the Unit Clerk.` });
+    }
+    setRoleToAssign(null);
+  };
+
+  const handleRemoveSpecificRole = (role: StaffRole) => {
+    if (role === 'Charge Nurse') {
+      setChargeNurseName('Unassigned');
+      toast({ title: "Charge Nurse Removed", description: `The Charge Nurse has been unassigned.` });
+    } else if (role === 'Unit Clerk') {
+      setUnitClerkName('Unassigned');
+      toast({ title: "Unit Clerk Removed", description: `The Unit Clerk has been unassigned.` });
+    }
+  };
+
+
   const handleRemoveNurse = (nurseId: string) => {
     const nurseToRemove = nurses.find(n => n.id === nurseId);
     if (!nurseToRemove) return;
@@ -392,8 +417,38 @@ export default function Home() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = (reportType: 'charge' | 'assignments') => {
+    const printTarget = reportType === 'charge' ? 'printable-charge-report' : 'printable-assignments-report';
+    const content = document.getElementById(printTarget);
+    if (!content) return;
+
+    const printWindow = window.open('', '_blank');
+    printWindow?.document.write(`
+        <html>
+        <head>
+          <title>Print Report</title>
+          <style>
+              @media print {
+                  body { 
+                      font-family: Arial, Helvetica, sans-serif;
+                      font-size: 10pt;
+                  }
+                  .print-hide { display: none !important; }
+                  .page-break-inside-avoid { page-break-inside: avoid; }
+                  h1 { font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 0.5rem; }
+                  .report-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; font-size: 9pt; }
+                  .report-header .unit-name { font-size: 20pt; font-weight: bold; text-align: center; width: 100%; position: absolute; top: 0; left: 0; }
+              }
+          </style>
+          <link rel="stylesheet" href="/globals.css">
+          <script src="https://cdn.tailwindcss.com"></script>
+        </head>
+        <body onload="window.print(); window.close();">
+          ${content.innerHTML}
+        </body>
+        </html>
+    `);
+    printWindow?.document.close();
   };
   
   const handlePatientDragStart = useCallback((
@@ -746,9 +801,18 @@ export default function Home() {
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
           onRemoveNurse={handleRemoveNurse}
           onRemoveTech={handleRemoveTech}
+          onAssignRole={(role) => setRoleToAssign(role)}
+          onRemoveRole={handleRemoveSpecificRole}
         />
       </main>
       <PrintableReport patients={patients} />
+      <PrintableAssignments 
+        unitName={getFriendlyLayoutName(currentLayoutName)}
+        chargeNurseName={chargeNurseName}
+        nurses={nurses}
+        techs={techs}
+        patients={patients}
+      />
       <ReportSheet
         patient={selectedPatient}
         open={!!selectedPatient}
@@ -811,9 +875,17 @@ export default function Home() {
         patient={patientToDischarge}
         onConfirm={handleConfirmDischarge}
       />
+       <AssignStaffDialog
+        open={!!roleToAssign}
+        onOpenChange={() => setRoleToAssign(null)}
+        role={roleToAssign}
+        onSave={handleAssignSpecificRole}
+      />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}
       </footer>
     </div>
   );
 }
+
+    

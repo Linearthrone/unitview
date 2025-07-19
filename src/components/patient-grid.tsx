@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import type { Patient, WidgetCard } from '@/types/patient';
+import type { Patient, StaffRole, WidgetCard } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 import PatientBlock from './patient-block';
 import NurseAssignmentCard from './nurse-assignment-card';
@@ -57,6 +57,8 @@ interface PatientGridProps {
   onEditDesignation: (patient: Patient) => void;
   onRemoveNurse: (nurseId: string) => void;
   onRemoveTech: (techId: string) => void;
+  onAssignRole: (role: StaffRole) => void;
+  onRemoveRole: (role: StaffRole) => void;
 }
 
 const PatientGrid: React.FC<PatientGridProps> = ({
@@ -88,6 +90,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   onEditDesignation,
   onRemoveNurse,
   onRemoveTech,
+  onAssignRole,
+  onRemoveRole,
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -202,8 +206,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 
   const renderWidget = (widget: WidgetCard) => {
     switch (widget.type) {
-      case 'UnitClerk': return <UnitClerkCard name={unitClerkName} />;
-      case 'ChargeNurse': return <ChargeNurseCard name={chargeNurseName} />;
+      case 'UnitClerk': return <UnitClerkCard name={unitClerkName} onAssign={onAssignRole} onRemove={onRemoveRole} />;
+      case 'ChargeNurse': return <ChargeNurseCard name={chargeNurseName} onAssign={onAssignRole} onRemove={onRemoveRole} />;
       default: return null;
     }
   };
@@ -294,3 +298,5 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 };
 
 export default PatientGrid;
+
+    

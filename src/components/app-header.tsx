@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users } from 'lucide-react';
+import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users, ClipboardSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -24,7 +24,7 @@ interface AppHeaderProps {
   currentLayoutName: LayoutName;
   onSelectLayout: (layoutName: LayoutName) => void;
   availableLayouts: LayoutName[];
-  onPrint: () => void;
+  onPrint: (reportType: 'charge' | 'assignments') => void;
   onSaveLayout: () => void;
   onAdmitPatient: () => void;
   onAddStaffMember: () => void;
@@ -119,15 +119,24 @@ const AppHeader: React.FC<AppHeaderProps> = ({
               <Users className="mr-2 h-4 w-4" />
               + Staff Member
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onPrint}
-              title="Print Charge Report"
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              Print Report
-            </Button>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                   <DropdownMenuItem onClick={() => onPrint('charge')}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print Charge Report
+                  </DropdownMenuItem>
+                   <DropdownMenuItem onClick={() => onPrint('assignments')}>
+                    <ClipboardSignature className="mr-2 h-4 w-4" />
+                    Print Assignments
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
 
           {/* Right Section */}
@@ -197,3 +206,5 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 };
 
 export default AppHeader;
+
+    
