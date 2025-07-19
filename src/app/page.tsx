@@ -197,6 +197,24 @@ export default function Home() {
     });
   };
 
+  const handleSaveCurrentLayout = async () => {
+    if (isLayoutLocked) {
+      toast({
+        variant: "destructive",
+        title: "Layout Locked",
+        description: "Unlock the layout to save changes.",
+      });
+      return;
+    }
+    const staffData = { chargeNurseName, unitClerkName };
+    await layoutService.saveNewLayout(currentLayoutName, patients, nurses, techs, widgetCards, staffData);
+    toast({
+      title: "Layout Saved",
+      description: `Current layout "${currentLayoutName}" has been saved.`,
+    });
+  };
+
+
   const handleOpenAdmitDialog = (patient: Patient) => {
     setIsUpdateMode(false);
     setAdmitOrUpdatePatient(patient);
@@ -770,6 +788,7 @@ export default function Home() {
         availableLayouts={availableLayouts}
         onPrint={handlePrint}
         onSaveLayout={handleOpenSaveDialog}
+        onSaveCurrentLayout={handleSaveCurrentLayout}
         onAdmitPatient={() => handleOpenAdmitDialog(null)}
         onAddStaffMember={() => setIsAddStaffMemberDialogOpen(true)}
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}

@@ -34,6 +34,7 @@ interface AppHeaderProps {
   availableLayouts: LayoutName[];
   onPrint: (reportType: 'charge' | 'assignments') => void;
   onSaveLayout: () => void;
+  onSaveCurrentLayout: () => void;
   onAdmitPatient: () => void;
   onAddStaffMember: () => void;
   onManageSpectra: () => void;
@@ -64,6 +65,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   availableLayouts,
   onPrint,
   onSaveLayout,
+  onSaveCurrentLayout,
   onAdmitPatient,
   onAddStaffMember,
   onManageSpectra,
@@ -170,6 +172,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
             <Button variant="outline" size="icon" onClick={onToggleLayoutLock} title={isLayoutLocked ? 'Unlock Layout' : 'Lock Layout'}>
               {isLayoutLocked ? <Lock /> : <Unlock />}
+            </Button>
+             <Button variant="outline" size="icon" onClick={onSaveCurrentLayout} disabled={isLayoutLocked} title="Save Current Layout">
+              <Save />
             </Button>
             
             <DropdownMenu>
