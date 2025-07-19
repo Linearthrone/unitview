@@ -256,3 +256,5 @@ export function calculateTechAssignments(techs: PatientCareTech[], patients: Pat
         return { ...tech, assignmentGroup };
     });
 }
+
+    
