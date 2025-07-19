@@ -1,8 +1,12 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users, ClipboardSignature } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+    Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, 
+    HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users, 
+    ClipboardSignature, HeartHandshake, Ban, Droplet
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,11 +18,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { LayoutName } from '@/types/patient';
 import IconExplanationDialog from './icon-explanation-dialog';
+import { Separator } from './ui/separator';
 
 interface AppHeaderProps {
   title: string;
   activePatientCount: number;
   totalRoomCount: number;
+  dnrCount: number;
+  restraintCount: number;
+  foleyCount: number;
   isLayoutLocked: boolean;
   onToggleLayoutLock: () => void;
   currentLayoutName: LayoutName;
@@ -34,10 +42,21 @@ interface AppHeaderProps {
   onInsertMockData: () => void;
 }
 
+const StatDisplay: React.FC<{ icon: React.ElementType, label: string, value: number, className?: string }> = ({ icon: Icon, label, value, className }) => (
+    <div className={`flex items-center gap-2 ${className}`}>
+        <Icon className="h-5 w-5" />
+        <span className="font-semibold">{value}</span>
+        <span className="text-sm text-muted-foreground hidden lg:inline">{label}</span>
+    </div>
+);
+
 const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   activePatientCount,
   totalRoomCount,
+  dnrCount,
+  restraintCount,
+  foleyCount,
   isLayoutLocked,
   onToggleLayoutLock,
   currentLayoutName,
@@ -53,6 +72,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onInsertMockData,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+      const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+      return () => clearInterval(timer);
+  }, []);
 
   const getFriendlyLayoutName = (layoutName: LayoutName): string => {
     switch (layoutName) {
@@ -68,21 +93,37 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="container mx-auto flex items-center justify-between">
           
           {/* Left Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <Stethoscope className="h-8 w-8 text-primary" />
+              <Stethoscope className="h-12 w-12 text-primary" />
               <div>
-                <h1 className="text-2xl font-headline font-bold text-primary">{title}</h1>
-                <p className="text-sm text-muted-foreground">{activePatientCount} Patients / {totalRoomCount} Rooms</p>
+                <h1 className="text-3xl font-headline font-bold text-primary">{title}</h1>
+                <p className="text-lg text-muted-foreground font-semibold">{activePatientCount} Patients / {totalRoomCount} Rooms</p>
               </div>
             </div>
+             <Separator orientation="vertical" className="h-12" />
+             <div className="flex items-center gap-4 text-lg">
+                <StatDisplay icon={HeartHandshake} label="DNR" value={dnrCount} className="text-purple-600" />
+                <StatDisplay icon={Ban} label="Restraints" value={restraintCount} className="text-destructive" />
+                <StatDisplay icon={Droplet} label="Foleys" value={foleyCount} className="text-blue-500" />
+             </div>
           </div>
           
           {/* Center Section */}
+          <div className="flex-col items-center">
+            <div className="font-bold text-2xl text-center">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-sm text-muted-foreground">
+                {currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          </div>
+
+          {/* Right Section */}
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline">
                   <LayoutGrid className="mr-2 h-4 w-4" />
                   {getFriendlyLayoutName(currentLayoutName)}
                 </Button>
@@ -101,102 +142,65 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAdmitPatient}
-              title="Admit or Transfer-In a new patient"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Admit Patient
+
+            <Button variant="outline" onClick={onAdmitPatient} title="Admit/Transfer-In">
+              <UserPlus /> Admit
             </Button>
-             <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddStaffMember}
-              title="Add a new staff member to the unit"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              + Staff Member
+            <Button variant="outline" onClick={onAddStaffMember} title="Add Staff">
+              <Users /> + Staff
             </Button>
-             <DropdownMenu>
+
+            <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print
+                  <Button variant="outline">
+                    <Printer /> Print
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                    <DropdownMenuItem onClick={() => onPrint('charge')}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print Charge Report
+                    <Printer /> Print Charge Report
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={() => onPrint('assignments')}>
-                    <ClipboardSignature className="mr-2 h-4 w-4" />
-                    Print Assignments
+                    <ClipboardSignature /> Print Assignments
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
-          </div>
+            </DropdownMenu>
+            
+            <Separator orientation="vertical" className="h-10 mx-2" />
 
-          {/* Right Section */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCreateUnit}
-              title="Create a new unit layout with pre-generated rooms"
-            >
-              <Building2 className="mr-2 h-4 w-4" />
-              Create Unit
+            <Button variant="outline" size="icon" onClick={onToggleLayoutLock} title={isLayoutLocked ? 'Unlock Layout' : 'Lock Layout'}>
+              {isLayoutLocked ? <Lock /> : <Unlock />}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddRoom}
-              title="Create a new vacant room card"
-            >
-              <PlusSquare className="mr-2 h-4 w-4" />
-              Create Room
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onToggleLayoutLock}
-              title={isLayoutLocked ? 'Unlock Layout' : 'Lock Layout'}
-            >
-              {isLayoutLocked ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
-              {isLayoutLocked ? 'Locked' : 'Lock'}
-            </Button>
-            <div className="border-l h-6"></div>
+            
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <TestTube className="mr-2 h-4 w-4" />
-                    Dev Tools
+                  <Button variant="ghost" size="icon">
+                    <TestTube />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuLabel>Demo & Dev Tools</DropdownMenuLabel>
+                  <DropdownMenuLabel>Dev & Admin Tools</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onCreateUnit}>
+                    <Building2 /> Create New Unit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onAddRoom}>
+                    <PlusSquare /> Create New Room
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onSaveLayout} disabled={isLayoutLocked}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Layout As...
+                    <Save /> Save Layout As...
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={onInsertMockData}>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Insert Mock Patient Data
+                    <UserPlus /> Insert Mock Patients
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={() => onManageSpectra()}>
-                    <ListTodo className="mr-2 h-4 w-4" />
-                    Manage Spectra Pool
+                    <ListTodo /> Manage Spectra Pool
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={() => setIsExplanationOpen(true)}>
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    Icon Explanation
+                    <HelpCircle /> Icon Explanation
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
+            </DropdownMenu>
           </div>
         </div>
       </header>
@@ -206,5 +210,3 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 };
 
 export default AppHeader;
-
-    

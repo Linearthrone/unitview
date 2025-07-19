@@ -750,6 +750,9 @@ export default function Home() {
 
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;
+  const dnrCount = patients.filter(p => p.isComfortCareDNR).length;
+  const restraintCount = patients.filter(p => p.isInRestraints).length;
+  const foleyCount = patients.filter(p => Array.isArray(p.ldas) && p.ldas.some(lda => lda.toLowerCase().includes('foley'))).length;
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -758,6 +761,9 @@ export default function Home() {
         activePatientCount={activePatientCount}
         totalRoomCount={totalRoomCount}
         isLayoutLocked={isLayoutLocked}
+        dnrCount={dnrCount}
+        restraintCount={restraintCount}
+        foleyCount={foleyCount}
         onToggleLayoutLock={toggleLayoutLock}
         currentLayoutName={currentLayoutName}
         onSelectLayout={handleSelectLayout}
