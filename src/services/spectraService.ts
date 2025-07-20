@@ -1,4 +1,6 @@
 
+"use server";
+
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';

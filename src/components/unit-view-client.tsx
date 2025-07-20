@@ -106,7 +106,7 @@ export default function UnitViewClient({
       try {
         const [patientData, nurseData, techData] = await Promise.all([
             patientService.getPatients(layoutName),
-            nurseService.getNurses(layoutName, spectraPool),
+            nurseService.getNurses(layoutName),
             nurseService.getTechs(layoutName),
         ]);
 
@@ -130,7 +130,7 @@ export default function UnitViewClient({
       } finally {
         setIsInitialized(true);
       }
-  }, [toast, spectraPool]);
+  }, [toast]);
 
   // Set current year on mount
   useEffect(() => {
