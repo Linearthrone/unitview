@@ -10,6 +10,7 @@ export const generateInitialNurses = (): Omit<Nurse, 'spectra'>[] => {
       assignedPatientIds: Array(6).fill(null),
       gridRow: 2,
       gridColumn: 5,
+      role: 'Staff Nurse'
     },
     {
       id: 'nurse-2',
