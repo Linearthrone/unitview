@@ -10,7 +10,7 @@ import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
-export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
+export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);

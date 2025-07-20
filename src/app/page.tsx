@@ -25,7 +25,7 @@ export default async function Home() {
       
   const [initialPatients, initialNurses, initialTechs] = await Promise.all([
     patientService.getPatients(layoutToLoad),
-    nurseService.getNurses(layoutToLoad, initialSpectra),
+    nurseService.getNurses(layoutToLoad),
     nurseService.getTechs(layoutToLoad),
   ]);
 
