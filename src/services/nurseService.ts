@@ -1,4 +1,6 @@
 
+"use server";
+
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, query } from 'firebase/firestore';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
@@ -31,9 +33,9 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
 
         nurses.forEach(nurse => {
             const docRef = doc(collectionRef, nurse.id);
+            // Ensure no undefined fields are accidentally sent to Firestore
             const nurseDataForFirestore = {
                 ...nurse,
-                // Ensure no undefined fields are accidentally sent, though Firestore config should handle it
                 relief: nurse.relief || null, 
             };
             batch.set(docRef, nurseDataForFirestore);
