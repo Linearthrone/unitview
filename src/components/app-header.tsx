@@ -52,6 +52,13 @@ const StatDisplay: React.FC<{ icon: React.ElementType, label: string, value: num
     </div>
 );
 
+const getFriendlyLayoutName = (layoutName: LayoutName): string => {
+    switch (layoutName) {
+      case 'North-South View': return 'North/South View';
+      default: return layoutName;
+    }
+  };
+
 const AppHeader: React.FC<AppHeaderProps> = ({
   title,
   activePatientCount,
@@ -85,14 +92,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       const timer = setInterval(() => setCurrentTime(new Date()), 1000);
       return () => clearInterval(timer);
   }, []);
-
-  const getFriendlyLayoutName = (layoutName: LayoutName): string => {
-    switch (layoutName) {
-      case 'default': return 'Default Layout';
-      case '*: North South': return 'North/South View';
-      default: return layoutName;
-    }
-  };
 
   return (
     <>

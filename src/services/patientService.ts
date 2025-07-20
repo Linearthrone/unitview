@@ -31,6 +31,7 @@ const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', l
 
 // This function seeds the predefined "North/South View" layout
 async function seedNorthSouthLayout(): Promise<Patient[]> {
+    const layoutName = 'North-South View';
     const layoutPatients: Patient[] = [];
     const perimeterCells = getPerimeterCells();
     
@@ -65,7 +66,7 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
         layoutPatients.push(patient);
     }
     
-    await savePatients('North/South View', layoutPatients);
+    await savePatients(layoutName, layoutPatients);
     return layoutPatients;
 }
 
@@ -77,8 +78,8 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-            // Special case: if the "North/South View" is selected and empty, seed it.
-            if (layoutName === 'North/South View') {
+            // Special case: if the "North-South View" is selected and empty, seed it.
+            if (layoutName === 'North-South View') {
                 console.log(`No data for layout '${layoutName}' in Firestore. Seeding initial layout.`);
                 return await seedNorthSouthLayout();
             }
@@ -91,7 +92,7 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
 
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
-         if (layoutName === 'North/South View') {
+         if (layoutName === 'North-South View') {
             return await seedNorthSouthLayout();
         }
         return [];

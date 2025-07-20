@@ -9,9 +9,9 @@ import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
 import PrintableAssignments from '@/components/printable-assignments';
 import SaveLayoutDialog from '@/components/save-layout-dialog';
-import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
+import AdmitPatientDialog from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
-import AddStaffMemberDialog, { type AddStaffMemberFormValues } from '@/components/add-staff-member-dialog';
+import AddStaffMemberDialog from '@/components/add-staff-member-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
@@ -22,6 +22,8 @@ import { NUM_ROWS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, StaffRole } from '@/types/patient';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
+import type { AdmitPatientFormValues } from '@/types/forms';
+import type { AddStaffMemberFormValues } from '@/types/forms';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
@@ -51,6 +53,13 @@ interface UnitViewClientProps {
     initialTechs: PatientCareTech[];
     initialSpectraPool: Spectra[];
 }
+
+const getFriendlyLayoutName = (layoutName: LayoutName): string => {
+    switch (layoutName) {
+      case 'North-South View': return 'North/South View';
+      default: return layoutName;
+    }
+  };
 
 export default function UnitViewClient({
     initialLayoutName,
@@ -197,7 +206,7 @@ export default function UnitViewClient({
   };
 
 
-  const handleOpenAdmitDialog = (patient: Patient) => {
+  const handleOpenAdmitDialog = (patient: Patient | null) => {
     setIsUpdateMode(false);
     setAdmitOrUpdatePatient(patient);
   };
@@ -670,14 +679,6 @@ export default function UnitViewClient({
       }
   }, [patients, techs]);
     
-  const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
-    switch (layoutName) {
-      case 'default': return 'Default Layout';
-      case '*: North South': return 'North/South View';
-      default: return layoutName;
-    }
-  }, []);
-
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;
   const dnrCount = patients.filter(p => p.isComfortCareDNR).length;

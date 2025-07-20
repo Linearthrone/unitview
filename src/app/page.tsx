@@ -1,3 +1,4 @@
+
 import React from 'react';
 import UnitViewClient from '@/components/unit-view-client';
 import type { LayoutName } from '@/types/patient';
@@ -18,7 +19,7 @@ export default async function Home() {
 
   const layoutToLoad: LayoutName = (userPrefs.lastSelectedLayout && allLayouts.includes(userPrefs.lastSelectedLayout)) 
       ? userPrefs.lastSelectedLayout 
-      : 'North/South View';
+      : 'North-South View';
       
   const [initialPatients, initialNurses, initialTechs] = await Promise.all([
     patientService.getPatients(layoutToLoad),
