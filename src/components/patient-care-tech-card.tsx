@@ -24,14 +24,14 @@ const PatientCareTechCard: React.FC<PatientCareTechCardProps> = ({ tech, onRemov
 
   return (
     <Card className={cn(
-        "flex flex-col h-full shadow-lg bg-indigo-200 dark:bg-indigo-900 border-indigo-400 dark:border-indigo-600 relative",
+        "flex flex-col h-full shadow-lg bg-rose-200 dark:bg-rose-900 border-rose-400 dark:border-rose-600 relative",
         !isEffectivelyLocked && "cursor-grab"
     )}>
        {!isEffectivelyLocked && (
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-1 right-1 h-6 w-6 text-indigo-900/70 dark:text-indigo-200/70 hover:text-destructive hover:bg-destructive/10"
+          className="absolute top-1 right-1 h-6 w-6 text-rose-900/70 dark:text-rose-200/70 hover:text-destructive hover:bg-destructive/10"
           onClick={handleRemoveClick}
           title={`Remove ${tech.name}`}
         >

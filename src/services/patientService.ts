@@ -3,7 +3,6 @@ import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp, query, limit } from 'firebase/firestore';
 import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/types/forms';
-import { generateInitialPatients } from '@/lib/initial-patients';
 import { mockPatientData } from '@/lib/mock-patients';
 import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';

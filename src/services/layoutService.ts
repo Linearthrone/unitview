@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
-import type { LayoutName, Patient, StaffAssignments, UserPreferences, WidgetCard } from '@/types/patient';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import type { LayoutName, Patient, StaffAssignments, UserPreferences } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 import { saveNurses, saveTechs } from './nurseService';
 import { savePatients } from './patientService';
@@ -35,12 +35,11 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     return Array.from(new Set(config.customLayoutNames || []));
 }
 
-export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], widgets: WidgetCard[], staffData: StaffAssignments): Promise<LayoutName[]> {
+export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], staffData: StaffAssignments): Promise<LayoutName[]> {
     // Save the actual layout data to their respective collections
     await savePatients(layoutName, patients);
     await saveNurses(layoutName, nurses);
     await saveTechs(layoutName, techs);
-    await saveWidgets(layoutName, widgets);
     await saveStaff(layoutName, staffData);
 
     // Update the list of custom layout names in the central config doc
@@ -109,29 +108,6 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
     await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
 
     return updatedCustomLayouts;
-}
-
-export async function getWidgets(layoutName: string): Promise<WidgetCard[] | null> {
-    const widgetsDocRef = doc(db, 'layouts', layoutName, 'widgets', 'positions');
-    try {
-        const docSnap = await getDoc(widgetsDocRef);
-        if (docSnap.exists()) {
-            return docSnap.data().widgets as WidgetCard[];
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error fetching widgets for layout ${layoutName}:`, error);
-        return null;
-    }
-}
-
-export async function saveWidgets(layoutName: string, widgets: WidgetCard[]): Promise<void> {
-    const widgetsDocRef = doc(db, 'layouts', layoutName, 'widgets', 'positions');
-    try {
-        await setDoc(widgetsDocRef, { widgets });
-    } catch (error) {
-        console.error(`Error saving widgets for layout ${layoutName}:`, error);
-    }
 }
 
 export async function getStaff(layoutName: string): Promise<StaffAssignments | null> {
