@@ -22,12 +22,13 @@ import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
-import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
+import type { Nurse, PatientCareTech } from '@/types/nurse';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
 import * as nurseService from '@/services/nurseService';
 import * as spectraService from '@/services/spectraService';
+import * as assignmentService from '@/services/assignmentService';
 import { Stethoscope } from 'lucide-react';
 
 
@@ -216,6 +217,23 @@ export default function Home() {
       title: "Layout Saved",
       description: `Current layout "${currentLayoutName}" has been saved.`,
     });
+  };
+
+  const handleSaveAssignments = async () => {
+    try {
+      await assignmentService.saveShiftAssignments(currentLayoutName, nurses, patients, chargeNurseName);
+      toast({
+        title: "Assignments Saved",
+        description: "The current shift assignments have been saved for reference.",
+      });
+    } catch (error) {
+       console.error("Failed to save assignments:", error);
+       toast({
+          variant: "destructive",
+          title: "Error Saving Assignments",
+          description: "Could not save the current assignments. See console for details.",
+       });
+    }
   };
 
 
@@ -793,6 +811,7 @@ export default function Home() {
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
         onCreateUnit={() => setIsCreateUnitDialogOpen(true)}
         onInsertMockData={handleInsertMockData}
+        onSaveAssignments={handleSaveAssignments}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -824,7 +843,7 @@ export default function Home() {
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
           onRemoveNurse={handleRemoveNurse}
           onRemoveTech={handleRemoveTech}
-          onAssignRole={handleAssignSpecificRole}
+          onAssignRole={(role) => setRoleToAssign(role)}
           onRemoveRole={handleRemoveSpecificRole}
         />
       </main>

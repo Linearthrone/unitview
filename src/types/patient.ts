@@ -55,3 +55,21 @@ export interface UserPreferences {
     lastSelectedLayout: LayoutName;
     isLayoutLocked: boolean;
 }
+
+export interface AssignmentSet {
+    id: string; // e.g., `North-South-View-2024-07-21-Day`
+    layoutName: LayoutName;
+    shift: 'Day Shift' | 'Night Shift';
+    date: Date;
+    chargeNurseName: string;
+    assignments: {
+        nurseId: string;
+        nurseName: string;
+        spectra: string;
+        assignedPatients: {
+            patientId: string;
+            roomDesignation: string;
+            patientName: string;
+        }[];
+    }[];
+}

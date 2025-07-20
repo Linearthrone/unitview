@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, 
     HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users, 
-    ClipboardSignature, HeartHandshake, Ban, Droplet
+    ClipboardSignature, HeartHandshake, Ban, Droplet, Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +41,7 @@ interface AppHeaderProps {
   onAddRoom: () => void;
   onCreateUnit: () => void;
   onInsertMockData: () => void;
+  onSaveAssignments: () => void;
 }
 
 const StatDisplay: React.FC<{ icon: React.ElementType, label: string, value: number, className?: string }> = ({ icon: Icon, label, value, className }) => (
@@ -72,6 +73,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onAddRoom,
   onCreateUnit,
   onInsertMockData,
+  onSaveAssignments,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -203,6 +205,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={onInsertMockData}>
                     <UserPlus /> Insert Mock Patients
+                  </DropdownMenuItem>
+                   <DropdownMenuItem onClick={onSaveAssignments}>
+                    <Archive /> Save Shift Assignments
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={() => setIsExplanationOpen(true)}>
                     <HelpCircle /> Icon Explanation
