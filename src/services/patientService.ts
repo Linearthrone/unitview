@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, Timestamp, query, limit } from 'firebase/firestore';
 import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/types/forms';
 import { generateInitialPatients } from '@/lib/initial-patients';
@@ -19,32 +19,52 @@ const patientFromFirestore = (data: any): Patient => {
     };
 }
 
+// Converts JS Dates to Firestore Timestamps for writing
+const patientToFirestore = (patient: Patient): any => {
+    return {
+        ...patient,
+        admitDate: Timestamp.fromDate(patient.admitDate),
+        dischargeDate: Timestamp.fromDate(patient.dischargeDate),
+    };
+}
+
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
+
+// Function to seed initial patients for a layout and save them to Firestore
+async function seedInitialPatients(layoutName: LayoutName): Promise<Patient[]> {
+    const basePatients = generateInitialPatients();
+    const initialLayoutPatients = appLayouts[layoutName](basePatients);
+    
+    await savePatients(layoutName, initialLayoutPatients);
+    
+    return initialLayoutPatients;
+}
 
 export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
     const collectionRef = getCollectionRef(layoutName);
     try {
-        const snapshot = await getDocs(collectionRef);
-        if (!snapshot.empty) {
-            return snapshot.docs.map(doc => patientFromFirestore(doc.data()));
+        // Check if the collection exists by querying for one document
+        const q = query(collectionRef, limit(1));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            // No patients exist for this layout.
+            // If it's a predefined layout, seed it with initial data.
+            if (appLayouts[layoutName]) {
+                console.log(`No data for layout '${layoutName}' in Firestore. Seeding initial layout.`);
+                return await seedInitialPatients(layoutName);
+            }
+            // For custom layouts that might be empty, return an empty array.
+            return [];
         }
 
-        // Apply predefined layouts only if the layout is not custom
-        if (appLayouts[layoutName]) {
-            console.log(`No data for layout '${layoutName}' in Firestore. Generating initial layout.`);
-            const basePatients = generateInitialPatients();
-            const initialLayoutPatients = appLayouts[layoutName](basePatients);
-            
-            // Removed the slow initial write operation. Data will be saved on first user change.
-            return initialLayoutPatients;
-        }
-
-        // For custom layouts that might be empty
-        return [];
+        // If data exists, fetch all documents.
+        const allDocsSnapshot = await getDocs(collectionRef);
+        return allDocsSnapshot.docs.map(doc => patientFromFirestore(doc.data()));
 
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
-        // Fallback to in-memory generation on error
+        // Fallback to in-memory generation on error, only for predefined layouts
         if (appLayouts[layoutName]) {
             const basePatients = generateInitialPatients();
             return appLayouts[layoutName](basePatients);
@@ -54,17 +74,21 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
 }
 
 export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
-    if (!patients) { // Can be an empty array
-        return;
-    }
+    if (!patients) return; // Can be an empty array
+
     const collectionRef = getCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
+        // Since we are overwriting the whole layout, we can delete all first.
+        // For more granular updates, a different strategy would be needed.
+        const existingDocs = await getDocs(collectionRef);
+        existingDocs.forEach(doc => batch.delete(doc.ref));
+        
+        // Then add all the new/updated patient data.
         patients.forEach(patient => {
             const docRef = doc(collectionRef, patient.id);
-            // The Firebase SDK handles JS Date conversion to Timestamp automatically.
-            // Undefined fields are handled by the initializeFirestore setting.
-            batch.set(docRef, patient);
+            const dataForFirestore = patientToFirestore(patient);
+            batch.set(docRef, dataForFirestore);
         });
         await batch.commit();
     } catch (error) {

@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, query, limit } from 'firebase/firestore';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 import type { Patient, WidgetCard } from '@/types/patient';
 import type { AddStaffMemberFormValues } from '@/types/forms';
@@ -11,59 +11,73 @@ import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
+// Function to seed initial nurses and save them to Firestore
+async function seedInitialNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
+    const initialNurses = generateInitialNurses();
+    const availableSpectra = spectraPool.filter(s => s.inService);
+    
+    const nursesWithSpectra: Nurse[] = initialNurses.map((nurse, index) => ({
+        ...nurse,
+        spectra: availableSpectra[index]?.id || 'N/A',
+    })) as Nurse[];
+
+    // Save the newly generated nurses to Firestore for future loads
+    await saveNurses(layoutName, nursesWithSpectra);
+    
+    return nursesWithSpectra;
+}
+
 export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
-        const snapshot = await getDocs(collectionRef);
-        if (!snapshot.empty) {
-            return snapshot.docs.map(doc => doc.data() as Nurse);
-        }
+        const q = query(collectionRef, limit(1));
+        const snapshot = await getDocs(q);
 
-        if (layoutName !== 'default' && layoutName !== '*: North South') {
-             // Return empty for non-default layouts if they don't exist
+        if (snapshot.empty) {
+            // No nurses exist for this layout.
+            // For predefined layouts, seed the initial data.
+            if (layoutName === 'default' || layoutName === '*: North South') {
+                console.log(`No nurse data for layout '${layoutName}' in Firestore. Seeding initial nurses.`);
+                return await seedInitialNurses(layoutName, spectraPool);
+            }
+            // For custom layouts, it's correct to have no nurses initially.
             return [];
         }
-
-        console.log(`No nurse data for layout '${layoutName}' in Firestore. Generating initial nurses.`);
-        const initialNurses = generateInitialNurses();
-        const availableSpectra = spectraPool.filter(s => s.inService);
-        const nursesWithSpectra = initialNurses.map((nurse, index) => ({
-            ...nurse,
-            spectra: availableSpectra[index]?.id || 'N/A',
-        })) as Nurse[];
         
-        return nursesWithSpectra;
+        // If we found at least one nurse, fetch all of them.
+        const allDocsSnapshot = await getDocs(collectionRef);
+        return allDocsSnapshot.docs.map(doc => doc.data() as Nurse);
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
-        if (layoutName !== 'default' && layoutName !== '*: North South') return [];
-        // Fallback to in-memory generation on error for default layout
-        const initialNurses = generateInitialNurses();
-        const availableSpectra = spectraPool.filter(s => s.inService);
-        return initialNurses.map((nurse, index) => ({
-            ...nurse,
-            spectra: availableSpectra[index]?.id || 'N/A',
-        })) as Nurse[];
+        // Fallback to in-memory generation ONLY on error for default layouts
+        if (layoutName === 'default' || layoutName === '*: North South') {
+            const initialNurses = generateInitialNurses();
+            const availableSpectra = spectraPool.filter(s => s.inService);
+            return initialNurses.map((nurse, index) => ({
+                ...nurse,
+                spectra: availableSpectra[index]?.id || 'N/A',
+            })) as Nurse[];
+        }
+        return [];
     }
 }
 
 export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promise<void> {
-    if (!nurses || nurses.length === 0) {
-        // We still want to write an empty array to clear the collection if all nurses are removed
-        const snapshot = await getDocs(getNurseCollectionRef(layoutName));
-        if (snapshot.empty) return; // Nothing to do if it's already empty
-    }
     const collectionRef = getNurseCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
-        // First, delete existing documents
         const snapshot = await getDocs(collectionRef);
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
 
-        // Then, add new documents
         nurses.forEach(nurse => {
             const docRef = doc(collectionRef, nurse.id);
-            batch.set(docRef, nurse);
+            const nurseDataForFirestore = {
+                ...nurse,
+                // Ensure no undefined fields are accidentally sent, though Firestore config should handle it
+                relief: nurse.relief || null, 
+            };
+            batch.set(docRef, nurseDataForFirestore);
         });
         await batch.commit();
     } catch (error) {
@@ -71,14 +85,11 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
     }
 }
 
-export async function getTechs(layoutName: LayoutName, spectraPool: Spectra[]): Promise<PatientCareTech[]> {
+export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[]> {
     const collectionRef = getTechCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
-        if (!snapshot.empty) {
-            return snapshot.docs.map(doc => doc.data() as PatientCareTech);
-        }
-        return [];
+        return snapshot.docs.map(doc => doc.data() as PatientCareTech);
     } catch (error) {
         console.error(`Error fetching techs for layout ${layoutName} from Firestore:`, error);
         return [];
@@ -86,9 +97,8 @@ export async function getTechs(layoutName: LayoutName, spectraPool: Spectra[]): 
 }
 
 export async function saveTechs(layoutName: LayoutName, techs: PatientCareTech[]): Promise<void> {
-    if (!techs) {
-       return;
-    }
+    if (!techs) return;
+    
     const collectionRef = getTechCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
@@ -256,5 +266,3 @@ export function calculateTechAssignments(techs: PatientCareTech[], patients: Pat
         return { ...tech, assignmentGroup };
     });
 }
-
-    

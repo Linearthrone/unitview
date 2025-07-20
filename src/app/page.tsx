@@ -90,7 +90,7 @@ export default function Home() {
         const [patientData, nurseData, techData, layoutWidgets, staffData] = await Promise.all([
             patientService.getPatients(layoutName),
             nurseService.getNurses(layoutName, currentSpectra),
-            nurseService.getTechs(layoutName, currentSpectra),
+            nurseService.getTechs(layoutName),
             layoutService.getWidgets(layoutName),
             layoutService.getStaff(layoutName),
         ]);
@@ -132,18 +132,19 @@ export default function Home() {
       try {
         setCurrentYear(new Date().getFullYear());
         
-        const [lockState, initialSpectra, allLayouts, savedLayout] = await Promise.all([
-          layoutService.getUserLayoutLockState(),
+        const [userPrefs, initialSpectra, allLayouts] = await Promise.all([
+          layoutService.getUserPreferences(),
           spectraService.getSpectraPool(),
           layoutService.getAvailableLayouts(),
-          layoutService.getLastSelectedLayout()
         ]);
         
-        setIsLayoutLocked(lockState);
+        setIsLayoutLocked(userPrefs.isLayoutLocked);
         setSpectraPool(initialSpectra);
         setAvailableLayouts(allLayouts);
 
-        const layoutToLoad = (savedLayout && allLayouts.includes(savedLayout)) ? savedLayout : '*: North South';
+        const layoutToLoad = (userPrefs.lastSelectedLayout && allLayouts.includes(userPrefs.lastSelectedLayout)) 
+            ? userPrefs.lastSelectedLayout 
+            : '*: North South';
         
         await loadLayoutData(layoutToLoad, initialSpectra);
 
@@ -163,14 +164,14 @@ export default function Home() {
   }, []); // Run once on mount
 
   const handleSelectLayout = async (newLayoutName: LayoutName) => {
-    await layoutService.setLastSelectedLayout(newLayoutName);
+    await layoutService.setUserPreference('lastSelectedLayout', newLayoutName);
     await loadLayoutData(newLayoutName, spectraPool);
   };
 
   const toggleLayoutLock = () => {
     const newLockState = !isLayoutLocked;
     setIsLayoutLocked(newLockState);
-    layoutService.setUserLayoutLockState(newLockState);
+    layoutService.setUserPreference('isLayoutLocked', newLockState);
   };
   
   const handleOpenSaveDialog = () => {
@@ -912,7 +913,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
-
-    

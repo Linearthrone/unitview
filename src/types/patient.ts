@@ -51,4 +51,7 @@ export interface StaffAssignments {
     unitClerkName: string;
 }
 
-    
+export interface UserPreferences {
+    lastSelectedLayout: LayoutName;
+    isLayoutLocked: boolean;
+}

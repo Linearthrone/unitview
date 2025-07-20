@@ -2,17 +2,17 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { layouts as appLayouts } from '@/lib/layouts';
-import type { LayoutName, Patient, StaffAssignments, WidgetCard } from '@/types/patient';
+import type { LayoutName, Patient, StaffAssignments, UserPreferences, WidgetCard } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 import { saveNurses, saveTechs } from './nurseService';
 import { savePatients } from './patientService';
 import { getPerimeterCells } from '@/lib/grid-utils';
 
 const appConfigDocRef = doc(db, 'appState', 'config');
+const userPrefsDocRef = doc(db, 'appState', 'userPreferences');
 
 interface AppConfig {
     customLayoutNames?: LayoutName[];
-    lastSelectedLayout?: LayoutName;
 }
 
 async function getAppConfig(): Promise<AppConfig> {
@@ -158,33 +158,30 @@ export async function saveStaff(layoutName: string, staff: StaffAssignments): Pr
 }
 
 
-export async function getLastSelectedLayout(): Promise<LayoutName | null> {
-    const config = await getAppConfig();
-    return config.lastSelectedLayout || null;
-}
-
-export async function setLastSelectedLayout(layoutName: LayoutName): Promise<void> {
+export async function getUserPreferences(): Promise<UserPreferences> {
+    const defaultPrefs: UserPreferences = {
+        lastSelectedLayout: 'default',
+        isLayoutLocked: false,
+    };
     try {
-        // Use set with merge to create or update the document
-        await setDoc(appConfigDocRef, { lastSelectedLayout: layoutName }, { merge: true });
-    } catch(error) {
-        console.error("Error setting last selected layout:", error);
+        const docSnap = await getDoc(userPrefsDocRef);
+        if (docSnap.exists()) {
+            return { ...defaultPrefs, ...docSnap.data() };
+        }
+        return defaultPrefs;
+    } catch (error) {
+        console.error("Error fetching user preferences:", error);
+        return defaultPrefs;
     }
 }
 
-export async function getUserLayoutLockState(): Promise<boolean> {
-    // This value is needed synchronously on page load to prevent UI flickering and layout changes.
-    // For this reason, we'll leave it in localStorage for instant access.
-    // A full migration would require a global loading state for the app config.
-    if (typeof window !== 'undefined') {
-        return localStorage.getItem('userLayoutLockState') === 'true';
-    }
-    return false;
-}
-
-export function setUserLayoutLockState(isLocked: boolean): void {
-    // Sticking with localStorage for synchronous access.
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('userLayoutLockState', String(isLocked));
+export async function setUserPreference<K extends keyof UserPreferences>(
+    key: K,
+    value: UserPreferences[K]
+): Promise<void> {
+    try {
+        await setDoc(userPrefsDocRef, { [key]: value }, { merge: true });
+    } catch (error) {
+        console.error(`Error setting user preference for ${key}:`, error);
     }
 }
