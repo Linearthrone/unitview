@@ -162,7 +162,7 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
         <Card 
           onClick={handleCardClick}
           className={cn(
-            "flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200",
+            "relative flex flex-col h-full shadow-lg hover:shadow-xl transition-shadow duration-200",
             isBlocked ? "cursor-not-allowed bg-black dark:bg-gray-900 border-gray-700" : "cursor-pointer bg-gray-200 dark:bg-gray-800",
             isDragging ? "opacity-50 ring-2 ring-primary" : ""
           )}
@@ -254,6 +254,34 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
                 </CardFooter>
               )}
             </>
+          )}
+
+          {!isVacant && !isBlocked && (
+            <div className="absolute bottom-1 right-2">
+              {patient.assignedNurse ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="w-4 h-4 bg-black rounded-sm border border-white/50" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Assigned to {patient.assignedNurse}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                 <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-destructive font-bold text-xl">!</div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>No nurse assigned!</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           )}
         </Card>
       </ContextMenuTrigger>
