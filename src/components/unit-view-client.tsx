@@ -271,8 +271,8 @@ export default function UnitViewClient({
   };
 
   
-  const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
-    const result = nurseService.addStaffMember(formData, nurses, techs, patients, spectraPool);
+  const handleSaveStaffMember = async (formData: AddStaffMemberFormValues) => {
+    const result = await nurseService.addStaffMember(formData, nurses, techs, patients, spectraPool);
     
     setIsAddStaffMemberDialogOpen(false);
 
@@ -670,13 +670,16 @@ export default function UnitViewClient({
   }, [patients, nurses, techs, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
-      if (techs.length > 0) {
-          const updatedTechs = nurseService.calculateTechAssignments(techs, patients);
-          // Only update state if assignments have actually changed to prevent infinite loops
-          if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
-              setTechs(updatedTechs);
-          }
-      }
+    async function updateTechAssignments() {
+        if (techs.length > 0) {
+            const updatedTechs = await nurseService.calculateTechAssignments(techs, patients);
+            // Only update state if assignments have actually changed to prevent infinite loops
+            if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
+                setTechs(updatedTechs);
+            }
+        }
+    }
+    updateTechAssignments();
   }, [patients, techs]);
     
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;

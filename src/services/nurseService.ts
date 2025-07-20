@@ -116,18 +116,18 @@ function findEmptySlot(
 }
 
 
-export function addStaffMember(
+export async function addStaffMember(
     formData: AddStaffMemberFormValues, 
     nurses: Nurse[], 
     techs: PatientCareTech[],
     patients: Patient[], 
     spectraPool: Spectra[]
-): { 
+): Promise<{ 
     newNurses?: Nurse[] | null; 
     newTechs?: PatientCareTech[] | null; 
     success?: boolean; 
     error?: string 
-} {
+}> {
     const { role } = formData;
     
     if (role === 'Sitter') {
