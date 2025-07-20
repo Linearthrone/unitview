@@ -16,13 +16,12 @@ import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
-import AssignStaffDialog from '@/components/assign-staff-dialog';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID } from '@/lib/grid-utils';
 // Types
-import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
-import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
+import type { LayoutName, Patient, StaffRole } from '@/types/patient';
+import type { Nurse, PatientCareTech } from '@/types/nurse';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
@@ -37,9 +36,6 @@ interface DraggingPatientInfo {
   originalGridColumn: number;
 }
 interface DraggingNurseInfo {
-  id: string;
-}
-interface DraggingWidgetInfo {
   id: string;
 }
 interface DraggingTechInfo {
@@ -57,12 +53,8 @@ export default function Home() {
   const [techs, setTechs] = useState<PatientCareTech[]>([]);
   const [spectraPool, setSpectraPool] = useState<Spectra[]>([]);
   
-  const [chargeNurseName, setChargeNurseName] = useState<string>('Unassigned');
-  const [unitClerkName, setUnitClerkName] = useState<string>('Unassigned');
-
   const [draggingPatientInfo, setDraggingPatientInfo] = useState<DraggingPatientInfo | null>(null);
   const [draggingNurseInfo, setDraggingNurseInfo] = useState<DraggingNurseInfo | null>(null);
-  const [draggingWidgetInfo, setDraggingWidgetInfo] = useState<DraggingWidgetInfo | null>(null);
   const [draggingTechInfo, setDraggingTechInfo] = useState<DraggingTechInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -77,23 +69,18 @@ export default function Home() {
   const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
   const [patientToEditDesignation, setPatientToEditDesignation] = useState<Patient | null>(null);
-  const [roleToAssign, setRoleToAssign] = useState<StaffRole | null>(null);
 
-  // Derive widget cards from staff state instead of managing them separately
-  const widgetCards: WidgetCard[] = [
-    { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 8, width: 2, height: 1 },
-    { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 8, width: 2, height: 1 },
-  ];
-
+  const getChargeNurseName = () => {
+    return nurses.find(n => n.role === 'Charge Nurse')?.name || 'Unassigned';
+  }
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
       setIsInitialized(false);
       try {
-        const [patientData, nurseData, techData, staffData] = await Promise.all([
+        const [patientData, nurseData, techData] = await Promise.all([
             patientService.getPatients(layoutName),
             nurseService.getNurses(layoutName, currentSpectra),
             nurseService.getTechs(layoutName),
-            layoutService.getStaff(layoutName),
         ]);
 
         const validNurses = nurseData.map(n => ({
@@ -105,13 +92,6 @@ export default function Home() {
         setNurses(validNurses);
         setTechs(techData);
 
-        if (staffData) {
-            setChargeNurseName(staffData.chargeNurseName || 'Unassigned');
-            setUnitClerkName(staffData.unitClerkName || 'Unassigned');
-        } else {
-            setChargeNurseName('Unassigned');
-            setUnitClerkName('Unassigned');
-        }
         setCurrentLayoutName(layoutName);
       } catch (error) {
         console.error(`Failed to load data for layout "${layoutName}":`, error);
@@ -186,8 +166,7 @@ export default function Home() {
   };
   
   const handleSaveNewLayout = async (newLayoutName: string) => {
-    const staffData = { chargeNurseName, unitClerkName };
-    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs, staffData);
+    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs);
     setAvailableLayouts(updatedLayouts);
     await handleSelectLayout(newLayoutName);
     
@@ -206,8 +185,7 @@ export default function Home() {
       });
       return;
     }
-    const staffData = { chargeNurseName, unitClerkName };
-    await layoutService.saveNewLayout(currentLayoutName, patients, nurses, techs, staffData);
+    await layoutService.saveNewLayout(currentLayoutName, patients, nurses, techs);
     toast({
       title: "Layout Saved",
       description: `Current layout "${currentLayoutName}" has been saved.`,
@@ -216,6 +194,7 @@ export default function Home() {
 
   const handleSaveAssignments = async () => {
     try {
+      const chargeNurseName = getChargeNurseName();
       await assignmentService.saveShiftAssignments(currentLayoutName, nurses, patients, chargeNurseName);
       toast({
         title: "Assignments Saved",
@@ -297,7 +276,7 @@ export default function Home() {
 
   
   const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
-    const result = nurseService.addStaffMember(formData, nurses, techs, patients, widgetCards, spectraPool);
+    const result = nurseService.addStaffMember(formData, nurses, techs, patients, spectraPool);
     
     setIsAddStaffMemberDialogOpen(false);
 
@@ -317,28 +296,6 @@ export default function Home() {
         });
     }
   };
-
-  const handleAssignSpecificRole = (name: string, role: StaffRole) => {
-    if (role === 'Charge Nurse') {
-      setChargeNurseName(name);
-      toast({ title: "Charge Nurse Assigned", description: `${name} is now the Charge Nurse.` });
-    } else if (role === 'Unit Clerk') {
-      setUnitClerkName(name);
-      toast({ title: "Unit Clerk Assigned", description: `${name} is now the Unit Clerk.` });
-    }
-    setRoleToAssign(null);
-  };
-
-  const handleRemoveSpecificRole = (role: StaffRole) => {
-    if (role === 'Charge Nurse') {
-      setChargeNurseName('Unassigned');
-      toast({ title: "Charge Nurse Removed", description: `The Charge Nurse has been unassigned.` });
-    } else if (role === 'Unit Clerk') {
-      setUnitClerkName('Unassigned');
-      toast({ title: "Unit Clerk Removed", description: `The Unit Clerk has been unassigned.` });
-    }
-  };
-
 
   const handleRemoveNurse = (nurseId: string) => {
     const nurseToRemove = nurses.find(n => n.id === nurseId);
@@ -390,7 +347,7 @@ export default function Home() {
   };
 
   const handleCreateRoom = (designation: string) => {
-    const result = patientService.createRoom(designation, patients, nurses, techs, widgetCards);
+    const result = patientService.createRoom(designation, patients, nurses, techs);
     if (result.newPatients) {
       setPatients(result.newPatients);
       setIsAddRoomDialogOpen(false);
@@ -491,7 +448,6 @@ export default function Home() {
       return;
     }
     setDraggingNurseInfo(null);
-    setDraggingWidgetInfo(null);
     setDraggingTechInfo(null);
     setDraggingPatientInfo({ id: patientId, originalGridRow, originalGridColumn });
     e.dataTransfer.setData('text/plain', patientId);
@@ -504,23 +460,9 @@ export default function Home() {
       return;
     }
     setDraggingPatientInfo(null);
-    setDraggingWidgetInfo(null);
     setDraggingTechInfo(null);
     setDraggingNurseInfo({ id: nurseId });
     e.dataTransfer.setData('text/plain', nurseId);
-    e.dataTransfer.effectAllowed = 'move';
-  }, [isLayoutLocked]);
-
-  const handleWidgetDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, widgetId: string) => {
-    if (isLayoutLocked) {
-        e.preventDefault();
-        return;
-    }
-    setDraggingPatientInfo(null);
-    setDraggingNurseInfo(null);
-    setDraggingTechInfo(null);
-    setDraggingWidgetInfo({ id: widgetId });
-    e.dataTransfer.setData('text/plain', widgetId);
     e.dataTransfer.effectAllowed = 'move';
   }, [isLayoutLocked]);
 
@@ -531,7 +473,6 @@ export default function Home() {
     }
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
-    setDraggingWidgetInfo(null);
     setDraggingTechInfo({ id: techId });
     e.dataTransfer.setData('text/plain', techId);
     e.dataTransfer.effectAllowed = 'move';
@@ -611,27 +552,23 @@ export default function Home() {
     }
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
-    setDraggingWidgetInfo(null);
     setDraggingTechInfo(null);
   }, [draggingPatientInfo, draggingNurseInfo, draggingTechInfo, isLayoutLocked, patients, toast]);
   
   const handleDragEnd = useCallback(() => {
     setDraggingPatientInfo(null);
     setDraggingNurseInfo(null);
-    setDraggingWidgetInfo(null);
     setDraggingTechInfo(null);
   }, []);
 
   const handleAutoSave = useCallback(async () => {
     if (isLayoutLocked || !isInitialized) return;
-    const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
       patientService.savePatients(currentLayoutName, patients),
       nurseService.saveNurses(currentLayoutName, nurses),
       nurseService.saveTechs(currentLayoutName, techs),
-      layoutService.saveStaff(currentLayoutName, staffData),
     ]);
-  }, [patients, nurses, techs, isLayoutLocked, currentLayoutName, isInitialized, chargeNurseName, unitClerkName]);
+  }, [patients, nurses, techs, isLayoutLocked, currentLayoutName, isInitialized]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -735,7 +672,7 @@ export default function Home() {
     if (isInitialized && !isLayoutLocked) {
       handleAutoSave();
     }
-  }, [patients, nurses, techs, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
+  }, [patients, nurses, techs, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
       if (techs.length > 0) {
@@ -791,20 +728,15 @@ export default function Home() {
           patients={patients}
           nurses={nurses}
           techs={techs}
-          widgetCards={widgetCards}
-          chargeNurseName={chargeNurseName}
-          unitClerkName={unitClerkName}
           isInitialized={isInitialized}
           isEffectivelyLocked={isLayoutLocked}
           draggingPatientInfo={draggingPatientInfo}
           draggingNurseInfo={draggingNurseInfo}
           draggingTechInfo={draggingTechInfo}
-          draggingWidgetInfo={draggingWidgetInfo}
           onSelectPatient={setSelectedPatient}
           onPatientDragStart={handlePatientDragStart}
           onNurseDragStart={handleNurseDragStart}
           onTechDragStart={handleTechDragStart}
-          onWidgetDragStart={handleWidgetDragStart}
           onDropOnCell={handleDropOnCell}
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
@@ -816,14 +748,12 @@ export default function Home() {
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
           onRemoveNurse={handleRemoveNurse}
           onRemoveTech={handleRemoveTech}
-          onAssignRole={(role) => setRoleToAssign(role)}
-          onRemoveRole={handleRemoveSpecificRole}
         />
       </main>
       <PrintableReport patients={patients} />
       <PrintableAssignments 
         unitName={getFriendlyLayoutName(currentLayoutName)}
-        chargeNurseName={chargeNurseName}
+        chargeNurseName={getChargeNurseName()}
         nurses={nurses}
         techs={techs}
         patients={patients}
@@ -889,12 +819,6 @@ export default function Home() {
         onOpenChange={(isOpen) => !isOpen && setPatientToDischarge(null)}
         patient={patientToDischarge}
         onConfirm={handleConfirmDischarge}
-      />
-       <AssignStaffDialog
-        open={!!roleToAssign}
-        onOpenChange={() => setRoleToAssign(null)}
-        role={roleToAssign}
-        onSave={handleAssignSpecificRole}
       />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}

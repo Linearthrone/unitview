@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp, query, limit } from 'firebase/firestore';
-import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
+import type { Patient, LayoutName } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/types/forms';
 import { mockPatientData } from '@/lib/mock-patients';
 import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
@@ -183,7 +183,6 @@ function findEmptySlotForPatient(
   patients: Patient[],
   nurses: Nurse[],
   techs: PatientCareTech[],
-  widgets: WidgetCard[]
 ): { row: number; col: number } | null {
   const occupiedCells = new Set<string>();
   
@@ -201,14 +200,6 @@ function findEmptySlotForPatient(
   
   techs.forEach(t => {
       occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
-  });
-
-  widgets.forEach(w => {
-    for (let r = 0; r < w.height; r++) {
-      for (let c = 0; c < w.width; c++) {
-        occupiedCells.add(`${w.gridRow + r}-${w.gridColumn + c}`);
-      }
-    }
   });
 
   // Prioritize inner grid first
@@ -237,9 +228,8 @@ export function createRoom(
   patients: Patient[],
   nurses: Nurse[],
   techs: PatientCareTech[],
-  widgets: WidgetCard[]
 ): { newPatients: Patient[] | null; error?: string } {
-  const position = findEmptySlotForPatient(patients, nurses, techs, widgets);
+  const position = findEmptySlotForPatient(patients, nurses, techs);
   if (!position) {
     return { newPatients: null, error: "No empty space on the grid to add a new room." };
   }

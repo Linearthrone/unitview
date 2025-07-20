@@ -65,5 +65,3 @@ const ChargeNurseCard: React.FC<ChargeNurseCardProps> = ({ name, onAssign, onRem
 };
 
 export default ChargeNurseCard;
-
-    

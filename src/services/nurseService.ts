@@ -2,7 +2,7 @@
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, query } from 'firebase/firestore';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
-import type { Patient, WidgetCard } from '@/types/patient';
+import type { Patient } from '@/types/patient';
 import type { AddStaffMemberFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -79,7 +79,6 @@ function findEmptySlot(
   patients: Patient[],
   nurses: Nurse[],
   techs: PatientCareTech[],
-  widgets: WidgetCard[],
   cardHeight: number,
   cardWidth: number,
 ): { row: number; col: number } | null {
@@ -93,11 +92,6 @@ function findEmptySlot(
   });
    techs.forEach(t => {
     occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
-  });
-  widgets.forEach(w => {
-    for (let r = 0; r < w.height; r++) {
-      for (let c = 0; c < w.width; c++) occupiedCells.add(`${w.gridRow + r}-${w.gridColumn + c}`);
-    }
   });
 
   for (let c = 1; c <= NUM_COLS_GRID - cardWidth + 1; c++) {
@@ -125,7 +119,6 @@ export function addStaffMember(
     nurses: Nurse[], 
     techs: PatientCareTech[],
     patients: Patient[], 
-    widgets: WidgetCard[],
     spectraPool: Spectra[]
 ): { 
     newNurses?: Nurse[] | null; 
@@ -150,7 +143,7 @@ export function addStaffMember(
     }
     
     if (isNurseRole) {
-        const position = findEmptySlot(patients, nurses, techs, widgets, 3, 1);
+        const position = findEmptySlot(patients, nurses, techs, 3, 1);
         if (!position) {
             return { error: "Cannot add new staff member, the grid is full." };
         }
@@ -168,7 +161,7 @@ export function addStaffMember(
     }
 
     if (isTechRole) {
-        const position = findEmptySlot(patients, nurses, techs, widgets, 1, 1);
+        const position = findEmptySlot(patients, nurses, techs, 1, 1);
          if (!position) {
             return { error: "Cannot add new tech, the grid is full." };
         }

@@ -35,22 +35,6 @@ export interface Patient {
   gridColumn: number; // 1-indexed
 }
 
-export type WidgetCardType = 'UnitClerk' | 'ChargeNurse';
-
-export interface WidgetCard {
-  id: string;
-  type: WidgetCardType;
-  gridRow: number;
-  gridColumn: number;
-  width: number;
-  height: number;
-}
-
-export interface StaffAssignments {
-    chargeNurseName: string;
-    unitClerkName: string;
-}
-
 export interface UserPreferences {
     lastSelectedLayout: LayoutName;
     isLayoutLocked: boolean;

@@ -1,7 +1,7 @@
 
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import type { LayoutName, Patient, StaffAssignments, UserPreferences } from '@/types/patient';
+import type { LayoutName, Patient } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 import { saveNurses, saveTechs } from './nurseService';
 import { savePatients } from './patientService';
@@ -35,12 +35,11 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     return Array.from(new Set(config.customLayoutNames || []));
 }
 
-export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], staffData: StaffAssignments): Promise<LayoutName[]> {
+export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[]): Promise<LayoutName[]> {
     // Save the actual layout data to their respective collections
     await savePatients(layoutName, patients);
     await saveNurses(layoutName, nurses);
     await saveTechs(layoutName, techs);
-    await saveStaff(layoutName, staffData);
 
     // Update the list of custom layout names in the central config doc
     const config = await getAppConfig();
@@ -109,30 +108,6 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
 
     return updatedCustomLayouts;
 }
-
-export async function getStaff(layoutName: string): Promise<StaffAssignments | null> {
-    const staffDocRef = doc(db, 'layouts', layoutName, 'staff', 'assignments');
-    try {
-        const docSnap = await getDoc(staffDocRef);
-        if (docSnap.exists()) {
-            return docSnap.data() as StaffAssignments;
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error fetching staff for layout ${layoutName}:`, error);
-        return null;
-    }
-}
-
-export async function saveStaff(layoutName: string, staff: StaffAssignments): Promise<void> {
-    const staffDocRef = doc(db, 'layouts', layoutName, 'staff', 'assignments');
-    try {
-        await setDoc(staffDocRef, staff);
-    } catch (error) {
-        console.error(`Error saving staff for layout ${layoutName}:`, error);
-    }
-}
-
 
 export async function getUserPreferences(): Promise<UserPreferences> {
     const defaultPrefs: UserPreferences = {

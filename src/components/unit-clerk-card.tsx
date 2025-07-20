@@ -68,5 +68,3 @@ const UnitClerkCard: React.FC<UnitClerkCardProps> = ({ name, onAssign, onRemove 
 };
 
 export default UnitClerkCard;
-
-    
