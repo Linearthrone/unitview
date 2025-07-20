@@ -1,4 +1,6 @@
 
+"use server";
+
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { LayoutName, Patient } from '@/types/patient';
@@ -32,7 +34,7 @@ async function getAppConfig(): Promise<AppConfig> {
 
 export async function getAvailableLayouts(): Promise<LayoutName[]> {
     const config = await getAppConfig();
-    return Array.from(new Set(config.customLayoutNames || []));
+    return Array.from(new Set(config.customLayoutNames || ['North-South View']));
 }
 
 export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[]): Promise<LayoutName[]> {
@@ -46,12 +48,7 @@ export async function saveNewLayout(layoutName: string, patients: Patient[], nur
     const customLayoutNames = config.customLayoutNames || [];
     const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, layoutName]));
     
-    try {
-        // Use set with merge to create or update the document
-        await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
-    } catch (error) {
-        console.error("Error saving new layout name:", error);
-    }
+    await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
 
     return updatedCustomLayouts;
 }
@@ -124,6 +121,7 @@ export async function getUserPreferences(): Promise<UserPreferences> {
         if (docSnap.exists()) {
             return { ...defaultPrefs, ...docSnap.data() };
         }
+        await setDoc(userPrefsDocRef, defaultPrefs);
         return defaultPrefs;
     } catch (error) {
         console.error("Error fetching user preferences:", error);
