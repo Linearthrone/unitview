@@ -7,6 +7,8 @@ import * as patientService from '@/services/patientService';
 import * as nurseService from '@/services/nurseService';
 import * as spectraService from '@/services/spectraService';
 
+export const dynamic = 'force-dynamic';
+
 // This is now a Server Component
 export default async function Home() {
   
