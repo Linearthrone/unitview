@@ -33,25 +33,19 @@ export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]):
         const q = query(collectionRef, limit(1));
         const snapshot = await getDocs(q);
 
-        if (snapshot.empty) {
-            // No nurses exist for this layout.
-            // For predefined layouts, seed the initial data.
-            if (layoutName === 'default' || layoutName === '*: North South') {
-                console.log(`No nurse data for layout '${layoutName}' in Firestore. Seeding initial nurses.`);
-                return await seedInitialNurses(layoutName, spectraPool);
-            }
-            // For custom layouts, it's correct to have no nurses initially.
-            return [];
+        // For the specific "North/South View", seed if empty. Otherwise, return what's there (even if empty).
+        if (snapshot.empty && layoutName === 'North/South View') {
+            console.log(`No nurse data for layout '${layoutName}' in Firestore. Seeding initial nurses.`);
+            return await seedInitialNurses(layoutName, spectraPool);
         }
         
-        // If we found at least one nurse, fetch all of them.
         const allDocsSnapshot = await getDocs(collectionRef);
         return allDocsSnapshot.docs.map(doc => doc.data() as Nurse);
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
-        // Fallback to in-memory generation ONLY on error for default layouts
-        if (layoutName === 'default' || layoutName === '*: North South') {
+        // Fallback to in-memory generation ONLY on error for North/South View layout
+        if (layoutName === 'North/South View') {
             const initialNurses = generateInitialNurses();
             const availableSpectra = spectraPool.filter(s => s.inService);
             return initialNurses.map((nurse, index) => ({

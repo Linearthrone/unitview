@@ -5,8 +5,7 @@ import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/types/forms';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { mockPatientData } from '@/lib/mock-patients';
-import { layouts as appLayouts } from '@/lib/layouts';
-import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
+import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
@@ -30,44 +29,71 @@ const patientToFirestore = (patient: Patient): any => {
 
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
 
-// Function to seed initial patients for a layout and save them to Firestore
-async function seedInitialPatients(layoutName: LayoutName): Promise<Patient[]> {
-    const basePatients = generateInitialPatients();
-    const initialLayoutPatients = appLayouts[layoutName](basePatients);
+
+// This function seeds the predefined "North/South View" layout
+async function seedNorthSouthLayout(): Promise<Patient[]> {
+    const layoutPatients: Patient[] = [];
+    const perimeterCells = getPerimeterCells();
     
-    await savePatients(layoutName, initialLayoutPatients);
+    // We'll create a standard 40-room layout using the perimeter
+    const numRooms = Math.min(40, perimeterCells.length);
+
+    for (let i = 0; i < numRooms; i++) {
+        const cell = perimeterCells[i];
+        const patient: Patient = {
+            id: `patient-ns-${i + 1}`,
+            bedNumber: i + 1,
+            roomDesignation: `NS-${i + 1}`,
+            name: 'Vacant',
+            age: 0,
+            admitDate: new Date(),
+            dischargeDate: new Date(),
+            chiefComplaint: 'N/A',
+            ldas: [],
+            diet: 'N/A',
+            mobility: 'Independent',
+            codeStatus: 'Full Code',
+            orientationStatus: 'N/A',
+            isFallRisk: false,
+            isSeizureRisk: false,
+            isAspirationRisk: false,
+            isIsolation: false,
+            isInRestraints: false,
+            isComfortCareDNR: false,
+            gridRow: cell.row,
+            gridColumn: cell.col,
+        };
+        layoutPatients.push(patient);
+    }
     
-    return initialLayoutPatients;
+    await savePatients('North/South View', layoutPatients);
+    return layoutPatients;
 }
+
 
 export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
     const collectionRef = getCollectionRef(layoutName);
     try {
-        // Check if the collection exists by querying for one document
         const q = query(collectionRef, limit(1));
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-            // No patients exist for this layout.
-            // If it's a predefined layout, seed it with initial data.
-            if (appLayouts[layoutName]) {
+            // Special case: if the "North/South View" is selected and empty, seed it.
+            if (layoutName === 'North/South View') {
                 console.log(`No data for layout '${layoutName}' in Firestore. Seeding initial layout.`);
-                return await seedInitialPatients(layoutName);
+                return await seedNorthSouthLayout();
             }
-            // For custom layouts that might be empty, return an empty array.
+            // For any other layout (including custom ones), return an empty array if not found.
             return [];
         }
 
-        // If data exists, fetch all documents.
         const allDocsSnapshot = await getDocs(collectionRef);
         return allDocsSnapshot.docs.map(doc => patientFromFirestore(doc.data()));
 
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
-        // Fallback to in-memory generation on error, only for predefined layouts
-        if (appLayouts[layoutName]) {
-            const basePatients = generateInitialPatients();
-            return appLayouts[layoutName](basePatients);
+         if (layoutName === 'North/South View') {
+            return await seedNorthSouthLayout();
         }
         return [];
     }

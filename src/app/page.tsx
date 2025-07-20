@@ -56,10 +56,7 @@ export default function Home() {
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [techs, setTechs] = useState<PatientCareTech[]>([]);
   const [spectraPool, setSpectraPool] = useState<Spectra[]>([]);
-  const [widgetCards, setWidgetCards] = useState<WidgetCard[]>([
-    { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 8, width: 2, height: 1 },
-    { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 8, width: 2, height: 1 },
-  ]);
+  const [widgetCards, setWidgetCards] = useState<WidgetCard[]>([]);
   
   const [chargeNurseName, setChargeNurseName] = useState<string>('Unassigned');
   const [unitClerkName, setUnitClerkName] = useState<string>('Unassigned');
@@ -105,6 +102,12 @@ export default function Home() {
         setTechs(techData);
         if (layoutWidgets) {
             setWidgetCards(layoutWidgets);
+        } else {
+             // If no widgets are saved, reset to a default state
+            setWidgetCards([
+              { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 8, width: 2, height: 1 },
+              { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 8, width: 2, height: 1 },
+            ]);
         }
         if (staffData) {
             setChargeNurseName(staffData.chargeNurseName || 'Unassigned');
@@ -144,7 +147,7 @@ export default function Home() {
 
         const layoutToLoad = (userPrefs.lastSelectedLayout && allLayouts.includes(userPrefs.lastSelectedLayout)) 
             ? userPrefs.lastSelectedLayout 
-            : '*: North South';
+            : 'North/South View';
         
         await loadLayoutData(layoutToLoad, initialSpectra);
 

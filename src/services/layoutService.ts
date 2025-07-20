@@ -1,7 +1,6 @@
 
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { layouts as appLayouts } from '@/lib/layouts';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import type { LayoutName, Patient, StaffAssignments, UserPreferences, WidgetCard } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 import { saveNurses, saveTechs } from './nurseService';
@@ -21,18 +20,19 @@ async function getAppConfig(): Promise<AppConfig> {
         if (docSnap.exists()) {
             return docSnap.data() as AppConfig;
         }
-        return {}; // Return empty object if not found
+        // If config doesn't exist, create it with a default layout
+        const initialConfig: AppConfig = { customLayoutNames: ['North/South View'] };
+        await setDoc(appConfigDocRef, initialConfig);
+        return initialConfig;
     } catch (error) {
         console.error("Error fetching app config from Firestore:", error);
-        return {};
+        return { customLayoutNames: ['North/South View'] }; // Fallback
     }
 }
 
 export async function getAvailableLayouts(): Promise<LayoutName[]> {
     const config = await getAppConfig();
-    const customLayoutNames = config.customLayoutNames || [];
-    const allNames = [...Object.keys(appLayouts), ...customLayoutNames];
-    return Array.from(new Set(allNames));
+    return Array.from(new Set(config.customLayoutNames || []));
 }
 
 export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], widgets: WidgetCard[], staffData: StaffAssignments): Promise<LayoutName[]> {
@@ -55,7 +55,7 @@ export async function saveNewLayout(layoutName: string, patients: Patient[], nur
         console.error("Error saving new layout name:", error);
     }
 
-    return Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts]));
+    return updatedCustomLayouts;
 }
 
 
@@ -108,7 +108,7 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
     
     await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
 
-    return Array.from(new Set([...Object.keys(appLayouts), ...updatedCustomLayouts]));
+    return updatedCustomLayouts;
 }
 
 export async function getWidgets(layoutName: string): Promise<WidgetCard[] | null> {
@@ -160,7 +160,7 @@ export async function saveStaff(layoutName: string, staff: StaffAssignments): Pr
 
 export async function getUserPreferences(): Promise<UserPreferences> {
     const defaultPrefs: UserPreferences = {
-        lastSelectedLayout: 'default',
+        lastSelectedLayout: 'North/South View',
         isLayoutLocked: false,
     };
     try {
