@@ -177,38 +177,33 @@ export function addStaffMember(
     error?: string 
 } {
     const { name, role } = formData;
-
-    if (role === 'Charge Nurse') {
-        return { chargeNurseName: name };
-    }
-    if (role === 'Unit Clerk') {
-        return { unitClerkName: name };
-    }
+    
+    // Sitter role does not get a card
     if (role === 'Sitter') {
         return { success: true };
     }
 
-    const isNursingRole = ['Staff Nurse', 'Float Pool Nurse'].includes(role);
+    const isNursingOrClericalRole = ['Staff Nurse', 'Float Pool Nurse', 'Charge Nurse', 'Unit Clerk'].includes(role);
     const isTechRole = role === 'Patient Care Tech';
 
     const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
     const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));
 
-    if (!assignedSpectra) {
+    if ((isNursingOrClericalRole || isTechRole) && !assignedSpectra) {
         return { error: "Could not add staff. Please add or enable a Spectra device in the pool." };
     }
     
-    if (isNursingRole) {
+    if (isNursingOrClericalRole) {
         const position = findEmptySlot(patients, nurses, techs, widgets, 3, 1);
         if (!position) {
-            return { error: "Cannot add new nurse, the grid is full." };
+            return { error: "Cannot add new staff member, the grid is full." };
         }
         const newNurse: Nurse = {
             id: `nurse-${Date.now()}`,
             name: formData.name,
             role: formData.role,
             relief: formData.relief || undefined,
-            spectra: assignedSpectra.id,
+            spectra: assignedSpectra!.id, // We've checked for this already
             assignedPatientIds: Array(6).fill(null),
             gridRow: position.row,
             gridColumn: position.col,
@@ -224,7 +219,7 @@ export function addStaffMember(
         const newTech: PatientCareTech = {
             id: `tech-${Date.now()}`,
             name: formData.name,
-            spectra: assignedSpectra.id,
+            spectra: assignedSpectra!.id, // We've checked for this already
             assignmentGroup: '',
             gridRow: position.row,
             gridColumn: position.col,
@@ -232,7 +227,8 @@ export function addStaffMember(
         return { newTechs: [...techs, newTech] };
     }
 
-    return { success: true };
+    // Should not be reached if all roles are handled
+    return { error: `Unhandled role: ${role}` };
 }
 
 export function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): PatientCareTech[] {

@@ -287,22 +287,16 @@ export default function Home() {
 
     if (result.newNurses) {
         setNurses(result.newNurses);
-        toast({ title: "Nurse Added", description: `${formData.name} (${formData.role}) has been added to the unit.` });
+        toast({ title: "Staff Added", description: `${formData.name} (${formData.role}) has been added to the unit.` });
     } else if (result.newTechs) {
         setTechs(result.newTechs);
         toast({ title: "Tech Added", description: `${formData.name} (${formData.role}) has been added to the unit.` });
-    } else if (result.chargeNurseName) {
-        setChargeNurseName(result.chargeNurseName);
-        toast({ title: "Charge Nurse Assigned", description: `${formData.name} is now the Charge Nurse.` });
-    } else if (result.unitClerkName) {
-        setUnitClerkName(result.unitClerkName);
-        toast({ title: "Unit Clerk Assigned", description: `${formData.name} is now the Unit Clerk.` });
     } else if (result.success) {
         toast({ title: "Staff Member Added", description: `${formData.name} (${formData.role}) has been added.` });
     } else if (result.error) {
         toast({
             variant: "destructive",
-            title: result.error === "No Spectra Available" ? "No Spectra Available" : "No Space Available",
+            title: "Error Adding Staff",
             description: result.error,
         });
     }
@@ -344,7 +338,7 @@ export default function Home() {
 
     setNurses(prevNurses => prevNurses.filter(n => n.id !== nurseId));
     toast({
-      title: "Nurse Removed",
+      title: "Staff Removed",
       description: `${nurseToRemove.name} has been removed from the unit.`,
     });
   };
@@ -827,7 +821,7 @@ export default function Home() {
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
           onRemoveNurse={handleRemoveNurse}
           onRemoveTech={handleRemoveTech}
-          onAssignRole={(role) => setRoleToAssign(role)}
+          onAssignRole={handleAssignSpecificRole}
           onRemoveRole={handleRemoveSpecificRole}
         />
       </main>
