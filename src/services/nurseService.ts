@@ -182,7 +182,7 @@ export function addStaffMember(
     return { error: `Unhandled role: ${role}` };
 }
 
-export function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): PatientCareTech[] {
+export async function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): Promise<PatientCareTech[]> {
     const activePatients = patients
         .filter(p => p.name !== 'Vacant' && !p.isBlocked)
         .sort((a, b) => {
