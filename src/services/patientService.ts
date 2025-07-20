@@ -1,4 +1,6 @@
 
+"use server";
+
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp, query, limit } from 'firebase/firestore';
 import type { Patient, LayoutName } from '@/types/patient';
@@ -29,7 +31,7 @@ const patientToFirestore = (patient: Patient): any => {
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
 
 
-// This function seeds the predefined "North/South View" layout
+// This function seeds the predefined "North-South View" layout
 async function seedNorthSouthLayout(): Promise<Patient[]> {
     const layoutName = 'North-South View';
     const layoutPatients: Patient[] = [];
@@ -37,13 +39,15 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
     
     // We'll create a standard 40-room layout using the perimeter
     const numRooms = Math.min(40, perimeterCells.length);
+    const startingRoomNumber = 801;
 
     for (let i = 0; i < numRooms; i++) {
         const cell = perimeterCells[i];
+        const currentRoomNumber = startingRoomNumber + i;
         const patient: Patient = {
-            id: `patient-ns-${i + 1}`,
-            bedNumber: i + 1,
-            roomDesignation: `NS-${i + 1}`,
+            id: `patient-ns-${currentRoomNumber}`,
+            bedNumber: currentRoomNumber,
+            roomDesignation: `Room ${currentRoomNumber}`,
             name: 'Vacant',
             age: 0,
             admitDate: new Date(),
@@ -74,6 +78,7 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
 export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
     const collectionRef = getCollectionRef(layoutName);
     try {
+        // Query for just one doc to see if the collection exists and has data.
         const q = query(collectionRef, limit(1));
         const snapshot = await getDocs(q);
 
@@ -87,11 +92,13 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
             return [];
         }
 
+        // If data exists, fetch all documents.
         const allDocsSnapshot = await getDocs(collectionRef);
         return allDocsSnapshot.docs.map(doc => patientFromFirestore(doc.data()));
 
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
+         // If there's an error (e.g., permissions), still try to seed the default layout if it's the one requested.
          if (layoutName === 'North-South View') {
             return await seedNorthSouthLayout();
         }
@@ -141,7 +148,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 orientationStatus: formData.orientationStatus,
                 isFallRisk: formData.isFallRisk,
                 isSeizureRisk: formData.isSeizureRisk,
-                isAspirationRisk: formData.isAspirationRisk,
+                isAspirationRisk: formData.asSeizureRisk,
                 isIsolation: formData.isIsolation,
                 isInRestraints: formData.isInRestraints,
                 isComfortCareDNR: formData.isComfortCareDNR,
@@ -238,7 +245,7 @@ export function createRoom(
   const newBedNumber = Math.max(0, ...patients.map(p => p.bedNumber)) + 1;
 
   const newRoom: Patient = {
-    id: `room-${designation.trim().replace(/\s+/g, '-')}-${Math.random().toString(36).slice(2, 9)}`,
+    id: `room-${designation.trim().replace(/[\s/]/g, '-')}-${newBedNumber}-${Math.random().toString(36).slice(2, 9)}`,
     bedNumber: newBedNumber,
     roomDesignation: designation,
     name: 'Vacant',
@@ -308,3 +315,5 @@ export function insertMockPatients(currentPatients: Patient[]): { updatedPatient
 
   return { updatedPatients: newPatients, insertedCount };
 }
+
+    
