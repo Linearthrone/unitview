@@ -74,9 +74,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onInsertMockData,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   useEffect(() => {
+      // Set the initial time on the client to avoid hydration mismatch
+      setCurrentTime(new Date());
+      // Then set up the interval
       const timer = setInterval(() => setCurrentTime(new Date()), 1000);
       return () => clearInterval(timer);
   }, []);
@@ -114,10 +117,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           {/* Center Section */}
           <div className="flex-col items-center">
             <div className="font-bold text-2xl text-center">
-                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {currentTime ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Loading...'}
             </div>
             <div className="text-sm text-muted-foreground">
-                {currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {currentTime ? currentTime.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : ''}
             </div>
           </div>
 

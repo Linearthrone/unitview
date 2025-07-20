@@ -52,7 +52,7 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
     <div id="printable-charge-report" className="hidden print:block text-black font-sans">
       <h1 className="text-xl font-bold text-center mb-2">Unit Charge Report</h1>
       <p className="text-center text-sm mb-4">
-        {generatedDate && `Generated on: ${generatedDate}`}
+        {generatedDate ? `Generated on: ${generatedDate}`: 'Generating...'}
       </p>
       
       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -114,5 +114,3 @@ const PrintableReport: React.FC<PrintableReportProps> = ({ patients }) => {
 };
 
 export default PrintableReport;
-
-    

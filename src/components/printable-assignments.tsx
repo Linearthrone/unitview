@@ -43,6 +43,8 @@ const PrintableAssignments: React.FC<PrintableAssignmentsProps> = ({
   const [date, setDate] = useState('');
 
   useEffect(() => {
+    // This logic is now in useEffect to ensure it only runs on the client,
+    // preventing a hydration mismatch.
     const currentHour = new Date().getHours();
     // Day shift from 2 AM (2) to 1:59 PM (13)
     // Night shift from 2 PM (14) to 1:59 AM (1)
@@ -119,5 +121,3 @@ const PrintableAssignments: React.FC<PrintableAssignmentsProps> = ({
 };
 
 export default PrintableAssignments;
-
-    
