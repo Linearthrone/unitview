@@ -154,6 +154,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
             <Button variant="outline" onClick={onAddStaffMember} title="Add Staff">
               <Users /> + Staff
             </Button>
+            <Button variant="outline" onClick={onManageSpectra} title="Manage Spectra Pool">
+              <ListTodo /> Spectra
+            </Button>
 
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -200,9 +203,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={onInsertMockData}>
                     <UserPlus /> Insert Mock Patients
-                  </DropdownMenuItem>
-                   <DropdownMenuItem onClick={() => onManageSpectra()}>
-                    <ListTodo /> Manage Spectra Pool
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={() => setIsExplanationOpen(true)}>
                     <HelpCircle /> Icon Explanation
