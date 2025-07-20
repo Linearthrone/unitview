@@ -8,7 +8,7 @@ export const generateInitialNurses = (): Omit<Nurse, 'spectra'>[] => {
       name: 'RN Alice',
       relief: 'RN Eve',
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 1,
+      gridRow: 2,
       gridColumn: 5,
     },
     {
@@ -16,7 +16,7 @@ export const generateInitialNurses = (): Omit<Nurse, 'spectra'>[] => {
       name: 'RN Bob',
       relief: 'RN Frank',
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 1,
+      gridRow: 2,
       gridColumn: 6,
     },
     {
@@ -24,7 +24,7 @@ export const generateInitialNurses = (): Omit<Nurse, 'spectra'>[] => {
       name: 'RN Charlie',
       relief: 'RN Grace',
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 1,
+      gridRow: 2,
       gridColumn: 11,
     },
     {
@@ -32,7 +32,7 @@ export const generateInitialNurses = (): Omit<Nurse, 'spectra'>[] => {
       name: 'RN David',
       relief: 'RN Heidi',
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 1,
+      gridRow: 2,
       gridColumn: 12,
     },
     {
@@ -40,16 +40,16 @@ export const generateInitialNurses = (): Omit<Nurse, 'spectra'>[] => {
       name: 'RN Mallory',
       relief: 'RN Ivan',
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 6,
-      gridColumn: 5,
+      gridRow: 2,
+      gridColumn: 7,
     },
      {
       id: 'nurse-6',
       name: 'RN Judy',
       relief: 'RN Trent',
       assignedPatientIds: Array(6).fill(null),
-      gridRow: 6,
-      gridColumn: 12,
+      gridRow: 2,
+      gridColumn: 8,
     },
   ];
 };
