@@ -139,7 +139,7 @@ export default function UnitViewClient({
 
   const handleSelectLayout = async (newLayoutName: LayoutName) => {
     await layoutService.setUserPreference('lastSelectedLayout', newLayoutName);
-    await loadLayoutData(newLayoutName);
+    window.location.href = '/'; // Reload to get server-rendered props for new layout
   };
 
   const toggleLayoutLock = () => {
@@ -161,14 +161,15 @@ export default function UnitViewClient({
   };
   
   const handleSaveNewLayout = async (newLayoutName: string) => {
-    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs);
-    setAvailableLayouts(updatedLayouts);
-    await handleSelectLayout(newLayoutName);
+    await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs);
+    await layoutService.setUserPreference('lastSelectedLayout', newLayoutName);
     
     toast({
       title: "Layout Saved",
-      description: `Layout "${newLayoutName}" has been successfully saved.`,
+      description: `Layout "${newLayoutName}" has been successfully saved. Reloading...`,
     });
+    // Hard reload to get new server props
+    window.location.href = '/';
   };
 
   const handleSaveCurrentLayout = async () => {
@@ -361,14 +362,13 @@ export default function UnitViewClient({
 
   const handleCreateUnit = async ({ designation, numRooms }: { designation: string; numRooms: number }) => {
     try {
-        const updatedLayouts = await layoutService.createNewUnitLayout(designation, numRooms);
-        setAvailableLayouts(updatedLayouts);
-        // After creating the unit, select it, which will trigger a full data reload and handle the loading state.
-        await handleSelectLayout(designation); 
+        await layoutService.createNewUnitLayout(designation, numRooms);
+        await layoutService.setUserPreference('lastSelectedLayout', designation);
         toast({
             title: "Unit Created",
-            description: `Unit "${designation}" with ${numRooms} rooms has been created.`,
+            description: `Unit "${designation}" with ${numRooms} rooms has been created. Reloading...`,
         });
+        window.location.href = '/';
     } catch (error) {
         console.error("Failed to create new unit:", error);
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
