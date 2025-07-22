@@ -12,10 +12,13 @@ import type { Nurse, PatientCareTech } from '@/types/nurse';
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
     const patientData = data as Patient;
+    const admitDate = patientData.admitDate;
+    const dischargeDate = patientData.dischargeDate;
+
     return {
         ...patientData,
-        admitDate: (data.admitDate as Timestamp)?.toDate ? (data.admitDate as Timestamp).toDate() : new Date(),
-        dischargeDate: (data.dischargeDate as Timestamp)?.toDate ? (data.dischargeDate as Timestamp).toDate() : new Date(),
+        admitDate: admitDate && (admitDate as Timestamp).toDate ? (admitDate as Timestamp).toDate() : new Date(),
+        dischargeDate: dischargeDate && (dischargeDate as Timestamp).toDate ? (dischargeDate as Timestamp).toDate() : new Date(),
     };
 }
 
@@ -23,8 +26,8 @@ const patientFromFirestore = (data: any): Patient => {
 const patientToFirestore = (patient: Patient): any => {
     return {
         ...patient,
-        admitDate: Timestamp.fromDate(patient.admitDate),
-        dischargeDate: Timestamp.fromDate(patient.dischargeDate),
+        admitDate: patient.admitDate ? Timestamp.fromDate(patient.admitDate) : Timestamp.now(),
+        dischargeDate: patient.dischargeDate ? Timestamp.fromDate(patient.dischargeDate) : Timestamp.now(),
     };
 }
 
