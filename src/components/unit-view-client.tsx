@@ -217,8 +217,8 @@ export default function UnitViewClient({
     setAdmitOrUpdatePatient(patient);
   };
 
-  const handleSavePatient = (formData: AdmitPatientFormValues) => {
-    const updatedPatients = patientService.admitPatient(formData, patients);
+  const handleSavePatient = async (formData: AdmitPatientFormValues) => {
+    const updatedPatients = await patientService.admitPatient(formData, patients);
     setPatients(updatedPatients);
     setAdmitOrUpdatePatient(null);
     

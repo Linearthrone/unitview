@@ -129,7 +129,7 @@ export async function savePatients(layoutName: LayoutName, patients: Patient[]):
     }
 }
 
-export function admitPatient(formData: AdmitPatientFormValues, patients: Patient[]): Patient[] {
+export async function admitPatient(formData: AdmitPatientFormValues, patients: Patient[]): Promise<Patient[]> {
     return patients.map(p => {
         if (p.bedNumber === formData.bedNumber) {
             return {
