@@ -12,6 +12,7 @@ import SaveLayoutDialog from '@/components/save-layout-dialog';
 import AdmitPatientDialog from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
 import AddStaffMemberDialog from '@/components/add-staff-member-dialog';
+import AssignStaffDialog from '@/components/assign-staff-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
@@ -91,6 +92,8 @@ export default function UnitViewClient({
   const [admitOrUpdatePatient, setAdmitOrUpdatePatient] = useState<Patient | null>(null);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isAddStaffMemberDialogOpen, setIsAddStaffMemberDialogOpen] = useState(false);
+  const [isAssignStaffDialogOpen, setIsAssignStaffDialogOpen] = useState(false);
+  const [staffRoleToAssign, setStaffRoleToAssign] = useState<StaffRole | null>(null);
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
   const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
@@ -322,6 +325,27 @@ export default function UnitViewClient({
       title: "Tech Removed",
       description: `${techToRemove.name} has been removed from the unit.`,
     });
+  };
+
+  const handleAssignStaff = (role: StaffRole) => {
+    setStaffRoleToAssign(role);
+    setIsAssignStaffDialogOpen(true);
+  }
+
+  const handleSaveAssignedStaff = (name: string, role: StaffRole) => {
+      setNurses(prev => prev.map(n => n.role === role ? { ...n, name } : n));
+      toast({ title: "Staff Assigned", description: `${name} has been assigned as the ${role}.` });
+      setIsAssignStaffDialogOpen(false);
+  }
+
+  const handleRemoveStaff = (role: StaffRole) => {
+    setNurses(prev => prev.map(n => {
+      if (n.role === role) {
+        return { ...n, name: 'Unassigned' };
+      }
+      return n;
+    }));
+    toast({ title: "Staff Removed", description: `The ${role} has been unassigned.` });
   };
   
   const handleAddSpectra = async (newId: string) => {
@@ -778,6 +802,12 @@ export default function UnitViewClient({
         open={isAddStaffMemberDialogOpen}
         onOpenChange={setIsAddStaffMemberDialogOpen}
         onSave={handleSaveStaffMember}
+      />
+       <AssignStaffDialog
+        open={isAssignStaffDialogOpen}
+        onOpenChange={() => setIsAssignStaffDialogOpen(false)}
+        role={staffRoleToAssign}
+        onSave={handleSaveAssignedStaff}
       />
       <AddRoomDialog
         open={isAddRoomDialogOpen}
