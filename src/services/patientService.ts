@@ -148,7 +148,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 orientationStatus: formData.orientationStatus,
                 isFallRisk: formData.isFallRisk,
                 isSeizureRisk: formData.isSeizureRisk,
-                isAspirationRisk: formData.asSeizureRisk,
+                isAspirationRisk: formData.isAspirationRisk,
                 isIsolation: formData.isIsolation,
                 isInRestraints: formData.isInRestraints,
                 isComfortCareDNR: formData.isComfortCareDNR,
@@ -160,7 +160,7 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
     });
 }
 
-export function dischargePatient(patientToDischarge: Patient, patients: Patient[]): Patient[] {
+export async function dischargePatient(patientToDischarge: Patient, patients: Patient[]): Promise<Patient[]> {
     const vacantPatient: Patient = {
       ...patientToDischarge,
       name: 'Vacant',
@@ -231,21 +231,22 @@ function findEmptySlotForPatient(
 }
 
 
-export function createRoom(
+export async function createRoom(
   designation: string,
   patients: Patient[],
   nurses: Nurse[],
   techs: PatientCareTech[],
-): { newPatients: Patient[] | null; error?: string } {
+): Promise<{ newPatients: Patient[] | null; error?: string }> {
   const position = findEmptySlotForPatient(patients, nurses, techs);
   if (!position) {
     return { newPatients: null, error: "No empty space on the grid to add a new room." };
   }
 
   const newBedNumber = Math.max(0, ...patients.map(p => p.bedNumber)) + 1;
+  const sanitizedDesignation = designation.trim().replace(/[\s/]/g, '-');
 
   const newRoom: Patient = {
-    id: `room-${designation.trim().replace(/[\s/]/g, '-')}-${newBedNumber}-${Math.random().toString(36).slice(2, 9)}`,
+    id: `room-${sanitizedDesignation}-${newBedNumber}-${Math.random().toString(36).slice(2, 9)}`,
     bedNumber: newBedNumber,
     roomDesignation: designation,
     name: 'Vacant',
@@ -286,7 +287,7 @@ const shuffleArray = (array: any[]) => {
   return array;
 };
 
-export function insertMockPatients(currentPatients: Patient[]): { updatedPatients: Patient[], insertedCount: number } {
+export async function insertMockPatients(currentPatients: Patient[]): Promise<{ updatedPatients: Patient[], insertedCount: number }> {
   const vacantRooms = currentPatients.filter(p => p.name === 'Vacant' && !p.isBlocked);
   
   if (vacantRooms.length === 0) {

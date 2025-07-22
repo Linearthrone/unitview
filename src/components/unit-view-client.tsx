@@ -235,9 +235,10 @@ export default function UnitViewClient({
     setPatientToDischarge(patient);
   };
   
-  const handleConfirmDischarge = () => {
+  const handleConfirmDischarge = async () => {
     if (!patientToDischarge) return;
-    setPatients(patientService.dischargePatient(patientToDischarge, patients));
+    const updatedPatients = await patientService.dischargePatient(patientToDischarge, patients);
+    setPatients(updatedPatients);
     toast({
       title: "Patient Discharged",
       description: `${patientToDischarge.name} has been discharged from ${patientToDischarge.roomDesignation}.`,
@@ -342,8 +343,8 @@ export default function UnitViewClient({
     }
   };
 
-  const handleCreateRoom = (designation: string) => {
-    const result = patientService.createRoom(designation, patients, nurses, techs);
+  const handleCreateRoom = async (designation: string) => {
+    const result = await patientService.createRoom(designation, patients, nurses, techs);
     if (result.newPatients) {
       setPatients(result.newPatients);
       setIsAddRoomDialogOpen(false);
@@ -381,8 +382,8 @@ export default function UnitViewClient({
     }
   };
 
-  const handleInsertMockData = () => {
-    const { updatedPatients, insertedCount } = patientService.insertMockPatients(patients);
+  const handleInsertMockData = async () => {
+    const { updatedPatients, insertedCount } = await patientService.insertMockPatients(patients);
     if (insertedCount > 0) {
       setPatients(updatedPatients);
       toast({
@@ -728,7 +729,7 @@ export default function UnitViewClient({
           onNurseDragStart={handleNurseDragStart}
           onTechDragStart={handleTechDragStart}
           onDropOnCell={handleDropOnCell}
-          onDropOnNurseSlot={handleDropOnNurseSlot}
+          onDropOnNurseSlot={onDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
           onDragEnd={handleDragEnd}
           onAdmitPatient={handleOpenAdmitDialog}
