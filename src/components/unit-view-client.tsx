@@ -17,6 +17,8 @@ import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
+import ChargeNurseCard from './charge-nurse-card';
+import UnitClerkCard from './unit-clerk-card';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -739,31 +741,45 @@ export default function UnitViewClient({
         onSaveAssignments={handleSaveAssignments}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
-        <PatientGrid
-          patients={patients}
-          nurses={nurses}
-          techs={techs}
-          isInitialized={isInitialized}
-          isEffectivelyLocked={isLayoutLocked}
-          draggingPatientInfo={draggingPatientInfo}
-          draggingNurseInfo={draggingNurseInfo}
-          draggingTechInfo={draggingTechInfo}
-          onSelectPatient={setSelectedPatient}
-          onPatientDragStart={handlePatientDragStart}
-          onNurseDragStart={handleNurseDragStart}
-          onTechDragStart={handleTechDragStart}
-          onDropOnCell={handleDropOnCell}
-          onDropOnNurseSlot={onDropOnNurseSlot}
-          onClearNurseAssignments={handleClearNurseAssignments}
-          onDragEnd={handleDragEnd}
-          onAdmitPatient={handleOpenAdmitDialog}
-          onUpdatePatient={handleOpenUpdateDialog}
-          onDischargePatient={handleDischargeRequest}
-          onToggleBlockRoom={handleToggleBlockRoom}
-          onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
-          onRemoveNurse={handleRemoveNurse}
-          onRemoveTech={handleRemoveTech}
-        />
+        <div className="flex-grow flex items-stretch">
+            <div className="flex flex-col w-64 p-2 gap-2 border-r">
+                <ChargeNurseCard 
+                    name={getChargeNurseName()}
+                    onAssign={handleAssignStaff}
+                    onRemove={handleRemoveStaff}
+                />
+                <UnitClerkCard 
+                    name={"Unassigned"}
+                    onAssign={handleAssignStaff}
+                    onRemove={handleRemoveStaff}
+                />
+            </div>
+            <PatientGrid
+              patients={patients}
+              nurses={nurses}
+              techs={techs}
+              isInitialized={isInitialized}
+              isEffectivelyLocked={isLayoutLocked}
+              draggingPatientInfo={draggingPatientInfo}
+              draggingNurseInfo={draggingNurseInfo}
+              draggingTechInfo={draggingTechInfo}
+              onSelectPatient={setSelectedPatient}
+              onPatientDragStart={handlePatientDragStart}
+              onNurseDragStart={handleNurseDragStart}
+              onTechDragStart={handleTechDragStart}
+              onDropOnCell={handleDropOnCell}
+              onDropOnNurseSlot={onDropOnNurseSlot}
+              onClearNurseAssignments={handleClearNurseAssignments}
+              onDragEnd={handleDragEnd}
+              onAdmitPatient={handleOpenAdmitDialog}
+              onUpdatePatient={handleOpenUpdateDialog}
+              onDischargePatient={handleDischargeRequest}
+              onToggleBlockRoom={handleToggleBlockRoom}
+              onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
+              onRemoveNurse={handleRemoveNurse}
+              onRemoveTech={handleRemoveTech}
+            />
+        </div>
       </main>
       <PrintableReport patients={patients} />
       <PrintableAssignments 
@@ -847,3 +863,5 @@ export default function UnitViewClient({
     </div>
   );
 }
+
+    
