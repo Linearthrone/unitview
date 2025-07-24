@@ -38,41 +38,54 @@ const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', l
 async function seedNorthSouthLayout(): Promise<Patient[]> {
     const layoutName = 'North-South View';
     const layoutPatients: Patient[] = [];
-    const perimeterCells = getPerimeterCells();
-    
-    // We'll create a standard 40-room layout using the perimeter
-    const numRooms = Math.min(40, perimeterCells.length);
-    const startingRoomNumber = 801;
 
-    for (let i = 0; i < numRooms; i++) {
-        const cell = perimeterCells[i];
-        const currentRoomNumber = startingRoomNumber + i;
-        const patient: Patient = {
-            id: `patient-ns-${currentRoomNumber}`,
-            bedNumber: currentRoomNumber,
-            roomDesignation: `Room ${currentRoomNumber}`,
-            name: 'Vacant',
-            age: 0,
-            admitDate: new Date(),
-            dischargeDate: new Date(),
-            chiefComplaint: 'N/A',
-            ldas: [],
-            diet: 'N/A',
-            mobility: 'Independent',
-            codeStatus: 'Full Code',
-            orientationStatus: 'N/A',
-            isFallRisk: false,
-            isSeizureRisk: false,
-            isAspirationRisk: false,
-            isIsolation: false,
-            isInRestraints: false,
-            isComfortCareDNR: false,
-            gridRow: cell.row,
-            gridColumn: cell.col,
-        };
-        layoutPatients.push(patient);
+    const createRoom = (roomNumber: number, row: number, col: number): Patient => ({
+        id: `patient-ns-${roomNumber}`,
+        bedNumber: roomNumber,
+        roomDesignation: `Room ${roomNumber}`,
+        name: 'Vacant',
+        age: 0,
+        admitDate: new Date(),
+        dischargeDate: new Date(),
+        chiefComplaint: 'N/A',
+        ldas: [],
+        diet: 'N/A',
+        mobility: 'Independent',
+        codeStatus: 'Full Code',
+        orientationStatus: 'N/A',
+        isFallRisk: false,
+        isSeizureRisk: false,
+        isAspirationRisk: false,
+        isIsolation: false,
+        isInRestraints: false,
+        isComfortCareDNR: false,
+        gridRow: row,
+        gridColumn: col,
+    });
+
+    // Custom top row layout as requested
+    const topRowRoomOrder = [826, 825, 824, 823, 822, 821, 820, 819, null, 818, 817, 816, 815, 814, 813, 812, 811];
+    topRowRoomOrder.forEach((roomNumber, index) => {
+        if (roomNumber) {
+            layoutPatients.push(createRoom(roomNumber, 1, index + 1));
+        }
+    });
+
+    // Bottom Row (Rooms 840-827, left-to-right)
+    for (let i = 0; i < 14; i++) {
+        layoutPatients.push(createRoom(840 - i, 10, i + 2));
     }
     
+    // Left Side (Rooms 801-810)
+    for (let i = 0; i < 8; i++) {
+        layoutPatients.push(createRoom(801 + i, i + 2, 1));
+    }
+    
+    // Right Side (Rooms 810-818)
+    for (let i = 0; i < 8; i++) {
+       layoutPatients.push(createRoom(810 + i, i + 2, 17));
+    }
+
     await savePatients(layoutName, layoutPatients);
     return layoutPatients;
 }
@@ -204,8 +217,9 @@ function findEmptySlotForPatient(
   });
 
   nurses.forEach(n => {
-    for (let i = 0; i < 3; i++) { // Nurse card is 3 rows high
-      occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
+    const cardHeight = n.role === 'Staff Nurse' ? 3 : 1;
+    for (let i = 0; i < cardHeight; i++) {
+        occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
     }
   });
   
