@@ -17,8 +17,6 @@ import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
-import ChargeNurseCard from './charge-nurse-card';
-import UnitClerkCard from './unit-clerk-card';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -529,21 +527,29 @@ export default function UnitViewClient({
         const newNurses = prevNurses.map(n => ({ ...n }));
         const draggedNurse = newNurses.find(n => n.id === draggedNurseId);
         if (!draggedNurse) return prevNurses;
+        
+        const cardHeight = (draggedNurse.role === 'Staff Nurse') ? 3 : 1;
+        const newRow = Math.min(targetRow, NUM_ROWS_GRID - (cardHeight - 1)); 
 
-        const newRow = Math.min(targetRow, NUM_ROWS_GRID - 2); 
+        const targetCells = [];
+        for (let i=0; i < cardHeight; i++) {
+            targetCells.push(`${newRow + i}-${targetCol}`);
+        }
 
-        const targetCells = [`${newRow}-${targetCol}`, `${newRow + 1}-${targetCol}`, `${newRow + 2}-${targetCol}`];
         const isOccupiedByPatient = patients.some(p => targetCells.includes(`${p.gridRow}-${p.gridColumn}`));
         const isOccupiedByOtherNurse = newNurses.some(nurse => {
           if (nurse.id === draggedNurseId) return false;
           if (nurse.gridColumn !== targetCol) return false;
-          const nurseTop = nurse.gridRow;
-          const nurseBottom = nurse.gridRow + 2;
-          return newRow <= nurseBottom && (newRow + 2) >= nurseTop;
+          
+          const otherCardHeight = (nurse.role === 'Staff Nurse') ? 3 : 1;
+          const otherTop = nurse.gridRow;
+          const otherBottom = nurse.gridRow + otherCardHeight -1;
+
+          return newRow <= otherBottom && (newRow + cardHeight -1) >= otherTop;
         });
 
         if (isOccupiedByPatient || isOccupiedByOtherNurse) {
-          toast({ variant: "destructive", title: "Cannot Move Nurse", description: "The target location is occupied." });
+          toast({ variant: "destructive", title: "Cannot Move Staff", description: "The target location is occupied." });
           return prevNurses;
         }
 
@@ -742,18 +748,6 @@ export default function UnitViewClient({
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <div className="flex-grow flex items-stretch">
-            <div className="flex flex-col w-64 p-2 gap-2 border-r">
-                <ChargeNurseCard 
-                    name={getChargeNurseName()}
-                    onAssign={handleAssignStaff}
-                    onRemove={handleRemoveStaff}
-                />
-                <UnitClerkCard 
-                    name={"Unassigned"}
-                    onAssign={handleAssignStaff}
-                    onRemove={handleRemoveStaff}
-                />
-            </div>
             <PatientGrid
               patients={patients}
               nurses={nurses}
@@ -768,7 +762,7 @@ export default function UnitViewClient({
               onNurseDragStart={handleNurseDragStart}
               onTechDragStart={handleTechDragStart}
               onDropOnCell={handleDropOnCell}
-              onDropOnNurseSlot={handleDropOnNurseSlot}
+              handleDropOnNurseSlot={handleDropOnNurseSlot}
               onClearNurseAssignments={handleClearNurseAssignments}
               onDragEnd={handleDragEnd}
               onAdmitPatient={handleOpenAdmitDialog}
@@ -778,6 +772,8 @@ export default function UnitViewClient({
               onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
               onRemoveNurse={handleRemoveNurse}
               onRemoveTech={handleRemoveTech}
+              onAssignStaff={handleAssignStaff}
+              onRemoveStaff={handleRemoveStaff}
             />
         </div>
       </main>

@@ -10,7 +10,7 @@ export interface Nurse {
   id: string;
   name: string;
   role: StaffRole;
-  spectra: string;
+  spectra?: string;
   relief?: string;
   assignedPatientIds: (string | null)[];
   gridRow: number;
@@ -25,5 +25,3 @@ export interface PatientCareTech {
     gridRow: number;
     gridColumn: number;
 }
-
-    

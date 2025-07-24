@@ -7,6 +7,8 @@ import type { Nurse, PatientCareTech } from '@/types/nurse';
 import PatientBlock from './patient-block';
 import NurseAssignmentCard from './nurse-assignment-card';
 import PatientCareTechCard from './patient-care-tech-card';
+import ChargeNurseCard from './charge-nurse-card';
+import UnitClerkCard from './unit-clerk-card';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -37,7 +39,7 @@ interface PatientGridProps {
   onNurseDragStart: (e: React.DragEvent<HTMLDivElement>, nurseId: string) => void;
   onTechDragStart: (e: React.DragEvent<HTMLDivElement>, techId: string) => void;
   onDropOnCell: (targetRow: number, targetCol: number) => void;
-  onDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
+  handleDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
   onClearNurseAssignments: (nurseId: string) => void;
   onDragEnd: () => void;
   onAdmitPatient: (patient: Patient) => void;
@@ -47,6 +49,8 @@ interface PatientGridProps {
   onEditDesignation: (patient: Patient) => void;
   onRemoveNurse: (nurseId: string) => void;
   onRemoveTech: (techId: string) => void;
+  onAssignStaff: (role: StaffRole) => void;
+  onRemoveStaff: (role: StaffRole) => void;
 }
 
 const PatientGrid: React.FC<PatientGridProps> = ({
@@ -63,7 +67,7 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   onNurseDragStart,
   onTechDragStart,
   onDropOnCell,
-  onDropOnNurseSlot,
+  handleDropOnNurseSlot,
   onClearNurseAssignments,
   onDragEnd,
   onAdmitPatient,
@@ -73,6 +77,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   onEditDesignation,
   onRemoveNurse,
   onRemoveTech,
+  onAssignStaff,
+  onRemoveStaff,
 }) => {
   const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -86,7 +92,8 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   const occupiedCells = new Set<string>();
   
   nurses.forEach(nurse => {
-    for (let i = 0; i < 3; i++) {
+    const cardHeight = nurse.role === 'Staff Nurse' ? 3 : 1;
+    for (let i = 0; i < cardHeight; i++) {
         occupiedCells.add(`${nurse.gridRow + i}-${nurse.gridColumn}`);
     }
   });
@@ -176,6 +183,29 @@ const PatientGrid: React.FC<PatientGridProps> = ({
     );
   }
 
+  const renderNurseCard = (nurse: Nurse) => {
+    switch (nurse.role) {
+      case 'Charge Nurse':
+        return <ChargeNurseCard name={nurse.name} onAssign={onAssignStaff} onRemove={onRemoveStaff} />;
+      case 'Unit Clerk':
+        return <UnitClerkCard name={nurse.name} onAssign={onAssignStaff} onRemove={onRemoveStaff} />;
+      case 'Staff Nurse':
+      case 'Float Pool Nurse':
+        return (
+          <NurseAssignmentCard
+            nurse={nurse}
+            patients={patients}
+            onDropOnSlot={handleDropOnNurseSlot}
+            onClearAssignments={onClearNurseAssignments}
+            onRemoveNurse={onRemoveNurse}
+            isEffectivelyLocked={isEffectivelyLocked}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="flex-grow flex overflow-auto p-2">
       <div
@@ -196,22 +226,16 @@ const PatientGrid: React.FC<PatientGridProps> = ({
             onDragStart={(e) => onNurseDragStart(e, nurse.id)}
             onDragEnd={onDragEnd}
             className={cn(
+              "min-h-[6rem]",
               draggingNurseInfo?.id === nurse.id && "opacity-50"
             )}
             style={{ 
               gridRowStart: nurse.gridRow, 
               gridColumnStart: nurse.gridColumn, 
-              gridRowEnd: 'span 3' 
+              gridRowEnd: nurse.role === 'Staff Nurse' ? 'span 3' : 'span 1'
             }}
           >
-            <NurseAssignmentCard
-              nurse={nurse}
-              patients={patients}
-              onDropOnSlot={onDropOnNurseSlot}
-              onClearAssignments={onClearNurseAssignments}
-              onRemoveNurse={onRemoveNurse}
-              isEffectivelyLocked={isEffectivelyLocked}
-            />
+            {renderNurseCard(nurse)}
           </div>
         ))}
         
@@ -243,5 +267,3 @@ const PatientGrid: React.FC<PatientGridProps> = ({
 };
 
 export default PatientGrid;
-
-    

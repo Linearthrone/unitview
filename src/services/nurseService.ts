@@ -17,7 +17,7 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
     try {
         const snapshot = await getDocs(collectionRef);
         // Validate each nurse object to ensure assignedPatientIds is an array.
-        return snapshot.docs.map(doc => {
+        const nurses = snapshot.docs.map(doc => {
             const data = doc.data() as Nurse;
             if (!Array.isArray(data.assignedPatientIds)) {
                 // If the field is missing or not an array, default it to the correct structure.
@@ -25,6 +25,23 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
             }
             return data;
         });
+
+        // Ensure Charge Nurse and Unit Clerk exist
+        const requiredRoles = ['Charge Nurse', 'Unit Clerk'];
+        requiredRoles.forEach(role => {
+            if (!nurses.some(n => n.role === role)) {
+                nurses.push({
+                    id: `nurse-${role.toLowerCase().replace(' ', '-')}-${Date.now()}`,
+                    name: 'Unassigned',
+                    role: role as any,
+                    assignedPatientIds: [],
+                    gridRow: 1, // Default position, can be moved by user
+                    gridColumn: role === 'Charge Nurse' ? 1 : 2, // Default position
+                });
+            }
+        });
+
+        return nurses;
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
@@ -44,7 +61,8 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
             // Ensure no undefined fields are accidentally sent to Firestore
             const nurseDataForFirestore = {
                 ...nurse,
-                relief: nurse.relief || null, 
+                relief: nurse.relief || null,
+                spectra: nurse.spectra || null,
             };
             batch.set(docRef, nurseDataForFirestore);
         });
@@ -98,7 +116,8 @@ function findEmptySlot(
     if (p.gridRow > 0 && p.gridColumn > 0) occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
   });
   nurses.forEach(n => {
-    for (let i = 0; i < 3; i++) occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
+    const height = n.role === 'Staff Nurse' ? 3 : 1;
+    for (let i = 0; i < height; i++) occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
   });
    techs.forEach(t => {
     occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
@@ -142,8 +161,14 @@ export async function addStaffMember(
         return { success: true }; // Sitters are tracked conceptually but don't have grid cards.
     }
 
-    const isNurseRole = ['Staff Nurse', 'Float Pool Nurse', 'Charge Nurse', 'Unit Clerk'].includes(role);
+    const isNurseRole = ['Staff Nurse', 'Float Pool Nurse'].includes(role);
     const isTechRole = role === 'Patient Care Tech';
+
+    if (role === 'Charge Nurse' || role === 'Unit Clerk') {
+        const newNurses = nurses.map(n => n.role === role ? { ...n, name: formData.name } : n);
+        return { newNurses };
+    }
+
 
     const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
     const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));

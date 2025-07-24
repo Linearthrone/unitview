@@ -35,12 +35,14 @@ const ChargeNurseCard: React.FC<ChargeNurseCardProps> = ({ name, onAssign, onRem
                 <div>
                     <p className="text-xl font-bold">{name}</p>
                 </div>
-                 <div>
-                     <p className="font-bold text-lg flex items-center gap-2">
-                        <Smartphone className="h-4 w-4"/>
-                        <span>x5501</span>
-                    </p>
-                </div>
+                 {name !== 'Unassigned' && (
+                     <div>
+                         <p className="font-bold text-lg flex items-center gap-2">
+                            <Smartphone className="h-4 w-4"/>
+                            <span>x5501</span>
+                        </p>
+                    </div>
+                )}
             </div>
           </CardContent>
         </Card>

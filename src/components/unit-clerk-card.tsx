@@ -38,12 +38,14 @@ const UnitClerkCard: React.FC<UnitClerkCardProps> = ({ name, onAssign, onRemove 
                       <span>{name}</span>
                     </p>
                 </div>
-                 <div>
-                    <p className="font-bold text-lg flex items-center gap-2">
-                        <Phone className="h-4 w-4"/>
-                        <span>(555) 123-4567</span>
-                    </p>
-                </div>
+                 {name !== 'Unassigned' && (
+                    <div>
+                        <p className="font-bold text-lg flex items-center gap-2">
+                            <Phone className="h-4 w-4"/>
+                            <span>(555) 123-4567</span>
+                        </p>
+                    </div>
+                 )}
             </div>
           </CardContent>
         </Card>
