@@ -16,7 +16,15 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
-        return snapshot.docs.map(doc => doc.data() as Nurse);
+        // Validate each nurse object to ensure assignedPatientIds is an array.
+        return snapshot.docs.map(doc => {
+            const data = doc.data() as Nurse;
+            if (!Array.isArray(data.assignedPatientIds)) {
+                // If the field is missing or not an array, default it to the correct structure.
+                data.assignedPatientIds = Array(6).fill(null);
+            }
+            return data;
+        });
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);

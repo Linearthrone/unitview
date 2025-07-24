@@ -12,16 +12,23 @@ export async function getSpectraPool(): Promise<Spectra[]> {
     try {
         const docSnap = await getDoc(spectraDocRef);
         if (docSnap.exists()) {
-            return docSnap.data().pool as Spectra[];
-        } else {
-            // Document doesn't exist, create it with initial data.
-            const initialSpectra = generateInitialSpectra();
-            await saveSpectraPool(initialSpectra);
-            return initialSpectra;
+            const data = docSnap.data();
+            // Ensure the pool exists and is an array, otherwise seed it.
+            if (Array.isArray(data.pool)) {
+                 return data.pool as Spectra[];
+            }
         }
+        // Document doesn't exist or pool is malformed, create it with initial data.
+        const initialSpectra = generateInitialSpectra();
+        await saveSpectraPool(initialSpectra);
+        return initialSpectra;
+
     } catch (error) {
         console.error("Failed to load spectra pool from Firestore:", error);
-        return generateInitialSpectra(); // Fallback on error
+        // Attempt to recover by seeding data
+        const initialSpectra = generateInitialSpectra();
+        await saveSpectraPool(initialSpectra);
+        return initialSpectra;
     }
 }
 
