@@ -76,14 +76,14 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
         layoutPatients.push(createRoom(840 - i, 10, i + 2));
     }
     
-    // Left Side (Rooms 801-810)
+    // Left Side (Rooms 801-808)
     for (let i = 0; i < 8; i++) {
         layoutPatients.push(createRoom(801 + i, i + 2, 1));
     }
     
-    // Right Side (Rooms 810-818)
+    // Right Side (Rooms 809-816)
     for (let i = 0; i < 8; i++) {
-       layoutPatients.push(createRoom(810 + i, i + 2, 17));
+       layoutPatients.push(createRoom(809 + i, i + 2, 17));
     }
 
     await savePatients(layoutName, layoutPatients);
@@ -337,3 +337,4 @@ export async function insertMockPatients(currentPatients: Patient[]): Promise<{ 
     
 
     
+
