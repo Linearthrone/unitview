@@ -99,7 +99,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   return (
     <>
       <header className="bg-card text-card-foreground shadow-md p-4 sticky top-0 z-50 print-hide h-32">
-        <div className="container mx-auto flex items-center justify-between h-full">
+        <div className="w-full flex items-center justify-between h-full px-4 sm:px-6 lg:px-8">
           
           {/* Left Section */}
           <div className="flex items-center gap-6 h-full">
