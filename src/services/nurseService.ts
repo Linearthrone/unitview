@@ -219,8 +219,8 @@ export async function calculateTechAssignments(techs: PatientCareTech[], patient
     const activePatients = patients
         .filter(p => p.name !== 'Vacant' && !p.isBlocked)
         .sort((a, b) => {
-            const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10);
-            const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10);
+            const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10) || 0;
             return numA - numB;
         });
 

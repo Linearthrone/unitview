@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: 'UnitView',
   description: 'Patient management dashboard for charge nurses.',
+  icons: null,
 };
 
 export default function RootLayout({
