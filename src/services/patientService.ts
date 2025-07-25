@@ -8,6 +8,7 @@ import type { AdmitPatientFormValues } from '@/types/forms';
 import { mockPatientData } from '@/lib/mock-patients';
 import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
+import { generateInitialNurses } from '@/lib/initial-nurses';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
@@ -81,9 +82,10 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
         layoutPatients.push(createRoom(801 + i, i + 2, 1));
     }
     
-    // Right Side (Rooms 809-816)
-    for (let i = 0; i < 8; i++) {
-       layoutPatients.push(createRoom(809 + i, i + 2, 17));
+    // Right Side (Rooms 809-810 are seeded via top row)
+    // Correctly seed 811-816 on the right side
+    for (let i = 0; i < 6; i++) {
+       layoutPatients.push(createRoom(811 + i, i + 2, 17));
     }
 
     await savePatients(layoutName, layoutPatients);
@@ -333,9 +335,3 @@ export async function insertMockPatients(currentPatients: Patient[]): Promise<{ 
 
   return { updatedPatients: newPatients, insertedCount };
 }
-
-    
-
-    
-
-
