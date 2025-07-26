@@ -685,8 +685,8 @@ export default function Home() {
         const patientMap = new Map(currentPatients.map(p => [p.id, p]));
 
         // 4. Sort the assigned IDs based on the patient's bed number
-        const sortedPatientIds = newAssignedIds.sort((idA, idB) => {
-          const patientA = patientMap.get(idA);
+        const sortedPatientIds = newAssignedIds.sort((a, idB) => {
+          const patientA = patientMap.get(a);
           const patientB = patientMap.get(idB);
           if (!patientA || !patientB) return 0;
           return patientA.bedNumber - patientB.bedNumber;
@@ -931,5 +931,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
