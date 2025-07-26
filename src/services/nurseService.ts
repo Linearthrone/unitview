@@ -30,21 +30,17 @@ async function seedInitialNurses(layoutName: LayoutName, spectraPool: Spectra[])
 export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
-        const q = query(collectionRef, limit(1));
-        const snapshot = await getDocs(q);
-
-        // For the specific "North/South View", seed if empty. Otherwise, return what's there (even if empty).
+        const snapshot = await getDocs(collectionRef);
+        
         if (snapshot.empty && layoutName === 'North/South View') {
             console.log(`No nurse data for layout '${layoutName}' in Firestore. Seeding initial nurses.`);
             return await seedInitialNurses(layoutName, spectraPool);
         }
         
-        const allDocsSnapshot = await getDocs(collectionRef);
-        return allDocsSnapshot.docs.map(doc => doc.data() as Nurse);
+        return snapshot.docs.map(doc => doc.data() as Nurse);
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
-        // Fallback to in-memory generation ONLY on error for North/South View layout
         if (layoutName === 'North/South View') {
             const initialNurses = generateInitialNurses();
             const availableSpectra = spectraPool.filter(s => s.inService);
@@ -68,7 +64,6 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
             const docRef = doc(collectionRef, nurse.id);
             const nurseDataForFirestore = {
                 ...nurse,
-                // Ensure no undefined fields are accidentally sent, though Firestore config should handle it
                 relief: nurse.relief || null, 
             };
             batch.set(docRef, nurseDataForFirestore);
@@ -83,6 +78,9 @@ export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[
     const collectionRef = getTechCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
+        if (snapshot.empty) {
+            return [];
+        }
         return snapshot.docs.map(doc => doc.data() as PatientCareTech);
     } catch (error) {
         console.error(`Error fetching techs for layout ${layoutName} from Firestore:`, error);
@@ -155,39 +153,36 @@ function findEmptySlot(
 }
 
 
-export function addStaffMember(
+export async function addStaffMember(
     formData: AddStaffMemberFormValues, 
     nurses: Nurse[], 
     techs: PatientCareTech[],
     patients: Patient[], 
-    spectraPool: Spectra[],
-    widgets: WidgetCard[]
-): { 
+    widgets: WidgetCard[],
+    spectraPool: Spectra[]
+): Promise<{ 
     newNurses?: Nurse[] | null; 
     newTechs?: PatientCareTech[] | null; 
-    chargeNurseName?: string;
-    unitClerkName?: string;
     success?: boolean; 
     error?: string 
-} {
-    const { name, role } = formData;
+}> {
+    const { role } = formData;
     
-    // Sitter role does not get a card
     if (role === 'Sitter') {
-        return { success: true };
+        return { success: true }; // Sitters are tracked conceptually but don't have grid cards.
     }
 
-    const isNursingOrClericalRole = ['Staff Nurse', 'Float Pool Nurse', 'Charge Nurse', 'Unit Clerk'].includes(role);
+    const isNurseRole = ['Staff Nurse', 'Float Pool Nurse', 'Charge Nurse', 'Unit Clerk'].includes(role);
     const isTechRole = role === 'Patient Care Tech';
 
     const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
     const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));
 
-    if ((isNursingOrClericalRole || isTechRole) && !assignedSpectra) {
+    if ((isNurseRole || isTechRole) && !assignedSpectra) {
         return { error: "Could not add staff. Please add or enable a Spectra device in the pool." };
     }
     
-    if (isNursingOrClericalRole) {
+    if (isNurseRole) {
         const position = findEmptySlot(patients, nurses, techs, widgets, 3, 1);
         if (!position) {
             return { error: "Cannot add new staff member, the grid is full." };
@@ -225,12 +220,12 @@ export function addStaffMember(
     return { error: `Unhandled role: ${role}` };
 }
 
-export function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): PatientCareTech[] {
+export async function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): Promise<PatientCareTech[]> {
     const activePatients = patients
         .filter(p => p.name !== 'Vacant' && !p.isBlocked)
         .sort((a, b) => {
-            const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10);
-            const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10);
+            const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10) || 0;
+            const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10) || 0;
             return numA - numB;
         });
 

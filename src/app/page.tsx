@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
-import type { Nurse, PatientCareTech } from '@/types/nurse';
+import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
@@ -247,8 +247,8 @@ export default function Home() {
     setAdmitOrUpdatePatient(patient);
   };
 
-  const handleSavePatient = (formData: AdmitPatientFormValues) => {
-    const updatedPatients = patientService.admitPatient(formData, patients);
+  const handleSavePatient = async (formData: AdmitPatientFormValues) => {
+    const updatedPatients = await patientService.admitPatient(formData, patients);
     setPatients(updatedPatients);
     setAdmitOrUpdatePatient(null);
     
@@ -265,9 +265,10 @@ export default function Home() {
     setPatientToDischarge(patient);
   };
   
-  const handleConfirmDischarge = () => {
+  const handleConfirmDischarge = async () => {
     if (!patientToDischarge) return;
-    setPatients(patientService.dischargePatient(patientToDischarge, patients));
+    const dischargedPatients = await patientService.dischargePatient(patientToDischarge, patients);
+    setPatients(dischargedPatients);
     toast({
       title: "Patient Discharged",
       description: `${patientToDischarge.name} has been discharged from ${patientToDischarge.roomDesignation}.`,
@@ -301,8 +302,8 @@ export default function Home() {
   };
 
   
-  const handleSaveStaffMember = (formData: AddStaffMemberFormValues) => {
-    const result = nurseService.addStaffMember(formData, nurses, techs, patients, spectraPool, widgetCards);
+  const handleSaveStaffMember = async (formData: AddStaffMemberFormValues) => {
+    const result = await nurseService.addStaffMember(formData, nurses, techs, patients, widgetCards, spectraPool);
     
     setIsAddStaffMemberDialogOpen(false);
 
@@ -394,8 +395,8 @@ export default function Home() {
     }
   };
 
-  const handleCreateRoom = (designation: string) => {
-    const result = patientService.createRoom(designation, patients, nurses, techs, widgetCards);
+  const handleCreateRoom = async (designation: string) => {
+    const result = await patientService.createRoom(designation, patients, nurses, techs, widgetCards);
     if (result.newPatients) {
       setPatients(result.newPatients);
       setIsAddRoomDialogOpen(false);
@@ -434,8 +435,8 @@ export default function Home() {
     }
   };
 
-  const handleInsertMockData = () => {
-    const { updatedPatients, insertedCount } = patientService.insertMockPatients(patients);
+  const handleInsertMockData = async () => {
+    const { updatedPatients, insertedCount } = await patientService.insertMockPatients(patients);
     if (insertedCount > 0) {
       setPatients(updatedPatients);
       toast({
@@ -766,11 +767,12 @@ export default function Home() {
 
   useEffect(() => {
       if (techs.length > 0) {
-          const updatedTechs = nurseService.calculateTechAssignments(techs, patients);
-          // Only update state if assignments have actually changed to prevent infinite loops
-          if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
-              setTechs(updatedTechs);
-          }
+          nurseService.calculateTechAssignments(techs, patients).then(updatedTechs => {
+            // Only update state if assignments have actually changed to prevent infinite loops
+            if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
+                setTechs(updatedTechs);
+            }
+          });
       }
   }, [patients, techs]);
     
@@ -929,3 +931,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

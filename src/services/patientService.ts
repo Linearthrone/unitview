@@ -1,12 +1,13 @@
 
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, writeBatch, Timestamp, query, limit } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, Timestamp, query, limit, addDoc } from 'firebase/firestore';
 import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
 import type { AdmitPatientFormValues } from '@/types/forms';
 import { generateInitialPatients } from '@/lib/initial-patients';
 import { mockPatientData } from '@/lib/mock-patients';
 import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
+import { saveNurses, saveTechs } from './nurseService';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
@@ -30,20 +31,19 @@ const patientToFirestore = (patient: Patient): any => {
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
 
 
-// This function seeds the predefined "North/South View" layout
-async function seedNorthSouthLayout(): Promise<Patient[]> {
-    const layoutPatients: Patient[] = [];
+async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> {
     const perimeterCells = getPerimeterCells();
-    
-    // We'll create a standard 40-room layout using the perimeter
     const numRooms = Math.min(40, perimeterCells.length);
+    const newPatients: Patient[] = [];
 
     for (let i = 0; i < numRooms; i++) {
         const cell = perimeterCells[i];
+        if (!cell) continue; // Skip if cell is invalid
+
         const patient: Patient = {
-            id: `patient-ns-${i + 1}`,
+            id: `patient-${layoutName}-${i + 1}`,
             bedNumber: i + 1,
-            roomDesignation: `NS-${i + 1}`,
+            roomDesignation: `${layoutName}-${i + 1}`,
             name: 'Vacant',
             age: 0,
             admitDate: new Date(),
@@ -63,11 +63,14 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
             gridRow: cell.row,
             gridColumn: cell.col,
         };
-        layoutPatients.push(patient);
+        newPatients.push(patient);
     }
     
-    await savePatients('North/South View', layoutPatients);
-    return layoutPatients;
+    await savePatients(layoutName, newPatients);
+    await saveNurses(layoutName, []);
+    await saveTechs(layoutName, []);
+
+    return newPatients;
 }
 
 
@@ -78,12 +81,10 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-            // Special case: if the "North/South View" is selected and empty, seed it.
             if (layoutName === 'North/South View') {
                 console.log(`No data for layout '${layoutName}' in Firestore. Seeding initial layout.`);
-                return await seedNorthSouthLayout();
+                return await seedInitialDataForLayout('North/South View');
             }
-            // For any other layout (including custom ones), return an empty array if not found.
             return [];
         }
 
@@ -93,24 +94,21 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
          if (layoutName === 'North/South View') {
-            return await seedNorthSouthLayout();
+            return await seedInitialDataForLayout('North/South View');
         }
         return [];
     }
 }
 
 export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
-    if (!patients) return; // Can be an empty array
+    if (!patients) return;
 
     const collectionRef = getCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
-        // Since we are overwriting the whole layout, we can delete all first.
-        // For more granular updates, a different strategy would be needed.
         const existingDocs = await getDocs(collectionRef);
         existingDocs.forEach(doc => batch.delete(doc.ref));
         
-        // Then add all the new/updated patient data.
         patients.forEach(patient => {
             const docRef = doc(collectionRef, patient.id);
             const dataForFirestore = patientToFirestore(patient);
@@ -122,7 +120,7 @@ export async function savePatients(layoutName: LayoutName, patients: Patient[]):
     }
 }
 
-export function admitPatient(formData: AdmitPatientFormValues, patients: Patient[]): Patient[] {
+export async function admitPatient(formData: AdmitPatientFormValues, patients: Patient[]): Promise<Patient[]> {
     return patients.map(p => {
         if (p.bedNumber === formData.bedNumber) {
             return {
@@ -146,14 +144,14 @@ export function admitPatient(formData: AdmitPatientFormValues, patients: Patient
                 isInRestraints: formData.isInRestraints,
                 isComfortCareDNR: formData.isComfortCareDNR,
                 notes: formData.notes,
-                isBlocked: false, // Admitting unblocks the room
+                isBlocked: false,
             };
         }
         return p;
     });
 }
 
-export function dischargePatient(patientToDischarge: Patient, patients: Patient[]): Patient[] {
+export async function dischargePatient(patientToDischarge: Patient, patients: Patient[]): Promise<Patient[]> {
     const vacantPatient: Patient = {
       ...patientToDischarge,
       name: 'Vacant',
@@ -175,7 +173,7 @@ export function dischargePatient(patientToDischarge: Patient, patients: Patient[
       isComfortCareDNR: false,
       orientationStatus: 'N/A',
       notes: '',
-      isBlocked: patientToDischarge.isBlocked, // Preserve blocked status
+      isBlocked: patientToDischarge.isBlocked,
     };
     return patients.map(p => (p.id === patientToDischarge.id ? vacantPatient : p));
 }
@@ -195,7 +193,7 @@ function findEmptySlotForPatient(
   });
 
   nurses.forEach(n => {
-    for (let i = 0; i < 3; i++) { // Nurse card is 3 rows high
+    for (let i = 0; i < 3; i++) {
       occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
     }
   });
@@ -212,7 +210,6 @@ function findEmptySlotForPatient(
     }
   });
 
-  // Prioritize inner grid first
   for (let r = 2; r < NUM_ROWS_GRID; r++) {
     for (let c = 2; c < NUM_COLS_GRID; c++) {
       if (!occupiedCells.has(`${r}-${c}`)) {
@@ -220,7 +217,6 @@ function findEmptySlotForPatient(
       }
     }
   }
-  // Then check full grid
   for (let r = 1; r <= NUM_ROWS_GRID; r++) {
     for (let c = 1; c <= NUM_COLS_GRID; c++) {
       if (!occupiedCells.has(`${r}-${c}`)) {
@@ -233,13 +229,13 @@ function findEmptySlotForPatient(
 }
 
 
-export function createRoom(
+export async function createRoom(
   designation: string,
   patients: Patient[],
   nurses: Nurse[],
   techs: PatientCareTech[],
   widgets: WidgetCard[]
-): { newPatients: Patient[] | null; error?: string } {
+): Promise<{ newPatients: Patient[] | null; error?: string }> {
   const position = findEmptySlotForPatient(patients, nurses, techs, widgets);
   if (!position) {
     return { newPatients: null, error: "No empty space on the grid to add a new room." };
@@ -277,8 +273,6 @@ export function createRoom(
   return { newPatients: [...patients, newRoom] };
 }
 
-
-// Fisher-Yates shuffle algorithm
 const shuffleArray = (array: any[]) => {
   let currentIndex = array.length, randomIndex;
   while (currentIndex !== 0) {
@@ -289,7 +283,7 @@ const shuffleArray = (array: any[]) => {
   return array;
 };
 
-export function insertMockPatients(currentPatients: Patient[]): { updatedPatients: Patient[], insertedCount: number } {
+export async function insertMockPatients(currentPatients: Patient[]): Promise<{ updatedPatients: Patient[], insertedCount: number }> {
   const vacantRooms = currentPatients.filter(p => p.name === 'Vacant' && !p.isBlocked);
   
   if (vacantRooms.length === 0) {
@@ -301,7 +295,7 @@ export function insertMockPatients(currentPatients: Patient[]): { updatedPatient
   let insertedCount = 0;
 
   for (let i = 0; i < vacantRooms.length; i++) {
-    const mockData = shuffledMockData[i % shuffledMockData.length]; // Loop through mock data if more vacant rooms than mocks
+    const mockData = shuffledMockData[i % shuffledMockData.length];
     const vacantRoom = vacantRooms[i];
     const patientIndex = newPatients.findIndex(p => p.id === vacantRoom.id);
 
