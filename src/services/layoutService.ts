@@ -51,6 +51,7 @@ export async function saveNewLayout(layoutName: string, patients: Patient[], nur
     try {
         // Use set with merge to create or update the document
         await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
+        await setUserPreference('lastSelectedLayout', layoutName);
     } catch (error) {
         console.error("Error saving new layout name:", error);
     }
