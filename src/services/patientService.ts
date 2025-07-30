@@ -43,7 +43,7 @@ async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> 
         if (!cell) continue; // Skip if cell is invalid
 
         const patient: Patient = {
-            id: `patient-${layoutName.replace(/\s+/g, '-')}-${i + 1}-${Math.random().toString(36).slice(2, 9)}`,
+            id: `patient-${layoutName.replace(/[\/\s]+/g, '-')}-${i + 1}-${Math.random().toString(36).slice(2, 9)}`,
             bedNumber: i + 1,
             roomDesignation: `${layoutName}-${i + 1}`,
             name: 'Vacant',
@@ -83,11 +83,8 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
         const snapshot = await getDocs(q);
 
         if (snapshot.empty) {
-            if (layoutName === 'North/South View') {
-                console.log(`No data for layout '${layoutName}' in Firestore. Seeding initial layout.`);
-                return await seedInitialDataForLayout('North/South View');
-            }
-            return [];
+            console.log(`No data for layout '${layoutName}' in Firestore. Seeding initial layout.`);
+            return await seedInitialDataForLayout(layoutName);
         }
 
         const allDocsSnapshot = await getDocs(collectionRef);
@@ -95,10 +92,7 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
 
     } catch (error) {
         console.error(`Error fetching patient layout ${layoutName} from Firestore:`, error);
-         if (layoutName === 'North/South View') {
-            return await seedInitialDataForLayout('North/South View');
-        }
-        return [];
+        return await seedInitialDataForLayout(layoutName);
     }
 }
 
