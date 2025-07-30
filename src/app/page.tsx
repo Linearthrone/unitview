@@ -768,13 +768,12 @@ export default function Home() {
   useEffect(() => {
       if (techs.length > 0) {
           nurseService.calculateTechAssignments(techs, patients).then(updatedTechs => {
-            // Only update state if assignments have actually changed to prevent infinite loops
             if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
                 setTechs(updatedTechs);
             }
           });
       }
-  }, [patients, techs]);
+  }, [patients]);
     
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
