@@ -33,15 +33,15 @@ const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', l
 async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> {
     const roomLayout: { bedNumber: number; row: number; col: number }[] = [
       // Top Row (Right to Left for 811-818, then 819-826)
-      { bedNumber: 811, row: 1, col: 17 }, { bedNumber: 812, row: 1, col: 16 },
-      { bedNumber: 813, row: 1, col: 15 }, { bedNumber: 814, row: 1, col: 14 },
-      { bedNumber: 815, row: 1, col: 13 }, { bedNumber: 816, row: 1, col: 12 },
-      { bedNumber: 817, row: 1, col: 11 }, { bedNumber: 818, row: 1, col: 10 },
+      { bedNumber: 826, row: 1, col: 1 }, { bedNumber: 825, row: 1, col: 2 },
+      { bedNumber: 824, row: 1, col: 3 }, { bedNumber: 823, row: 1, col: 4 },
+      { bedNumber: 822, row: 1, col: 5 }, { bedNumber: 821, row: 1, col: 6 },
+      { bedNumber: 820, row: 1, col: 7 }, { bedNumber: 819, row: 1, col: 8 },
       // Blank space at col 9
-      { bedNumber: 819, row: 1, col: 8 },  { bedNumber: 820, row: 1, col: 7 },
-      { bedNumber: 821, row: 1, col: 6 },  { bedNumber: 822, row: 1, col: 5 },
-      { bedNumber: 823, row: 1, col: 4 },  { bedNumber: 824, row: 1, col: 3 },
-      { bedNumber: 825, row: 1, col: 2 },  { bedNumber: 826, row: 1, col: 1 },
+      { bedNumber: 818, row: 1, col: 10 }, { bedNumber: 817, row: 1, col: 11 },
+      { bedNumber: 816, row: 1, col: 12 }, { bedNumber: 815, row: 1, col: 13 },
+      { bedNumber: 814, row: 1, col: 14 }, { bedNumber: 813, row: 1, col: 15 },
+      { bedNumber: 812, row: 1, col: 16 }, { bedNumber: 811, row: 1, col: 17 },
 
       // Left and Right Columns
       { bedNumber: 827, row: 2, col: 1 },  { bedNumber: 810, row: 2, col: 17 },
@@ -299,3 +299,4 @@ export async function insertMockPatients(currentPatients: Patient[]): Promise<{ 
 
   return { updatedPatients: newPatients, insertedCount };
 }
+
