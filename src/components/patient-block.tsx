@@ -41,7 +41,6 @@ interface PatientBlockProps {
   isDragging?: boolean;
   isEffectivelyLocked?: boolean;
   onSelectPatient: (patient: Patient) => void;
-  onUpdate: (patient: Patient) => void;
   onDischarge: (patient: Patient) => void;
   onToggleBlock: (patientId: string) => void;
   onEditDesignation: (patient: Patient) => void;
@@ -59,7 +58,6 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
   isDragging, 
   isEffectivelyLocked,
   onSelectPatient,
-  onUpdate,
   onDischarge,
   onToggleBlock,
   onEditDesignation,
@@ -285,9 +283,6 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
           </ContextMenuItem>
         ) : (
           <>
-            <ContextMenuItem onClick={() => onUpdate(patient)} disabled={isVacant}>
-              <Edit className="mr-2 h-4 w-4" /> Update Info
-            </ContextMenuItem>
             <ContextMenuItem onClick={() => onDischarge(patient)} disabled={isVacant}>
               <UserMinus className="mr-2 h-4 w-4" /> Discharge Patient
             </ContextMenuItem>

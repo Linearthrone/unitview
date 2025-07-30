@@ -50,8 +50,6 @@ interface PatientGridProps {
   onDropOnNurseSlot: (nurseId: string, slotIndex: number) => void;
   onClearNurseAssignments: (nurseId: string) => void;
   onDragEnd: () => void;
-  onAdmitPatient: (patient: Patient) => void;
-  onUpdatePatient: (patient: Patient) => void;
   onDischargePatient: (patient: Patient) => void;
   onToggleBlockRoom: (patientId: string) => void;
   onEditDesignation: (patient: Patient) => void;
@@ -83,8 +81,6 @@ const PatientGrid: React.FC<PatientGridProps> = ({
   onDropOnNurseSlot,
   onClearNurseAssignments,
   onDragEnd,
-  onAdmitPatient,
-  onUpdatePatient,
   onDischargePatient,
   onToggleBlockRoom,
   onEditDesignation,
@@ -162,7 +158,6 @@ const PatientGrid: React.FC<PatientGridProps> = ({
                   isDragging={draggingPatientInfo?.id === patientInCell.id && !isEffectivelyLocked}
                   isEffectivelyLocked={isEffectivelyLocked}
                   onSelectPatient={onSelectPatient}
-                  onUpdate={onUpdatePatient}
                   onDischarge={onDischargePatient}
                   onToggleBlock={onToggleBlockRoom}
                   onEditDesignation={onEditDesignation}

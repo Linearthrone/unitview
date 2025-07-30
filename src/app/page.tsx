@@ -18,13 +18,12 @@ import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
-import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
+import type { Nurse, PatientCareTech } from '@/types/nurse';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
 import * as nurseService from '@/services/nurseService';
 import * as assignmentService from '@/services/assignmentService';
-import { Stethoscope } from 'lucide-react';
 
 
 interface DraggingPatientInfo {
@@ -662,7 +661,7 @@ export default function Home() {
         }
     };
     calculateAndSetAssignments();
-}, [patients, techs]); // Depend on both patients and techs to recalculate
+}, [patients]);
     
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;
@@ -711,8 +710,6 @@ export default function Home() {
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
           onDragEnd={handleDragEnd}
-          onAdmitPatient={() => {}}
-          onUpdatePatient={() => {}}
           onDischargePatient={handleDischargeRequest}
           onToggleBlockRoom={handleToggleBlockRoom}
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
