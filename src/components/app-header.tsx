@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-    Stethoscope, Lock, Unlock, LayoutGrid, Printer, Save, UserPlus, 
-    HelpCircle, ListTodo, PlusSquare, Building2, TestTube, Users, 
+    Stethoscope, Lock, Unlock, Printer, Save, UserPlus, 
+    HelpCircle, ListTodo, PlusSquare, TestTube, Users, 
     ClipboardSignature, HeartHandshake, Ban, Droplet, Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { LayoutName } from '@/types/patient';
 import IconExplanationDialog from './icon-explanation-dialog';
 import { Separator } from './ui/separator';
 
@@ -29,17 +28,12 @@ interface AppHeaderProps {
   foleyCount: number;
   isLayoutLocked: boolean;
   onToggleLayoutLock: () => void;
-  currentLayoutName: LayoutName;
-  onSelectLayout: (layoutName: LayoutName) => void;
-  availableLayouts: LayoutName[];
   onPrint: (reportType: 'charge' | 'assignments') => void;
-  onSaveLayout: () => void;
   onSaveCurrentLayout: () => void;
   onAdmitPatient: () => void;
   onAddStaffMember: () => void;
   onManageSpectra: () => void;
   onAddRoom: () => void;
-  onCreateUnit: () => void;
   onInsertMockData: () => void;
   onSaveAssignments: () => void;
 }
@@ -61,17 +55,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   foleyCount,
   isLayoutLocked,
   onToggleLayoutLock,
-  currentLayoutName,
-  onSelectLayout,
-  availableLayouts,
   onPrint,
-  onSaveLayout,
   onSaveCurrentLayout,
   onAdmitPatient,
   onAddStaffMember,
   onManageSpectra,
   onAddRoom,
-  onCreateUnit,
   onInsertMockData,
   onSaveAssignments,
 }) => {
@@ -85,14 +74,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
       const timer = setInterval(() => setCurrentTime(new Date()), 1000);
       return () => clearInterval(timer);
   }, []);
-
-  const getFriendlyLayoutName = (layoutName: LayoutName): string => {
-    switch (layoutName) {
-      case 'default': return 'Default Layout';
-      case '*: North South': return 'North/South View';
-      default: return layoutName;
-    }
-  };
 
   return (
     <>
@@ -128,28 +109,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Right Section */}
           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  {getFriendlyLayoutName(currentLayoutName)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Select Unit Layout</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {availableLayouts.map((layoutName) => (
-                  <DropdownMenuItem
-                    key={layoutName}
-                    onClick={() => onSelectLayout(layoutName)}
-                    disabled={layoutName === currentLayoutName}
-                  >
-                    {getFriendlyLayoutName(layoutName)}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <Button variant="outline" onClick={onAdmitPatient} title="Admit/Transfer-In">
               <UserPlus /> Admit
             </Button>
@@ -194,14 +153,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <DropdownMenuContent>
                   <DropdownMenuLabel>Dev & Admin Tools</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onCreateUnit}>
-                    <Building2 /> Create New Unit
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onAddRoom}>
                     <PlusSquare /> Create New Room
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onSaveLayout} disabled={isLayoutLocked}>
-                    <Save /> Save Layout As...
                   </DropdownMenuItem>
                    <DropdownMenuItem onClick={onInsertMockData}>
                     <UserPlus /> Insert Mock Patients

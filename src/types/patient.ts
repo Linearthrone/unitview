@@ -52,7 +52,6 @@ export interface StaffAssignments {
 }
 
 export interface UserPreferences {
-    lastSelectedLayout: LayoutName;
     isLayoutLocked: boolean;
 }
 

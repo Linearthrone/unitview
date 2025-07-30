@@ -8,13 +8,11 @@ import PatientGrid from '@/components/patient-grid';
 import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
 import PrintableAssignments from '@/components/printable-assignments';
-import SaveLayoutDialog from '@/components/save-layout-dialog';
 import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
 import AddStaffMemberDialog, { type AddStaffMemberFormValues } from '@/components/add-staff-member-dialog';
 import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
-import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
 import AssignStaffDialog from '@/components/assign-staff-dialog';
 // Hooks and utils
@@ -47,11 +45,11 @@ interface DraggingTechInfo {
   id: string;
 }
 
+const SINGLE_LAYOUT_NAME: LayoutName = 'Unit';
+
 export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-  const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('');
-  const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>([]);
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
@@ -70,13 +68,11 @@ export default function Home() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
   
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [admitOrUpdatePatient, setAdmitOrUpdatePatient] = useState<Patient | null>(null);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isAddStaffMemberDialogOpen, setIsAddStaffMemberDialogOpen] = useState(false);
   const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
-  const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
   const [patientToEditDesignation, setPatientToEditDesignation] = useState<Patient | null>(null);
   const [roleToAssign, setRoleToAssign] = useState<StaffRole | null>(null);
@@ -120,7 +116,6 @@ export default function Home() {
             setChargeNurseName('Unassigned');
             setUnitClerkName('Unassigned');
         }
-        setCurrentLayoutName(layoutName);
       } catch (error) {
         console.error(`Failed to load data for layout "${layoutName}":`, error);
         toast({
@@ -139,35 +134,14 @@ export default function Home() {
       try {
         setCurrentYear(new Date().getFullYear());
         
-        const [userPrefs, initialSpectra, allLayouts] = await Promise.all([
+        const [userPrefs, initialSpectra] = await Promise.all([
           layoutService.getUserPreferences(),
           spectraService.getSpectraPool(),
-          layoutService.getAvailableLayouts(),
         ]);
         
         setSpectraPool(initialSpectra);
-        setAvailableLayouts(allLayouts);
         setIsLayoutLocked(userPrefs.isLayoutLocked);
-
-        if (allLayouts.length === 0) {
-            setIsCreateUnitDialogOpen(true);
-            setIsInitialized(true);
-            return;
-        }
-
-        const lastLayout = userPrefs.lastSelectedLayout;
-        const layoutToLoad = (lastLayout && allLayouts.includes(lastLayout)) 
-            ? lastLayout 
-            : allLayouts[0];
-        
-        if (layoutToLoad) {
-            await loadLayoutData(layoutToLoad);
-        } else {
-            // This case handles if allLayouts has items but layoutToLoad is still falsy (e.g. empty string)
-            // This can happen if user preferences point to a layout that no longer exists
-            setIsCreateUnitDialogOpen(true);
-            setIsInitialized(true);
-        }
+        await loadLayoutData(SINGLE_LAYOUT_NAME);
 
       } catch (error) {
           console.error("Initialization failed:", error);
@@ -184,39 +158,10 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
-  const handleSelectLayout = async (newLayoutName: LayoutName) => {
-    await layoutService.setUserPreference('lastSelectedLayout', newLayoutName);
-    await loadLayoutData(newLayoutName);
-  };
-
   const toggleLayoutLock = () => {
     const newLockState = !isLayoutLocked;
     setIsLayoutLocked(newLockState);
     layoutService.setUserPreference('isLayoutLocked', newLockState);
-  };
-  
-  const handleOpenSaveDialog = () => {
-    if (isLayoutLocked) {
-      toast({
-        variant: "destructive",
-        title: "Layout Locked",
-        description: "Unlock the layout to save changes.",
-      });
-      return;
-    }
-    setIsSaveDialogOpen(true);
-  };
-  
-  const handleSaveNewLayout = async (newLayoutName: string) => {
-    const staffData = { chargeNurseName, unitClerkName };
-    const updatedLayouts = await layoutService.saveNewLayout(newLayoutName, patients, nurses, techs, widgetCards, staffData);
-    setAvailableLayouts(updatedLayouts);
-    await handleSelectLayout(newLayoutName);
-    
-    toast({
-      title: "Layout Saved",
-      description: `Layout "${newLayoutName}" has been successfully saved.`,
-    });
   };
 
   const handleSaveCurrentLayout = async () => {
@@ -229,16 +174,16 @@ export default function Home() {
       return;
     }
     const staffData = { chargeNurseName, unitClerkName };
-    await layoutService.saveNewLayout(currentLayoutName, patients, nurses, techs, widgetCards, staffData);
+    await layoutService.saveLayout(SINGLE_LAYOUT_NAME, patients, nurses, techs, widgetCards, staffData);
     toast({
       title: "Layout Saved",
-      description: `Current layout "${currentLayoutName}" has been saved.`,
+      description: `Current layout has been saved.`,
     });
   };
 
   const handleSaveAssignments = async () => {
     try {
-      await assignmentService.saveShiftAssignments(currentLayoutName, nurses, patients, chargeNurseName);
+      await assignmentService.saveShiftAssignments(SINGLE_LAYOUT_NAME, nurses, patients, chargeNurseName);
       toast({
         title: "Assignments Saved",
         description: "The current shift assignments have been saved for reference.",
@@ -427,28 +372,6 @@ export default function Home() {
         title: "Could Not Create Room",
         description: result.error,
       });
-    }
-  };
-
-  const handleCreateUnit = async ({ designation, numRooms }: { designation: string; numRooms: number }) => {
-    try {
-        const updatedLayouts = await layoutService.createNewUnitLayout(designation, numRooms);
-        setAvailableLayouts(updatedLayouts);
-        // After creating the unit, select it, which will trigger a full data reload and handle the loading state.
-        await handleSelectLayout(designation); 
-        toast({
-            title: "Unit Created",
-            description: `Unit "${designation}" with ${numRooms} rooms has been created.`,
-        });
-    } catch (error) {
-        console.error("Failed to create new unit:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-        toast({
-            variant: "destructive",
-            title: "Error Creating Unit",
-            description: errorMessage,
-        });
-        throw error; // Re-throw the error so the dialog can catch it
     }
   };
 
@@ -667,16 +590,16 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(async () => {
-    if (isLayoutLocked || !isInitialized || !currentLayoutName) return;
+    if (isLayoutLocked || !isInitialized) return;
     const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
-      patientService.savePatients(currentLayoutName, patients),
-      nurseService.saveNurses(currentLayoutName, nurses),
-      nurseService.saveTechs(currentLayoutName, techs),
-      layoutService.saveWidgets(currentLayoutName, widgetCards),
-      layoutService.saveStaff(currentLayoutName, staffData),
+      patientService.savePatients(SINGLE_LAYOUT_NAME, patients),
+      nurseService.saveNurses(SINGLE_LAYOUT_NAME, nurses),
+      nurseService.saveTechs(SINGLE_LAYOUT_NAME, techs),
+      layoutService.saveWidgets(SINGLE_LAYOUT_NAME, widgetCards),
+      layoutService.saveStaff(SINGLE_LAYOUT_NAME, staffData),
     ]);
-  }, [patients, nurses, techs, widgetCards, isLayoutLocked, currentLayoutName, isInitialized, chargeNurseName, unitClerkName]);
+  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -783,15 +706,17 @@ export default function Home() {
   }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
-    if (patients.length > 0) {
-      nurseService.calculateTechAssignments(techs, patients).then(updatedTechs => {
-        // Deep comparison to prevent unnecessary re-renders
-        if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
-            setTechs(updatedTechs);
+    const calculateAndSetAssignments = async () => {
+        if (patients.length > 0) {
+            const updatedTechs = await nurseService.calculateTechAssignments(techs, patients);
+            // Deep comparison to prevent unnecessary re-renders
+            if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
+                setTechs(updatedTechs);
+            }
         }
-      });
-    }
-  }, [patients, techs]); // Depend on both patients and techs
+    };
+    calculateAndSetAssignments();
+}, [patients, techs]); // Depend on both patients and techs to recalculate
     
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;
@@ -810,17 +735,12 @@ export default function Home() {
         restraintCount={restraintCount}
         foleyCount={foleyCount}
         onToggleLayoutLock={toggleLayoutLock}
-        currentLayoutName={currentLayoutName}
-        onSelectLayout={handleSelectLayout}
-        availableLayouts={availableLayouts}
         onPrint={handlePrint}
-        onSaveLayout={handleOpenSaveDialog}
         onSaveCurrentLayout={handleSaveCurrentLayout}
         onAdmitPatient={() => handleOpenAdmitDialog(null)}
         onAddStaffMember={() => setIsAddStaffMemberDialogOpen(true)}
         onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
-        onCreateUnit={() => setIsCreateUnitDialogOpen(true)}
         onInsertMockData={handleInsertMockData}
         onSaveAssignments={handleSaveAssignments}
       />
@@ -860,7 +780,7 @@ export default function Home() {
       </main>
       <PrintableReport patients={patients} />
       <PrintableAssignments 
-        unitName={currentLayoutName}
+        unitName={SINGLE_LAYOUT_NAME}
         chargeNurseName={chargeNurseName}
         nurses={nurses}
         techs={techs}
@@ -875,12 +795,6 @@ export default function Home() {
           }
         }}
         onDischarge={handleDischargeRequest}
-      />
-      <SaveLayoutDialog
-        open={isSaveDialogOpen}
-        onOpenChange={setIsSaveDialogOpen}
-        onSave={handleSaveNewLayout}
-        existingLayoutNames={availableLayouts}
       />
       <AdmitPatientDialog
         open={!!admitOrUpdatePatient}
@@ -901,12 +815,6 @@ export default function Home() {
         onOpenChange={setIsAddRoomDialogOpen}
         onSave={handleCreateRoom}
         existingDesignations={patients.map(p => p.roomDesignation)}
-      />
-      <CreateUnitDialog
-        open={isCreateUnitDialogOpen}
-        onOpenChange={setIsCreateUnitDialogOpen}
-        onSave={handleCreateUnit}
-        existingLayoutNames={availableLayouts}
       />
        <EditRoomDesignationDialog
         open={!!patientToEditDesignation}
