@@ -100,11 +100,21 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
     
     const newNurses: Nurse[] = [];
     const newTechs: PatientCareTech[] = [];
+    const newStaffAssignments: StaffAssignments = { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
+    const newWidgets: WidgetCard[] = [
+      { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 8, width: 2, height: 1 },
+      { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 8, width: 2, height: 1 },
+    ];
     const layoutName = designation;
+
+    // Save all necessary data for the new layout
     await savePatients(layoutName, newPatients);
     await saveNurses(layoutName, newNurses);
     await saveTechs(layoutName, newTechs);
+    await saveStaff(layoutName, newStaffAssignments);
+    await saveWidgets(layoutName, newWidgets);
 
+    // Update the list of available layouts
     const config = await getAppConfig();
     const customLayoutNames = config.customLayoutNames || [];
     const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, layoutName]));
