@@ -30,9 +30,7 @@ interface AppHeaderProps {
   onToggleLayoutLock: () => void;
   onPrint: (reportType: 'charge' | 'assignments') => void;
   onSaveCurrentLayout: () => void;
-  onAdmitPatient: () => void;
   onAddStaffMember: () => void;
-  onManageSpectra: () => void;
   onAddRoom: () => void;
   onInsertMockData: () => void;
   onSaveAssignments: () => void;
@@ -57,9 +55,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onToggleLayoutLock,
   onPrint,
   onSaveCurrentLayout,
-  onAdmitPatient,
   onAddStaffMember,
-  onManageSpectra,
   onAddRoom,
   onInsertMockData,
   onSaveAssignments,
@@ -109,16 +105,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Right Section */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={onAdmitPatient} title="Admit/Transfer-In">
-              <UserPlus /> Admit
-            </Button>
             <Button variant="outline" onClick={onAddStaffMember} title="Add Staff">
               <Users /> + Staff
             </Button>
-            <Button variant="outline" onClick={onManageSpectra} title="Manage Spectra Pool">
-              <ListTodo /> Spectra
-            </Button>
-
+            
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">

@@ -4,12 +4,9 @@
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp, query, limit, addDoc } from 'firebase/firestore';
 import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
-import type { AdmitPatientFormValues } from '@/types/forms';
-import { generateInitialPatients } from '@/lib/initial-patients';
 import { mockPatientData } from '@/lib/mock-patients';
 import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
-import { saveNurses, saveTechs } from './nurseService';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
@@ -35,14 +32,16 @@ const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', l
 
 async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> {
     const perimeterCells = getPerimeterCells();
-    const numRooms = Math.min(24, perimeterCells.length);
+    const numRooms = 40; // Default to 40 rooms for a new layout
     const newPatients: Patient[] = [];
 
     for (let i = 0; i < numRooms; i++) {
-        const cell = perimeterCells[i];
+        const cell = perimeterCells[i % perimeterCells.length];
         if (!cell) continue;
 
-        const roomDesignation = `${layoutName}-${i + 1}`;
+        const hall = i < 20 ? 'North Hall' : 'South Hall';
+        const roomNumInHall = (i % 20) + 1;
+        const roomDesignation = `${hall} ${roomNumInHall}`;
 
         const patient: Patient = {
             id: `patient-${layoutName.replace(/[\/\s]+/g, '-')}-${i + 1}-${Math.random().toString(36).slice(2, 9)}`,
@@ -114,37 +113,6 @@ export async function savePatients(layoutName: LayoutName, patients: Patient[]):
     } catch (error) {
         console.error(`Error saving patient layout ${layoutName} to Firestore:`, error);
     }
-}
-
-export async function admitPatient(formData: AdmitPatientFormValues, patients: Patient[]): Promise<Patient[]> {
-    return patients.map(p => {
-        if (p.bedNumber === formData.bedNumber) {
-            return {
-                ...p,
-                name: formData.name,
-                age: formData.age,
-                gender: formData.gender,
-                assignedNurse: formData.assignedNurse === 'To Be Assigned' ? undefined : formData.assignedNurse,
-                chiefComplaint: formData.chiefComplaint,
-                admitDate: formData.admitDate,
-                dischargeDate: formData.dischargeDate,
-                ldas: formData.ldas ? formData.ldas.split(',').map(s => s.trim()).filter(Boolean) : [],
-                diet: formData.diet,
-                mobility: formData.mobility,
-                codeStatus: formData.codeStatus,
-                orientationStatus: formData.orientationStatus,
-                isFallRisk: formData.isFallRisk,
-                isSeizureRisk: formData.isSeizureRisk,
-                isAspirationRisk: formData.isAspirationRisk,
-                isIsolation: formData.isIsolation,
-                isInRestraints: formData.isInRestraints,
-                isComfortCareDNR: formData.isComfortCareDNR,
-                notes: formData.notes,
-                isBlocked: false,
-            };
-        }
-        return p;
-    });
 }
 
 export async function dischargePatient(patientToDischarge: Patient, patients: Patient[]): Promise<Patient[]> {

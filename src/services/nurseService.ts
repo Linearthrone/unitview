@@ -133,7 +133,6 @@ export async function addStaffMember(
     techs: PatientCareTech[],
     patients: Patient[], 
     widgets: WidgetCard[],
-    spectraPool: Spectra[]
 ): Promise<{ 
     newNurses?: Nurse[] | null; 
     newTechs?: PatientCareTech[] | null; 
@@ -148,13 +147,6 @@ export async function addStaffMember(
 
     const isNurseRole = ['Staff Nurse', 'Float Pool Nurse', 'Charge Nurse', 'Unit Clerk'].includes(role);
     const isTechRole = role === 'Patient Care Tech';
-
-    const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
-    const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));
-
-    if ((isNurseRole || isTechRole) && !assignedSpectra) {
-        return { error: "Could not add staff. Please add or enable a Spectra device in the pool." };
-    }
     
     if (isNurseRole) {
         const position = findEmptySlot(patients, nurses, techs, widgets, 3, 1);
@@ -166,7 +158,7 @@ export async function addStaffMember(
             name: formData.name,
             role: formData.role,
             relief: formData.relief || undefined,
-            spectra: assignedSpectra!.id, // We've checked for this already
+            spectra: 'N/A',
             assignedPatientIds: Array(6).fill(null),
             gridRow: position.row,
             gridColumn: position.col,
@@ -182,7 +174,7 @@ export async function addStaffMember(
         const newTech: PatientCareTech = {
             id: `tech-${Date.now()}`,
             name: formData.name,
-            spectra: assignedSpectra!.id, // We've checked for this already
+            spectra: 'N/A',
             assignmentGroup: '',
             gridRow: position.row,
             gridColumn: position.col,

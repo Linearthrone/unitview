@@ -37,9 +37,6 @@ import {
   CalendarDays,
   Utensils,
   FileHeart,
-  ListTodo,
-  CheckCircle,
-  XCircle,
   PlusSquare,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -73,13 +70,12 @@ const iconSections = [
     title: 'Header Actions',
     icons: [
       { Icon: PlusSquare, description: 'Create New Room Card' },
-      { Icon: UserPlus, description: 'Admit Patient / Add Nurse' },
+      { Icon: UserPlus, description: 'Add Nurse' },
       { Icon: LayoutGrid, description: 'Select Unit Layout' },
       { Icon: Printer, description: 'Print Charge Report' },
       { Icon: Save, description: 'Save Layout As...' },
       { Icon: Lock, description: 'Layout Locked' },
       { Icon: Unlock, description: 'Layout Unlocked' },
-      { Icon: ListTodo, description: 'Manage Spectra Pool' },
       { Icon: HelpCircle, description: 'Icon Explanation' },
     ],
   },
@@ -96,8 +92,6 @@ const iconSections = [
       { Icon: CalendarDays, description: 'Date (Admit / EDD)' },
       { Icon: Utensils, description: 'Patient Diet' },
       { Icon: FileHeart, description: 'Lines, Drains, Airways (LDAs)' },
-      { Icon: CheckCircle, description: 'Spectra In Service' },
-      { Icon: XCircle, description: 'Spectra Out of Service' },
     ],
   },
 ];

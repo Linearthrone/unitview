@@ -22,7 +22,6 @@ import {
   BrainCircuit,
   Wind,
   HeartHandshake,
-  UserPlus,
   UserMinus,
   Edit,
   Lock,
@@ -42,7 +41,6 @@ interface PatientBlockProps {
   isDragging?: boolean;
   isEffectivelyLocked?: boolean;
   onSelectPatient: (patient: Patient) => void;
-  onAdmit: (patient: Patient) => void;
   onUpdate: (patient: Patient) => void;
   onDischarge: (patient: Patient) => void;
   onToggleBlock: (patientId: string) => void;
@@ -61,7 +59,6 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
   isDragging, 
   isEffectivelyLocked,
   onSelectPatient,
-  onAdmit,
   onUpdate,
   onDischarge,
   onToggleBlock,
@@ -96,10 +93,6 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
           </Card>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={() => onAdmit(patient)}>
-            <UserPlus className="mr-2 h-4 w-4" /> Admit Patient
-          </ContextMenuItem>
-          <ContextMenuSeparator />
           <ContextMenuItem onClick={() => onEditDesignation(patient)}>
             <Edit className="mr-2 h-4 w-4" /> Change Designation
           </ContextMenuItem>
@@ -294,9 +287,6 @@ const PatientBlock: React.FC<PatientBlockProps> = ({
           <>
             <ContextMenuItem onClick={() => onUpdate(patient)} disabled={isVacant}>
               <Edit className="mr-2 h-4 w-4" /> Update Info
-            </ContextMenuItem>
-            <ContextMenuItem onClick={() => onAdmit(patient)} disabled={!isVacant}>
-              <UserPlus className="mr-2 h-4 w-4" /> Admit Patient
             </ContextMenuItem>
             <ContextMenuItem onClick={() => onDischarge(patient)} disabled={isVacant}>
               <UserMinus className="mr-2 h-4 w-4" /> Discharge Patient

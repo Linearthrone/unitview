@@ -59,7 +59,7 @@ export default function AddStaffMemberDialog({ open, onOpenChange, onSave }: Add
         <DialogHeader>
           <DialogTitle>Add Staff Member</DialogTitle>
           <DialogDescription>
-            Enter the staff member's details. For nursing roles, an available Spectra will be assigned.
+            Enter the staff member's details.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

@@ -8,10 +8,8 @@ import PatientGrid from '@/components/patient-grid';
 import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
 import PrintableAssignments from '@/components/printable-assignments';
-import AdmitPatientDialog, { type AdmitPatientFormValues } from '@/components/admit-patient-dialog';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
 import AddStaffMemberDialog, { type AddStaffMemberFormValues } from '@/components/add-staff-member-dialog';
-import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
 import AssignStaffDialog from '@/components/assign-staff-dialog';
@@ -25,7 +23,6 @@ import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
 import * as nurseService from '@/services/nurseService';
-import * as spectraService from '@/services/spectraService';
 import * as assignmentService from '@/services/assignmentService';
 import { Stethoscope } from 'lucide-react';
 
@@ -54,7 +51,6 @@ export default function Home() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [nurses, setNurses] = useState<Nurse[]>([]);
   const [techs, setTechs] = useState<PatientCareTech[]>([]);
-  const [spectraPool, setSpectraPool] = useState<Spectra[]>([]);
   const [widgetCards, setWidgetCards] = useState<WidgetCard[]>([]);
   
   const [chargeNurseName, setChargeNurseName] = useState<string>('Unassigned');
@@ -68,10 +64,7 @@ export default function Home() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
   
-  const [admitOrUpdatePatient, setAdmitOrUpdatePatient] = useState<Patient | null>(null);
-  const [isUpdateMode, setIsUpdateMode] = useState(false);
   const [isAddStaffMemberDialogOpen, setIsAddStaffMemberDialogOpen] = useState(false);
-  const [isManageSpectraDialogOpen, setIsManageSpectraDialogOpen] = useState(false);
   const [isAddRoomDialogOpen, setIsAddRoomDialogOpen] = useState(false);
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
   const [patientToEditDesignation, setPatientToEditDesignation] = useState<Patient | null>(null);
@@ -134,12 +127,8 @@ export default function Home() {
       try {
         setCurrentYear(new Date().getFullYear());
         
-        const [userPrefs, initialSpectra] = await Promise.all([
-          layoutService.getUserPreferences(),
-          spectraService.getSpectraPool(),
-        ]);
+        const userPrefs = await layoutService.getUserPreferences();
         
-        setSpectraPool(initialSpectra);
         setIsLayoutLocked(userPrefs.isLayoutLocked);
         await loadLayoutData(SINGLE_LAYOUT_NAME);
 
@@ -198,30 +187,6 @@ export default function Home() {
     }
   };
 
-
-  const handleOpenAdmitDialog = (patient: Patient) => {
-    setIsUpdateMode(false);
-    setAdmitOrUpdatePatient(patient);
-  };
-
-  const handleOpenUpdateDialog = (patient: Patient) => {
-    setIsUpdateMode(true);
-    setAdmitOrUpdatePatient(patient);
-  };
-
-  const handleSavePatient = async (formData: AdmitPatientFormValues) => {
-    const updatedPatients = await patientService.admitPatient(formData, patients);
-    setPatients(updatedPatients);
-    setAdmitOrUpdatePatient(null);
-    
-    const verb = isUpdateMode ? 'updated' : 'admitted';
-    const patientRecord = updatedPatients.find(p => p.bedNumber === formData.bedNumber);
-    toast({
-      title: `Patient ${verb.charAt(0).toUpperCase() + verb.slice(1)}`,
-      description: `${formData.name} has been ${verb} to ${patientRecord?.roomDesignation}.`,
-    });
-  };
-
   const handleDischargeRequest = (patient: Patient) => {
     if (patient.name === 'Vacant') return;
     setPatientToDischarge(patient);
@@ -265,7 +230,7 @@ export default function Home() {
 
   
   const handleSaveStaffMember = async (formData: AddStaffMemberFormValues) => {
-    const result = await nurseService.addStaffMember(formData, nurses, techs, patients, widgetCards, spectraPool);
+    const result = await nurseService.addStaffMember(formData, nurses, techs, patients, widgetCards);
     
     setIsAddStaffMemberDialogOpen(false);
 
@@ -336,25 +301,6 @@ export default function Home() {
       title: "Tech Removed",
       description: `${techToRemove.name} has been removed from the unit.`,
     });
-  };
-  
-  const handleAddSpectra = async (newId: string) => {
-    const result = await spectraService.addSpectra(newId, spectraPool);
-    if (result.newPool) {
-      setSpectraPool(result.newPool);
-      toast({ title: "Spectra Added", description: `Device ${newId.trim().toUpperCase()} added to the pool.` });
-    } else if (result.error) {
-      toast({ variant: "destructive", title: "Error Adding Spectra", description: result.error });
-    }
-  };
-  
-  const handleToggleSpectraStatus = async (id: string, inService: boolean) => {
-    const result = await spectraService.toggleSpectraStatus(id, inService, spectraPool, nurses, techs);
-    if (result.newPool) {
-        setSpectraPool(result.newPool);
-    } else if (result.error) {
-        toast({ variant: "destructive", title: "Cannot Disable", description: result.error });
-    }
   };
 
   const handleCreateRoom = async (designation: string) => {
@@ -737,9 +683,7 @@ export default function Home() {
         onToggleLayoutLock={toggleLayoutLock}
         onPrint={handlePrint}
         onSaveCurrentLayout={handleSaveCurrentLayout}
-        onAdmitPatient={() => handleOpenAdmitDialog(null)}
         onAddStaffMember={() => setIsAddStaffMemberDialogOpen(true)}
-        onManageSpectra={() => setIsManageSpectraDialogOpen(true)}
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
         onInsertMockData={handleInsertMockData}
         onSaveAssignments={handleSaveAssignments}
@@ -767,8 +711,8 @@ export default function Home() {
           onDropOnNurseSlot={handleDropOnNurseSlot}
           onClearNurseAssignments={handleClearNurseAssignments}
           onDragEnd={handleDragEnd}
-          onAdmitPatient={handleOpenAdmitDialog}
-          onUpdatePatient={handleOpenUpdateDialog}
+          onAdmitPatient={() => {}}
+          onUpdatePatient={() => {}}
           onDischargePatient={handleDischargeRequest}
           onToggleBlockRoom={handleToggleBlockRoom}
           onEditDesignation={(patient) => setPatientToEditDesignation(patient)}
@@ -796,15 +740,6 @@ export default function Home() {
         }}
         onDischarge={handleDischargeRequest}
       />
-      <AdmitPatientDialog
-        open={!!admitOrUpdatePatient}
-        onOpenChange={(isOpen) => !isOpen && setAdmitOrUpdatePatient(null)}
-        onSave={handleSavePatient}
-        patients={patients}
-        nurses={nurses}
-        patientToEdit={admitOrUpdatePatient}
-        isUpdateMode={isUpdateMode}
-      />
       <AddStaffMemberDialog
         open={isAddStaffMemberDialogOpen}
         onOpenChange={setIsAddStaffMemberDialogOpen}
@@ -822,13 +757,6 @@ export default function Home() {
         patient={patientToEditDesignation}
         onSave={handleSaveRoomDesignation}
         existingDesignations={patients.map(p => p.roomDesignation)}
-      />
-      <ManageSpectraDialog
-        open={isManageSpectraDialogOpen}
-        onOpenChange={setIsManageSpectraDialogOpen}
-        spectraPool={spectraPool}
-        onAddSpectra={handleAddSpectra}
-        onToggleStatus={handleToggleSpectraStatus}
       />
       <DischargeConfirmationDialog
         open={!!patientToDischarge}
