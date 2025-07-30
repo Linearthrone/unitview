@@ -766,14 +766,15 @@ export default function Home() {
   }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
-      if (techs.length > 0) {
-          nurseService.calculateTechAssignments(techs, patients).then(updatedTechs => {
-            if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
-                setTechs(updatedTechs);
-            }
-          });
-      }
-  }, [patients]);
+    if (techs.length > 0) {
+      nurseService.calculateTechAssignments(techs, patients).then(updatedTechs => {
+        // Deep comparison to prevent unnecessary re-renders
+        if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
+            setTechs(updatedTechs);
+        }
+      });
+    }
+  }, [patients, techs]); // Depend on both patients and techs
     
   const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
     switch (layoutName) {
