@@ -148,7 +148,7 @@ export default function Home() {
 
         const layoutToLoad = (userPrefs.lastSelectedLayout && allLayouts.includes(userPrefs.lastSelectedLayout)) 
             ? userPrefs.lastSelectedLayout 
-            : 'North/South View';
+            : 'North-South View';
         
         await loadLayoutData(layoutToLoad, initialSpectra);
 

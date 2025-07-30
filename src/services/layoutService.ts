@@ -23,12 +23,12 @@ async function getAppConfig(): Promise<AppConfig> {
             return docSnap.data() as AppConfig;
         }
         // If config doesn't exist, create it with a default layout
-        const initialConfig: AppConfig = { customLayoutNames: ['North/South View'] };
+        const initialConfig: AppConfig = { customLayoutNames: ['North-South View'] };
         await setDoc(appConfigDocRef, initialConfig);
         return initialConfig;
     } catch (error) {
         console.error("Error fetching app config from Firestore:", error);
-        return { customLayoutNames: ['North/South View'] }; // Fallback
+        return { customLayoutNames: ['North-South View'] }; // Fallback
     }
 }
 
@@ -173,7 +173,7 @@ export async function saveStaff(layoutName: string, staff: StaffAssignments): Pr
 
 export async function getUserPreferences(): Promise<UserPreferences> {
     const defaultPrefs: UserPreferences = {
-        lastSelectedLayout: 'North/South View',
+        lastSelectedLayout: 'North-South View',
         isLayoutLocked: false,
     };
     try {

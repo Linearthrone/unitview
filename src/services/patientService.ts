@@ -35,7 +35,7 @@ const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', l
 
 async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> {
     const perimeterCells = getPerimeterCells();
-    const numRooms = layoutName === 'North/South View' ? 40 : Math.min(24, perimeterCells.length);
+    const numRooms = layoutName === 'North-South View' ? 40 : Math.min(24, perimeterCells.length);
     const newPatients: Patient[] = [];
 
     for (let i = 0; i < numRooms; i++) {
@@ -43,7 +43,7 @@ async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> 
         if (!cell) continue;
 
         let roomDesignation = `${layoutName}-${i + 1}`;
-        if (layoutName === 'North/South View') {
+        if (layoutName === 'North-South View') {
              const hall = i < 20 ? 'North' : 'South';
              const roomNum = i < 20 ? i + 1 : i - 19;
              roomDesignation = `${hall} ${String(roomNum).padStart(2, '0')}`;
