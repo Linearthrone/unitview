@@ -50,7 +50,7 @@ interface DraggingTechInfo {
 export default function Home() {
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
-  const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('default');
+  const [currentLayoutName, setCurrentLayoutName] = useState<LayoutName>('');
   const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>([]);
 
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -82,12 +82,16 @@ export default function Home() {
   const [roleToAssign, setRoleToAssign] = useState<StaffRole | null>(null);
 
 
-  const loadLayoutData = useCallback(async (layoutName: LayoutName, currentSpectra: Spectra[]) => {
+  const loadLayoutData = useCallback(async (layoutName: LayoutName) => {
+      if (!layoutName) {
+        setIsInitialized(true);
+        return;
+      };
       setIsInitialized(false);
       try {
         const [patientData, nurseData, techData, layoutWidgets, staffData] = await Promise.all([
             patientService.getPatients(layoutName),
-            nurseService.getNurses(layoutName, currentSpectra),
+            nurseService.getNurses(layoutName),
             nurseService.getTechs(layoutName),
             layoutService.getWidgets(layoutName),
             layoutService.getStaff(layoutName),
@@ -142,15 +146,21 @@ export default function Home() {
           layoutService.getAvailableLayouts(),
         ]);
         
-        setIsLayoutLocked(userPrefs.isLayoutLocked);
         setSpectraPool(initialSpectra);
         setAvailableLayouts(allLayouts);
+        setIsLayoutLocked(userPrefs.isLayoutLocked);
+
+        if (allLayouts.length === 0) {
+            setIsCreateUnitDialogOpen(true);
+            setIsInitialized(true);
+            return;
+        }
 
         const layoutToLoad = (userPrefs.lastSelectedLayout && allLayouts.includes(userPrefs.lastSelectedLayout)) 
             ? userPrefs.lastSelectedLayout 
-            : 'North-South View';
+            : allLayouts[0];
         
-        await loadLayoutData(layoutToLoad, initialSpectra);
+        await loadLayoutData(layoutToLoad);
 
       } catch (error) {
           console.error("Initialization failed:", error);
@@ -169,7 +179,7 @@ export default function Home() {
 
   const handleSelectLayout = async (newLayoutName: LayoutName) => {
     await layoutService.setUserPreference('lastSelectedLayout', newLayoutName);
-    await loadLayoutData(newLayoutName, spectraPool);
+    await loadLayoutData(newLayoutName);
   };
 
   const toggleLayoutLock = () => {
@@ -766,7 +776,7 @@ export default function Home() {
   }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
-    if (techs.length > 0) {
+    if (patients.length > 0) {
       nurseService.calculateTechAssignments(techs, patients).then(updatedTechs => {
         // Deep comparison to prevent unnecessary re-renders
         if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
@@ -776,14 +786,6 @@ export default function Home() {
     }
   }, [patients, techs]); // Depend on both patients and techs
     
-  const getFriendlyLayoutName = useCallback((layoutName: LayoutName): string => {
-    switch (layoutName) {
-      case 'default': return 'Default Layout';
-      case '*: North South': return 'North/South View';
-      default: return layoutName;
-    }
-  }, []);
-
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;
   const dnrCount = patients.filter(p => p.isComfortCareDNR).length;
@@ -851,7 +853,7 @@ export default function Home() {
       </main>
       <PrintableReport patients={patients} />
       <PrintableAssignments 
-        unitName={getFriendlyLayoutName(currentLayoutName)}
+        unitName={currentLayoutName}
         chargeNurseName={chargeNurseName}
         nurses={nurses}
         techs={techs}

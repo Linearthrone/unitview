@@ -22,13 +22,12 @@ async function getAppConfig(): Promise<AppConfig> {
         if (docSnap.exists()) {
             return docSnap.data() as AppConfig;
         }
-        // If config doesn't exist, create it with a default layout
-        const initialConfig: AppConfig = { customLayoutNames: ['North-South View'] };
+        const initialConfig: AppConfig = { customLayoutNames: [] };
         await setDoc(appConfigDocRef, initialConfig);
         return initialConfig;
     } catch (error) {
         console.error("Error fetching app config from Firestore:", error);
-        return { customLayoutNames: ['North-South View'] }; // Fallback
+        return { customLayoutNames: [] }; // Fallback
     }
 }
 
@@ -38,20 +37,17 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
 }
 
 export async function saveNewLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], widgets: WidgetCard[], staffData: StaffAssignments): Promise<LayoutName[]> {
-    // Save the actual layout data to their respective collections
     await savePatients(layoutName, patients);
     await saveNurses(layoutName, nurses);
     await saveTechs(layoutName, techs);
     await saveWidgets(layoutName, widgets);
     await saveStaff(layoutName, staffData);
 
-    // Update the list of custom layout names in the central config doc
     const config = await getAppConfig();
     const customLayoutNames = config.customLayoutNames || [];
     const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, layoutName]));
     
     try {
-        // Use set with merge to create or update the document
         await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
         await setUserPreference('lastSelectedLayout', layoutName);
     } catch (error) {
@@ -173,7 +169,7 @@ export async function saveStaff(layoutName: string, staff: StaffAssignments): Pr
 
 export async function getUserPreferences(): Promise<UserPreferences> {
     const defaultPrefs: UserPreferences = {
-        lastSelectedLayout: 'North-South View',
+        lastSelectedLayout: '',
         isLayoutLocked: false,
     };
     try {

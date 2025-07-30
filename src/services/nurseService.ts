@@ -1,54 +1,28 @@
 
+"use server";
+
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, query, limit } from 'firebase/firestore';
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 import type { Patient, WidgetCard } from '@/types/patient';
 import type { AddStaffMemberFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
-import { generateInitialNurses } from '@/lib/initial-nurses';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 
 const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
-// Function to seed initial nurses and save them to Firestore
-async function seedInitialNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
-    const initialNurses = generateInitialNurses();
-    const availableSpectra = spectraPool.filter(s => s.inService);
-    
-    const nursesWithSpectra: Nurse[] = initialNurses.map((nurse, index) => ({
-        ...nurse,
-        spectra: availableSpectra[index]?.id || 'N/A',
-    })) as Nurse[];
-
-    // Save the newly generated nurses to Firestore for future loads
-    await saveNurses(layoutName, nursesWithSpectra);
-    
-    return nursesWithSpectra;
-}
-
-export async function getNurses(layoutName: LayoutName, spectraPool: Spectra[]): Promise<Nurse[]> {
+export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
-        
-        if (snapshot.empty && layoutName === 'North/South View') {
-            console.log(`No nurse data for layout '${layoutName}' in Firestore. Seeding initial nurses.`);
-            return await seedInitialNurses(layoutName, spectraPool);
+        if (snapshot.empty) {
+            return [];
         }
-        
         return snapshot.docs.map(doc => doc.data() as Nurse);
 
     } catch (error) {
         console.error(`Error fetching nurse layout ${layoutName} from Firestore:`, error);
-        if (layoutName === 'North/South View') {
-            const initialNurses = generateInitialNurses();
-            const availableSpectra = spectraPool.filter(s => s.inService);
-            return initialNurses.map((nurse, index) => ({
-                ...nurse,
-                spectra: availableSpectra[index]?.id || 'N/A',
-            })) as Nurse[];
-        }
         return [];
     }
 }
