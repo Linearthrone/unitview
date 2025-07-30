@@ -1,4 +1,6 @@
 
+"use server";
+
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp, query, limit, addDoc } from 'firebase/firestore';
 import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
@@ -41,7 +43,7 @@ async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> 
         if (!cell) continue; // Skip if cell is invalid
 
         const patient: Patient = {
-            id: `patient-${layoutName}-${i + 1}`,
+            id: `patient-${layoutName.replace(/\s+/g, '-')}-${i + 1}-${Math.random().toString(36).slice(2, 9)}`,
             bedNumber: i + 1,
             roomDesignation: `${layoutName}-${i + 1}`,
             name: 'Vacant',
