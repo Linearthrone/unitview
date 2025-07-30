@@ -60,6 +60,7 @@ export default function Home() {
   const [draggingWidgetInfo, setDraggingWidgetInfo] = useState<DraggingWidgetInfo | null>(null);
   const [draggingTechInfo, setDraggingTechInfo] = useState<DraggingTechInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isAutoSavingEnabled, setIsAutoSavingEnabled] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
   
@@ -76,6 +77,9 @@ export default function Home() {
       };
       setIsInitialized(false);
       try {
+        // Disable auto-saving during the initial load to prevent race conditions
+        setIsAutoSavingEnabled(false);
+        
         const [patientData, nurseData, techData, layoutWidgets, staffData] = await Promise.all([
             patientService.getPatients(layoutName),
             nurseService.getNurses(layoutName),
@@ -83,6 +87,32 @@ export default function Home() {
             layoutService.getWidgets(layoutName),
             layoutService.getStaff(layoutName),
         ]);
+
+        // This is a critical check. If any of these are null/empty on first load,
+        // it means the layout is being seeded. We should save everything to ensure consistency.
+        const isFirstLoad = !layoutWidgets || !staffData || nurseData.length === 0 || techData.length === 0;
+
+        if (isFirstLoad) {
+            console.log(`Performing first-time setup for layout: ${layoutName}`);
+            // Use the data we just got or create defaults
+            const initialWidgets = layoutWidgets || [
+                { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 9, width: 2, height: 1 },
+                { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 9, width: 2, height: 1 },
+            ];
+            const initialStaff = staffData || { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
+            
+            // Save everything to ensure the layout is fully initialized in Firestore
+            await layoutService.saveLayout(layoutName, patientData, nurseData, techData, initialWidgets, initialStaff);
+            
+            // Set the state with the now-consistent data
+            setWidgetCards(initialWidgets);
+            setChargeNurseName(initialStaff.chargeNurseName);
+            setUnitClerkName(initialStaff.unitClerkName);
+        } else {
+             setWidgetCards(layoutWidgets);
+             setChargeNurseName(staffData.chargeNurseName || 'Unassigned');
+             setUnitClerkName(staffData.unitClerkName || 'Unassigned');
+        }
 
         const validNurses = nurseData.map(n => ({
           ...n,
@@ -92,31 +122,18 @@ export default function Home() {
         setPatients(patientData);
         setNurses(validNurses);
         setTechs(techData);
-        if (layoutWidgets) {
-            setWidgetCards(layoutWidgets);
-        } else {
-             // If no widgets are saved, reset to a default state
-            setWidgetCards([
-              { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 8, width: 2, height: 1 },
-              { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 8, width: 2, height: 1 },
-            ]);
-        }
-        if (staffData) {
-            setChargeNurseName(staffData.chargeNurseName || 'Unassigned');
-            setUnitClerkName(staffData.unitClerkName || 'Unassigned');
-        } else {
-            setChargeNurseName('Unassigned');
-            setUnitClerkName('Unassigned');
-        }
+
       } catch (error) {
         console.error(`Failed to load data for layout "${layoutName}":`, error);
         toast({
           variant: "destructive",
           title: "Error Loading Layout",
-          description: `Could not load data for "${layoutName}".`,
+          description: `Could not load data for "${layoutName}". Please refresh.`,
         });
       } finally {
         setIsInitialized(true);
+        // Re-enable auto-saving after the initial load and potential seeding is complete.
+        setIsAutoSavingEnabled(true);
       }
   }, [toast]);
 
@@ -535,7 +552,7 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(async () => {
-    if (isLayoutLocked || !isInitialized) return;
+    if (isLayoutLocked || !isInitialized || !isAutoSavingEnabled) return;
     const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
       patientService.savePatients(SINGLE_LAYOUT_NAME, patients),
@@ -544,7 +561,7 @@ export default function Home() {
       layoutService.saveWidgets(SINGLE_LAYOUT_NAME, widgetCards),
       layoutService.saveStaff(SINGLE_LAYOUT_NAME, staffData),
     ]);
-  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName]);
+  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName, isAutoSavingEnabled]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -645,23 +662,23 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (isInitialized && !isLayoutLocked) {
+    if (isInitialized && !isLayoutLocked && isAutoSavingEnabled) {
       handleAutoSave();
     }
-  }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
+  }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave, isAutoSavingEnabled]);
 
   useEffect(() => {
     const calculateAndSetAssignments = async () => {
-        if (patients.length > 0) {
+        if (patients.length > 0 && techs.length > 0) {
             const updatedTechs = await nurseService.calculateTechAssignments(techs, patients);
-            // Deep comparison to prevent unnecessary re-renders
+            // Deep comparison to prevent unnecessary re-renders that cause loops
             if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
                 setTechs(updatedTechs);
             }
         }
     };
     calculateAndSetAssignments();
-}, [patients]);
+}, [patients, techs]);
     
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
   const totalRoomCount = patients.length;

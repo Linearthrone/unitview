@@ -12,12 +12,35 @@ import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
+
+const seedInitialNurses = async (layoutName: LayoutName): Promise<Nurse[]> => {
+    const initialNurses: Nurse[] = [
+        { id: 'nurse-1', name: 'RN Alice', relief: 'RN Eve', assignedPatientIds: Array(6).fill(null), gridRow: 2, gridColumn: 2, role: 'Staff Nurse', spectra: 'x5511' },
+        { id: 'nurse-2', name: 'RN Bob', relief: 'RN Frank', assignedPatientIds: Array(6).fill(null), gridRow: 2, gridColumn: 3, role: 'Staff Nurse', spectra: 'x5512' },
+        { id: 'nurse-3', name: 'RN Charlie', relief: 'RN Grace', assignedPatientIds: Array(6).fill(null), gridRow: 2, gridColumn: 4, role: 'Staff Nurse', spectra: 'x5513' },
+        { id: 'nurse-4', name: 'RN David', relief: 'RN Heidi', assignedPatientIds: Array(6).fill(null), gridRow: 2, gridColumn: 5, role: 'Staff Nurse', spectra: 'x5514' },
+    ];
+    await saveNurses(layoutName, initialNurses);
+    return initialNurses;
+};
+
+const seedInitialTechs = async (layoutName: LayoutName): Promise<PatientCareTech[]> => {
+    const initialTechs: PatientCareTech[] = [
+        { id: 'tech-1', name: 'PCT Alex', spectra: 'x5521', assignmentGroup: '', gridRow: 6, gridColumn: 2 },
+        { id: 'tech-2', name: 'PCT Jordan', spectra: 'x5522', assignmentGroup: '', gridRow: 6, gridColumn: 3 },
+    ];
+    await saveTechs(layoutName, initialTechs);
+    return initialTechs;
+};
+
+
 export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
         if (snapshot.empty) {
-            return [];
+            console.log(`No nurses found for layout '${layoutName}'. Seeding initial nurses.`);
+            return await seedInitialNurses(layoutName);
         }
         return snapshot.docs.map(doc => doc.data() as Nurse);
 
@@ -53,7 +76,8 @@ export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[
     try {
         const snapshot = await getDocs(collectionRef);
         if (snapshot.empty) {
-            return [];
+            console.log(`No techs found for layout '${layoutName}'. Seeding initial techs.`);
+            return await seedInitialTechs(layoutName);
         }
         return snapshot.docs.map(doc => doc.data() as PatientCareTech);
     } catch (error) {
@@ -190,7 +214,6 @@ export async function calculateTechAssignments(techs: PatientCareTech[], patient
     const activePatients = patients
         .filter(p => p.name !== 'Vacant' && !p.isBlocked)
         .sort((a, b) => {
-            // Robust sorting based on numeric parts of the designation
             const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10) || 0;
             const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10) || 0;
             return numA - numB;
