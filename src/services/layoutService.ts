@@ -177,6 +177,7 @@ export async function getUserPreferences(): Promise<UserPreferences> {
         if (docSnap.exists()) {
             return { ...defaultPrefs, ...docSnap.data() };
         }
+        await setDoc(userPrefsDocRef, defaultPrefs);
         return defaultPrefs;
     } catch (error) {
         console.error("Error fetching user preferences:", error);
