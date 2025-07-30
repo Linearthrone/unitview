@@ -5,11 +5,20 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { LayoutName, Patient, StaffAssignments, UserPreferences, WidgetCard } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
-import { saveNurses, saveTechs } from './nurseService';
-import { savePatients } from './patientService';
+import { getNurses, saveNurses, getTechs, saveTechs } from './nurseService';
+import { getPatients, savePatients } from './patientService';
 
 const userPrefsDocRef = doc(db, 'appState', 'userPreferences');
 
+export async function getOrCreateLayout(layoutName: LayoutName) {
+    const patients = await getPatients(layoutName);
+    const nurses = await getNurses(layoutName);
+    const techs = await getTechs(layoutName);
+    const widgets = await getWidgets(layoutName);
+    const staff = await getStaff(layoutName);
+
+    return { patients, nurses, techs, widgets, staff };
+}
 
 export async function saveLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], widgets: WidgetCard[], staffData: StaffAssignments): Promise<void> {
     await savePatients(layoutName, patients);
@@ -19,17 +28,24 @@ export async function saveLayout(layoutName: string, patients: Patient[], nurses
     await saveStaff(layoutName, staffData);
 }
 
-export async function getWidgets(layoutName: string): Promise<WidgetCard[] | null> {
+export async function getWidgets(layoutName: string): Promise<WidgetCard[]> {
     const widgetsDocRef = doc(db, 'layouts', layoutName, 'widgets', 'positions');
     try {
         const docSnap = await getDoc(widgetsDocRef);
         if (docSnap.exists()) {
             return docSnap.data().widgets as WidgetCard[];
         }
-        return null;
+        console.log(`No widgets found for layout '${layoutName}'. Seeding initial widgets.`);
+        const initialWidgets: WidgetCard[] = [
+            { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 9, width: 2, height: 1 },
+            { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 9, width: 2, height: 1 },
+        ];
+        await saveWidgets(layoutName, initialWidgets);
+        return initialWidgets;
+
     } catch (error) {
         console.error(`Error fetching widgets for layout ${layoutName}:`, error);
-        return null;
+        return [];
     }
 }
 
@@ -42,17 +58,20 @@ export async function saveWidgets(layoutName: string, widgets: WidgetCard[]): Pr
     }
 }
 
-export async function getStaff(layoutName: string): Promise<StaffAssignments | null> {
+export async function getStaff(layoutName: string): Promise<StaffAssignments> {
     const staffDocRef = doc(db, 'layouts', layoutName, 'staff', 'assignments');
     try {
         const docSnap = await getDoc(staffDocRef);
         if (docSnap.exists()) {
             return docSnap.data() as StaffAssignments;
         }
-        return null;
+        console.log(`No staff found for layout '${layoutName}'. Seeding initial staff.`);
+        const initialStaff: StaffAssignments = { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
+        await saveStaff(layoutName, initialStaff);
+        return initialStaff;
     } catch (error) {
         console.error(`Error fetching staff for layout ${layoutName}:`, error);
-        return null;
+        return { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
     }
 }
 

@@ -60,7 +60,7 @@ export default function Home() {
   const [draggingWidgetInfo, setDraggingWidgetInfo] = useState<DraggingWidgetInfo | null>(null);
   const [draggingTechInfo, setDraggingTechInfo] = useState<DraggingTechInfo | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isAutoSavingEnabled, setIsAutoSavingEnabled] = useState(true);
+  
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const { toast } = useToast();
   
@@ -77,51 +77,19 @@ export default function Home() {
       };
       setIsInitialized(false);
       try {
-        // Disable auto-saving during the initial load to prevent race conditions
-        setIsAutoSavingEnabled(false);
-        
-        const [patientData, nurseData, techData, layoutWidgets, staffData] = await Promise.all([
-            patientService.getPatients(layoutName),
-            nurseService.getNurses(layoutName),
-            nurseService.getTechs(layoutName),
-            layoutService.getWidgets(layoutName),
-            layoutService.getStaff(layoutName),
-        ]);
+        const layoutData = await layoutService.getOrCreateLayout(layoutName);
 
-        // This is a critical check. If any of these are null/empty on first load,
-        // it means the layout is being seeded. We should save everything to ensure consistency.
-        const isFirstLoad = !layoutWidgets || !staffData || nurseData.length === 0 || techData.length === 0;
-
-        if (isFirstLoad) {
-            console.log(`Performing first-time setup for layout: ${layoutName}`);
-            // Use the data we just got or create defaults
-            const initialWidgets = layoutWidgets || [
-                { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 9, width: 2, height: 1 },
-                { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 9, width: 2, height: 1 },
-            ];
-            const initialStaff = staffData || { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
-            
-            // Save everything to ensure the layout is fully initialized in Firestore
-            await layoutService.saveLayout(layoutName, patientData, nurseData, techData, initialWidgets, initialStaff);
-            
-            // Set the state with the now-consistent data
-            setWidgetCards(initialWidgets);
-            setChargeNurseName(initialStaff.chargeNurseName);
-            setUnitClerkName(initialStaff.unitClerkName);
-        } else {
-             setWidgetCards(layoutWidgets);
-             setChargeNurseName(staffData.chargeNurseName || 'Unassigned');
-             setUnitClerkName(staffData.unitClerkName || 'Unassigned');
-        }
-
-        const validNurses = nurseData.map(n => ({
+        const validNurses = layoutData.nurses.map(n => ({
           ...n,
           assignedPatientIds: Array.isArray(n.assignedPatientIds) ? n.assignedPatientIds : Array(6).fill(null)
         }));
 
-        setPatients(patientData);
+        setPatients(layoutData.patients);
         setNurses(validNurses);
-        setTechs(techData);
+        setTechs(layoutData.techs);
+        setWidgetCards(layoutData.widgets);
+        setChargeNurseName(layoutData.staff.chargeNurseName || 'Unassigned');
+        setUnitClerkName(layoutData.staff.unitClerkName || 'Unassigned');
 
       } catch (error) {
         console.error(`Failed to load data for layout "${layoutName}":`, error);
@@ -132,8 +100,6 @@ export default function Home() {
         });
       } finally {
         setIsInitialized(true);
-        // Re-enable auto-saving after the initial load and potential seeding is complete.
-        setIsAutoSavingEnabled(true);
       }
   }, [toast]);
 
@@ -552,7 +518,7 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(async () => {
-    if (isLayoutLocked || !isInitialized || !isAutoSavingEnabled) return;
+    if (isLayoutLocked || !isInitialized) return;
     const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
       patientService.savePatients(SINGLE_LAYOUT_NAME, patients),
@@ -561,7 +527,7 @@ export default function Home() {
       layoutService.saveWidgets(SINGLE_LAYOUT_NAME, widgetCards),
       layoutService.saveStaff(SINGLE_LAYOUT_NAME, staffData),
     ]);
-  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName, isAutoSavingEnabled]);
+  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -662,10 +628,10 @@ export default function Home() {
 
 
   useEffect(() => {
-    if (isInitialized && !isLayoutLocked && isAutoSavingEnabled) {
+    if (isInitialized && !isLayoutLocked) {
       handleAutoSave();
     }
-  }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave, isAutoSavingEnabled]);
+  }, [patients, nurses, techs, widgetCards, chargeNurseName, unitClerkName, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
     const calculateAndSetAssignments = async () => {
