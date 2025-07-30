@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, writeBatch, Timestamp, query, limit, addDoc } from 'firebase/firestore';
 import type { Patient, LayoutName, WidgetCard } from '@/types/patient';
 import { mockPatientData } from '@/lib/mock-patients';
-import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
+import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
@@ -31,22 +31,45 @@ const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', l
 
 
 async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> {
-    const perimeterCells = getPerimeterCells();
-    const numRooms = 40; // Default to 40 rooms for a new layout
+    const roomLayout: { bedNumber: number; row: number; col: number }[] = [
+      // Top Row (Right to Left for 811-818, then 819-826)
+      { bedNumber: 811, row: 1, col: 17 }, { bedNumber: 812, row: 1, col: 16 },
+      { bedNumber: 813, row: 1, col: 15 }, { bedNumber: 814, row: 1, col: 14 },
+      { bedNumber: 815, row: 1, col: 13 }, { bedNumber: 816, row: 1, col: 12 },
+      { bedNumber: 817, row: 1, col: 11 }, { bedNumber: 818, row: 1, col: 10 },
+      // Blank space at col 9
+      { bedNumber: 819, row: 1, col: 8 },  { bedNumber: 820, row: 1, col: 7 },
+      { bedNumber: 821, row: 1, col: 6 },  { bedNumber: 822, row: 1, col: 5 },
+      { bedNumber: 823, row: 1, col: 4 },  { bedNumber: 824, row: 1, col: 3 },
+      { bedNumber: 825, row: 1, col: 2 },  { bedNumber: 826, row: 1, col: 1 },
+
+      // Left and Right Columns
+      { bedNumber: 827, row: 2, col: 1 },  { bedNumber: 810, row: 2, col: 17 },
+      { bedNumber: 828, row: 3, col: 1 },  { bedNumber: 809, row: 3, col: 17 },
+      { bedNumber: 829, row: 4, col: 1 },  { bedNumber: 808, row: 4, col: 17 },
+      
+      // Bottom Rows
+      { bedNumber: 830, row: 5, col: 1 },
+      { bedNumber: 831, row: 5, col: 2 },  { bedNumber: 832, row: 5, col: 3 },
+      { bedNumber: 833, row: 5, col: 4 },  { bedNumber: 834, row: 5, col: 5 },
+      { bedNumber: 835, row: 5, col: 6 },  { bedNumber: 836, row: 5, col: 7 },
+
+      { bedNumber: 837, row: 6, col: 7 },  { bedNumber: 838, row: 7, col: 7 },
+      { bedNumber: 839, row: 8, col: 7 },  { bedNumber: 840, row: 9, col: 7 },
+
+      { bedNumber: 807, row: 5, col: 17 },
+      { bedNumber: 806, row: 5, col: 16 }, { bedNumber: 805, row: 5, col: 15 },
+      { bedNumber: 804, row: 5, col: 14 }, { bedNumber: 803, row: 5, col: 13 },
+      { bedNumber: 802, row: 5, col: 12 }, { bedNumber: 801, row: 5, col: 11 },
+    ];
+
     const newPatients: Patient[] = [];
 
-    for (let i = 0; i < numRooms; i++) {
-        const cell = perimeterCells[i % perimeterCells.length];
-        if (!cell) continue;
-
-        const hall = i < 20 ? 'North Hall' : 'South Hall';
-        const roomNumInHall = (i % 20) + 1;
-        const roomDesignation = `${hall} ${roomNumInHall}`;
-
+    roomLayout.forEach(room => {
         const patient: Patient = {
-            id: `patient-${layoutName.replace(/[\/\s]+/g, '-')}-${i + 1}-${Math.random().toString(36).slice(2, 9)}`,
-            bedNumber: i + 1,
-            roomDesignation: roomDesignation,
+            id: `patient-${layoutName.replace(/[\/\s]+/g, '-')}-${room.bedNumber}`,
+            bedNumber: room.bedNumber,
+            roomDesignation: `${room.bedNumber}`,
             name: 'Vacant',
             age: 0,
             admitDate: new Date(),
@@ -63,11 +86,11 @@ async function seedInitialDataForLayout(layoutName: string): Promise<Patient[]> 
             isIsolation: false,
             isInRestraints: false,
             isComfortCareDNR: false,
-            gridRow: cell.row,
-            gridColumn: cell.col,
+            gridRow: room.row,
+            gridColumn: room.col,
         };
         newPatients.push(patient);
-    }
+    });
     
     await savePatients(layoutName, newPatients);
 
