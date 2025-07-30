@@ -84,8 +84,7 @@ export default function Home() {
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName) => {
       if (!layoutName) {
-        setIsInitialized(true);
-        return;
+        throw new Error("loadLayoutData was called without a layoutName.");
       };
       setIsInitialized(false);
       try {
@@ -156,11 +155,19 @@ export default function Home() {
             return;
         }
 
-        const layoutToLoad = (userPrefs.lastSelectedLayout && allLayouts.includes(userPrefs.lastSelectedLayout)) 
-            ? userPrefs.lastSelectedLayout 
+        const lastLayout = userPrefs.lastSelectedLayout;
+        const layoutToLoad = (lastLayout && allLayouts.includes(lastLayout)) 
+            ? lastLayout 
             : allLayouts[0];
         
-        await loadLayoutData(layoutToLoad);
+        if (layoutToLoad) {
+            await loadLayoutData(layoutToLoad);
+        } else {
+            // This case handles if allLayouts has items but layoutToLoad is still falsy (e.g. empty string)
+            // This can happen if user preferences point to a layout that no longer exists
+            setIsCreateUnitDialogOpen(true);
+            setIsInitialized(true);
+        }
 
       } catch (error) {
           console.error("Initialization failed:", error);
@@ -660,7 +667,7 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(async () => {
-    if (isLayoutLocked || !isInitialized) return;
+    if (isLayoutLocked || !isInitialized || !currentLayoutName) return;
     const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
       patientService.savePatients(currentLayoutName, patients),
