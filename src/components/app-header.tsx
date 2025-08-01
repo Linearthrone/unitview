@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Stethoscope, Lock, Unlock, Printer, Save, UserPlus, 
     HelpCircle, ListTodo, PlusSquare, TestTube, Users, 
-    ClipboardSignature, HeartHandshake, Ban, Droplet, Archive
+    ClipboardSignature, HeartHandshake, Ban, Droplet, Archive, LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,9 +15,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import IconExplanationDialog from './icon-explanation-dialog';
 import { Separator } from './ui/separator';
+import type { LayoutName } from '@/types/patient';
 
 interface AppHeaderProps {
   title: string;
@@ -34,6 +37,9 @@ interface AppHeaderProps {
   onAddRoom: () => void;
   onInsertMockData: () => void;
   onSaveAssignments: () => void;
+  availableLayouts: LayoutName[];
+  currentLayout: LayoutName | null;
+  onSelectLayout: (layoutName: LayoutName) => void;
 }
 
 const StatDisplay: React.FC<{ icon: React.ElementType, label: string, value: number, className?: string }> = ({ icon: Icon, label, value, className }) => (
@@ -59,6 +65,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onAddRoom,
   onInsertMockData,
   onSaveAssignments,
+  availableLayouts,
+  currentLayout,
+  onSelectLayout,
 }) => {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -105,6 +114,23 @@ const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Right Section */}
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <LayoutGrid /> Select Unit
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuLabel>Available Units</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={currentLayout || ''} onValueChange={onSelectLayout}>
+                  {availableLayouts.map((layout) => (
+                     <DropdownMenuRadioItem key={layout} value={layout}>{layout}</DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button variant="outline" onClick={onAddStaffMember} title="Add Staff">
               <Users /> + Staff
             </Button>

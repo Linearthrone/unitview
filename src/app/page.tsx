@@ -69,6 +69,9 @@ export default function Home() {
   const [patientToDischarge, setPatientToDischarge] = useState<Patient | null>(null);
   const [patientToEditDesignation, setPatientToEditDesignation] = useState<Patient | null>(null);
   const [roleToAssign, setRoleToAssign] = useState<StaffRole | null>(null);
+  
+  const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>([]);
+  const [currentLayout, setCurrentLayout] = useState<LayoutName | null>(null);
 
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName) => {
@@ -90,6 +93,7 @@ export default function Home() {
         setWidgetCards(layoutData.widgets);
         setChargeNurseName(layoutData.staff.chargeNurseName || 'Unassigned');
         setUnitClerkName(layoutData.staff.unitClerkName || 'Unassigned');
+        setCurrentLayout(layoutName);
 
       } catch (error) {
         console.error(`Failed to load data for layout "${layoutName}":`, error);
@@ -110,9 +114,13 @@ export default function Home() {
         setCurrentYear(new Date().getFullYear());
         
         const userPrefs = await layoutService.getUserPreferences();
+        const allLayouts = await layoutService.getAvailableLayouts();
+        setAvailableLayouts(allLayouts);
+
+        let layoutToLoad = userPrefs.lastOpenedLayout || allLayouts[0] || SINGLE_LAYOUT_NAME;
         
         setIsLayoutLocked(userPrefs.isLayoutLocked);
-        await loadLayoutData(SINGLE_LAYOUT_NAME);
+        await loadLayoutData(layoutToLoad);
 
       } catch (error) {
           console.error("Initialization failed:", error);
@@ -129,6 +137,12 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
+  const handleSelectLayout = async (layoutName: LayoutName) => {
+    if (layoutName === currentLayout) return;
+    await loadLayoutData(layoutName);
+    await layoutService.setUserPreference('lastOpenedLayout', layoutName);
+  }
+
   const toggleLayoutLock = () => {
     const newLockState = !isLayoutLocked;
     setIsLayoutLocked(newLockState);
@@ -136,6 +150,7 @@ export default function Home() {
   };
 
   const handleSaveCurrentLayout = async () => {
+    if (!currentLayout) return;
     if (isLayoutLocked) {
       toast({
         variant: "destructive",
@@ -145,7 +160,7 @@ export default function Home() {
       return;
     }
     const staffData = { chargeNurseName, unitClerkName };
-    await layoutService.saveLayout(SINGLE_LAYOUT_NAME, patients, nurses, techs, widgetCards, staffData);
+    await layoutService.saveLayout(currentLayout, patients, nurses, techs, widgetCards, staffData);
     toast({
       title: "Layout Saved",
       description: `Current layout has been saved.`,
@@ -153,8 +168,9 @@ export default function Home() {
   };
 
   const handleSaveAssignments = async () => {
+    if (!currentLayout) return;
     try {
-      await assignmentService.saveShiftAssignments(SINGLE_LAYOUT_NAME, nurses, patients, chargeNurseName);
+      await assignmentService.saveShiftAssignments(currentLayout, nurses, patients, chargeNurseName);
       toast({
         title: "Assignments Saved",
         description: "The current shift assignments have been saved for reference.",
@@ -518,16 +534,16 @@ export default function Home() {
   }, []);
 
   const handleAutoSave = useCallback(async () => {
-    if (isLayoutLocked || !isInitialized) return;
+    if (!currentLayout || isLayoutLocked || !isInitialized) return;
     const staffData = { chargeNurseName, unitClerkName };
     await Promise.all([
-      patientService.savePatients(SINGLE_LAYOUT_NAME, patients),
-      nurseService.saveNurses(SINGLE_LAYOUT_NAME, nurses),
-      nurseService.saveTechs(SINGLE_LAYOUT_NAME, techs),
-      layoutService.saveWidgets(SINGLE_LAYOUT_NAME, widgetCards),
-      layoutService.saveStaff(SINGLE_LAYOUT_NAME, staffData),
+      patientService.savePatients(currentLayout, patients),
+      nurseService.saveNurses(currentLayout, nurses),
+      nurseService.saveTechs(currentLayout, techs),
+      layoutService.saveWidgets(currentLayout, widgetCards),
+      layoutService.saveStaff(currentLayout, staffData),
     ]);
-  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName]);
+  }, [patients, nurses, techs, widgetCards, isLayoutLocked, isInitialized, chargeNurseName, unitClerkName, currentLayout]);
 
   const handleDropOnNurseSlot = useCallback((targetNurseId: string, slotIndex: number) => {
     if (!draggingPatientInfo) return;
@@ -655,7 +671,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <AppHeader
-        title="UnitView"
+        title={currentLayout || 'UnitView'}
         activePatientCount={activePatientCount}
         totalRoomCount={totalRoomCount}
         isLayoutLocked={isLayoutLocked}
@@ -669,6 +685,9 @@ export default function Home() {
         onAddRoom={() => setIsAddRoomDialogOpen(true)}
         onInsertMockData={handleInsertMockData}
         onSaveAssignments={handleSaveAssignments}
+        availableLayouts={availableLayouts}
+        currentLayout={currentLayout}
+        onSelectLayout={handleSelectLayout}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -704,7 +723,7 @@ export default function Home() {
       </main>
       <PrintableReport patients={patients} />
       <PrintableAssignments 
-        unitName={SINGLE_LAYOUT_NAME}
+        unitName={currentLayout || 'Unit'}
         chargeNurseName={chargeNurseName}
         nurses={nurses}
         techs={techs}

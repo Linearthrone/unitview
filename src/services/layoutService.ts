@@ -2,13 +2,28 @@
 "use server";
 
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import type { LayoutName, Patient, StaffAssignments, UserPreferences, WidgetCard } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
 import { getNurses, saveNurses, getTechs, saveTechs } from './nurseService';
 import { getPatients, savePatients } from './patientService';
 
 const userPrefsDocRef = doc(db, 'appState', 'userPreferences');
+
+export async function getAvailableLayouts(): Promise<LayoutName[]> {
+    const layoutsCollectionRef = collection(db, 'layouts');
+    try {
+        const snapshot = await getDocs(layoutsCollectionRef);
+        if (snapshot.empty) {
+            return ['Unit']; // Return a default if no layouts exist
+        }
+        return snapshot.docs.map(doc => doc.id);
+    } catch (error) {
+        console.error("Error fetching available layouts:", error);
+        return ['Unit']; // Fallback to default
+    }
+}
+
 
 export async function getOrCreateLayout(layoutName: LayoutName) {
     const patients = await getPatients(layoutName);
@@ -88,6 +103,7 @@ export async function saveStaff(layoutName: string, staff: StaffAssignments): Pr
 export async function getUserPreferences(): Promise<UserPreferences> {
     const defaultPrefs: UserPreferences = {
         isLayoutLocked: false,
+        lastOpenedLayout: null,
     };
     try {
         const docSnap = await getDoc(userPrefsDocRef);

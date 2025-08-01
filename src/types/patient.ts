@@ -53,6 +53,7 @@ export interface StaffAssignments {
 
 export interface UserPreferences {
     isLayoutLocked: boolean;
+    lastOpenedLayout: LayoutName | null;
 }
 
 export interface AssignmentSet {
