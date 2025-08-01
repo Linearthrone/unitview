@@ -16,11 +16,11 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     try {
         const snapshot = await getDocs(layoutsCollectionRef);
         if (snapshot.empty) {
-            // If there are no layouts, create and fully seed the default "Unit" one.
+            const defaultLayoutName = 'Unit';
             // Awaiting this ensures all data (patients, nurses, etc.) is created
             // before the application tries to load it, preventing a race condition.
-            const defaultLayoutName = 'Unit';
             await getOrCreateLayout(defaultLayoutName); 
+            // After seeding, we know the default layout exists.
             return [defaultLayoutName];
         }
         return snapshot.docs.map(doc => doc.id as LayoutName);
@@ -35,14 +35,13 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
 
 
 export async function getOrCreateLayout(layoutName: LayoutName) {
-    // Explicitly create the layout document itself if it doesn't exist.
-    // This prevents trying to write to subcollections of a non-existent document.
     const layoutDocRef = doc(db, 'layouts', layoutName);
     const layoutDoc = await getDoc(layoutDocRef);
     if (!layoutDoc.exists()) {
         await setDoc(layoutDocRef, { name: layoutName, createdAt: new Date() });
     }
     
+    // Sequentially get or create each part of the layout
     const patients = await getPatients(layoutName);
     const nurses = await getNurses(layoutName);
     const techs = await getTechs(layoutName);
@@ -102,11 +101,9 @@ export async function createNewUnitLayout(
         newPatients.push(patient);
     }
     
-    // Create the layout document first to ensure it exists before we save to its subcollections
     const layoutDocRef = doc(db, 'layouts', designation);
     await setDoc(layoutDocRef, { name: designation, createdAt: new Date() });
 
-    // Now seed default staff and widgets for the new layout
     const newNurses = await seedInitialNurses(designation);
     const newTechs = await seedInitialTechs(designation);
     const newWidgets: WidgetCard[] = [
@@ -115,7 +112,6 @@ export async function createNewUnitLayout(
     ];
     const newStaff: StaffAssignments = { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
 
-    // Save all the new data to the now-existing layout
     await saveLayout(designation, newPatients, newNurses, newTechs, newWidgets, newStaff);
 }
 
