@@ -16,7 +16,10 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     try {
         const snapshot = await getDocs(layoutsCollectionRef);
         if (snapshot.empty) {
-            return ['Unit']; // Return a default if no layouts exist
+            // If there are no layouts, create the default "Unit" one.
+            const defaultLayoutName = 'Unit';
+            await getOrCreateLayout(defaultLayoutName); // This will seed it
+            return [defaultLayoutName];
         }
         return snapshot.docs.map(doc => doc.id);
     } catch (error) {
@@ -37,11 +40,13 @@ export async function getOrCreateLayout(layoutName: LayoutName) {
 }
 
 export async function saveLayout(layoutName: string, patients: Patient[], nurses: Nurse[], techs: PatientCareTech[], widgets: WidgetCard[], staffData: StaffAssignments): Promise<void> {
-    await savePatients(layoutName, patients);
-    await saveNurses(layoutName, nurses);
-    await saveTechs(layoutName, techs);
-    await saveWidgets(layoutName, widgets);
-    await saveStaff(layoutName, staffData);
+    await Promise.all([
+      savePatients(layoutName, patients),
+      saveNurses(layoutName, nurses),
+      saveTechs(layoutName, techs),
+      saveWidgets(layoutName, widgets),
+      saveStaff(layoutName, staffData)
+    ]);
 }
 
 export async function createNewUnitLayout(
@@ -84,7 +89,11 @@ export async function createNewUnitLayout(
         newPatients.push(patient);
     }
     
-    // Seed default staff and widgets for the new layout
+    // Create the layout document first to ensure it exists before we save to its subcollections
+    const layoutDocRef = doc(db, 'layouts', designation);
+    await setDoc(layoutDocRef, { name: designation, createdAt: new Date() });
+
+    // Now seed default staff and widgets for the new layout
     const newNurses = await seedInitialNurses(designation);
     const newTechs = await seedInitialTechs(designation);
     const newWidgets: WidgetCard[] = [
@@ -93,7 +102,7 @@ export async function createNewUnitLayout(
     ];
     const newStaff: StaffAssignments = { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
 
-    // Save all the new data
+    // Save all the new data to the now-existing layout
     await saveLayout(designation, newPatients, newNurses, newTechs, newWidgets, newStaff);
 }
 
