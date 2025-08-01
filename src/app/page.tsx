@@ -9,7 +9,7 @@ import ReportSheet from '@/components/report-sheet';
 import PrintableReport from '@/components/printable-report';
 import PrintableAssignments from '@/components/printable-assignments';
 import DischargeConfirmationDialog from '@/components/discharge-confirmation-dialog';
-import AddStaffMemberDialog, { type AddStaffMemberFormValues } from '@/components/add-staff-member-dialog';
+import AddStaffMemberDialog from '@/components/add-staff-member-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
 import AssignStaffDialog from '@/components/assign-staff-dialog';
@@ -20,7 +20,7 @@ import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
-import type { CreateUnitFormValues } from '@/types/forms';
+import type { CreateUnitFormValues, AddStaffMemberFormValues } from '@/types/forms';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
@@ -78,9 +78,12 @@ export default function Home() {
 
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName) => {
+      // Critical fix: Prevent running with a null/undefined layout name.
       if (!layoutName) {
-        throw new Error("loadLayoutData was called without a layoutName.");
+        console.warn("loadLayoutData was called without a layoutName. Aborting.");
+        return;
       };
+
       setIsInitialized(false);
       try {
         const layoutData = await layoutService.getOrCreateLayout(layoutName);
@@ -123,7 +126,14 @@ export default function Home() {
         let layoutToLoad = userPrefs.lastOpenedLayout || allLayouts[0] || SINGLE_LAYOUT_NAME;
         
         setIsLayoutLocked(userPrefs.isLayoutLocked);
-        await loadLayoutData(layoutToLoad);
+        
+        if (layoutToLoad) {
+          await loadLayoutData(layoutToLoad);
+        } else {
+          // If there's truly no layout to load, we just initialize the app empty.
+          // This might happen on the very first run ever.
+          setIsInitialized(true);
+        }
 
       } catch (error) {
           console.error("Initialization failed:", error);
