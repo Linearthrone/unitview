@@ -5,8 +5,9 @@ import { db } from '@/lib/firebase';
 import { collection, doc, getDoc, setDoc, getDocs } from 'firebase/firestore';
 import type { LayoutName, Patient, StaffAssignments, UserPreferences, WidgetCard } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
-import { getNurses, saveNurses, getTechs, saveTechs } from './nurseService';
+import { getNurses, saveNurses, getTechs, saveTechs, seedInitialNurses, seedInitialTechs } from './nurseService';
 import { getPatients, savePatients } from './patientService';
+import { getPerimeterCells, NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
 
 const userPrefsDocRef = doc(db, 'appState', 'userPreferences');
 
@@ -41,6 +42,59 @@ export async function saveLayout(layoutName: string, patients: Patient[], nurses
     await saveTechs(layoutName, techs);
     await saveWidgets(layoutName, widgets);
     await saveStaff(layoutName, staffData);
+}
+
+export async function createNewUnitLayout(
+  designation: string,
+  roomCount: number,
+  startNumber: number
+): Promise<void> {
+    const perimeterCells = getPerimeterCells();
+    if (roomCount > perimeterCells.length) {
+        throw new Error(`Cannot create a layout with ${roomCount} rooms. The maximum is ${perimeterCells.length}.`);
+    }
+
+    const newPatients: Patient[] = [];
+    for (let i = 0; i < roomCount; i++) {
+        const cell = perimeterCells[i];
+        const roomNumber = startNumber + i;
+        const patient: Patient = {
+            id: `patient-${designation.replace(/\s+/g, '-')}-${roomNumber}`,
+            bedNumber: roomNumber,
+            roomDesignation: `${roomNumber}`,
+            name: 'Vacant',
+            age: 0,
+            admitDate: new Date(),
+            dischargeDate: new Date(),
+            chiefComplaint: 'N/A',
+            ldas: [],
+            diet: 'N/A',
+            mobility: 'Independent',
+            codeStatus: 'Full Code',
+            orientationStatus: 'N/A',
+            isFallRisk: false,
+            isSeizureRisk: false,
+            isAspirationRisk: false,
+            isIsolation: false,
+            isInRestraints: false,
+            isComfortCareDNR: false,
+            gridRow: cell.row,
+            gridColumn: cell.col,
+        };
+        newPatients.push(patient);
+    }
+    
+    // Seed default staff and widgets for the new layout
+    const newNurses = await seedInitialNurses(designation);
+    const newTechs = await seedInitialTechs(designation);
+    const newWidgets: WidgetCard[] = [
+        { id: 'unit-clerk', type: 'UnitClerk', gridRow: 2, gridColumn: 9, width: 2, height: 1 },
+        { id: 'charge-nurse', type: 'ChargeNurse', gridRow: 4, gridColumn: 9, width: 2, height: 1 },
+    ];
+    const newStaff: StaffAssignments = { chargeNurseName: 'Unassigned', unitClerkName: 'Unassigned' };
+
+    // Save all the new data
+    await saveLayout(designation, newPatients, newNurses, newTechs, newWidgets, newStaff);
 }
 
 export async function getWidgets(layoutName: string): Promise<WidgetCard[]> {

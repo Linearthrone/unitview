@@ -13,12 +13,14 @@ import AddStaffMemberDialog, { type AddStaffMemberFormValues } from '@/component
 import AddRoomDialog from '@/components/add-room-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
 import AssignStaffDialog from '@/components/assign-staff-dialog';
+import CreateUnitDialog from '@/components/create-unit-dialog';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID, NUM_COLS_GRID } from '@/lib/grid-utils';
 // Types
 import type { LayoutName, Patient, WidgetCard, StaffRole } from '@/types/patient';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
+import type { CreateUnitFormValues } from '@/types/forms';
 // Services
 import * as layoutService from '@/services/layoutService';
 import * as patientService from '@/services/patientService';
@@ -72,6 +74,7 @@ export default function Home() {
   
   const [availableLayouts, setAvailableLayouts] = useState<LayoutName[]>([]);
   const [currentLayout, setCurrentLayout] = useState<LayoutName | null>(null);
+  const [isCreateUnitDialogOpen, setIsCreateUnitDialogOpen] = useState(false);
 
 
   const loadLayoutData = useCallback(async (layoutName: LayoutName) => {
@@ -335,6 +338,34 @@ export default function Home() {
       });
     }
   };
+
+  const handleCreateUnitLayout = async (values: CreateUnitFormValues) => {
+    try {
+        await layoutService.createNewUnitLayout(values.designation, values.roomCount, values.startNumber);
+        
+        toast({
+            title: "Unit Created",
+            description: `The "${values.designation}" unit has been created successfully.`,
+        });
+
+        // Refresh available layouts
+        const allLayouts = await layoutService.getAvailableLayouts();
+        setAvailableLayouts(allLayouts);
+        
+        // Switch to the new layout
+        await handleSelectLayout(values.designation);
+        
+        setIsCreateUnitDialogOpen(false);
+    } catch (error: any) {
+        console.error("Failed to create new unit layout:", error);
+        toast({
+            variant: "destructive",
+            title: "Failed to Create Unit",
+            description: error.message || "An unexpected error occurred.",
+        });
+    }
+  };
+
 
   const handlePrint = (reportType: 'charge' | 'assignments') => {
     const printTarget = reportType === 'charge' ? 'printable-charge-report' : 'printable-assignments-report';
@@ -688,6 +719,7 @@ export default function Home() {
         availableLayouts={availableLayouts}
         currentLayout={currentLayout}
         onSelectLayout={handleSelectLayout}
+        onCreateUnit={() => setIsCreateUnitDialogOpen(true)}
       />
       <main className="flex-grow flex flex-col overflow-auto print-hide">
         <PatientGrid
@@ -769,11 +801,15 @@ export default function Home() {
         role={roleToAssign}
         onSave={handleAssignSpecificRole}
       />
+      <CreateUnitDialog
+        open={isCreateUnitDialogOpen}
+        onOpenChange={setIsCreateUnitDialogOpen}
+        onSave={handleCreateUnitLayout}
+        existingLayouts={availableLayouts}
+      />
       <footer className="text-center p-4 text-sm text-muted-foreground border-t print-hide">
         UnitView &copy; {currentYear !== null ? currentYear : 'Loading...'}
       </footer>
     </div>
   );
 }
-
-    

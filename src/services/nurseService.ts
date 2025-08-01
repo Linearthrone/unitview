@@ -13,7 +13,7 @@ const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layout
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
 
-const seedInitialNurses = async (layoutName: LayoutName): Promise<Nurse[]> => {
+export const seedInitialNurses = async (layoutName: LayoutName): Promise<Nurse[]> => {
     const initialNurses: Nurse[] = [
         { id: 'nurse-1', name: 'RN Alice', relief: 'RN Eve', assignedPatientIds: Array(6).fill(null), gridRow: 2, gridColumn: 2, role: 'Staff Nurse', spectra: 'x5511' },
         { id: 'nurse-2', name: 'RN Bob', relief: 'RN Frank', assignedPatientIds: Array(6).fill(null), gridRow: 2, gridColumn: 3, role: 'Staff Nurse', spectra: 'x5512' },
@@ -24,7 +24,7 @@ const seedInitialNurses = async (layoutName: LayoutName): Promise<Nurse[]> => {
     return initialNurses;
 };
 
-const seedInitialTechs = async (layoutName: LayoutName): Promise<PatientCareTech[]> => {
+export const seedInitialTechs = async (layoutName: LayoutName): Promise<PatientCareTech[]> => {
     const initialTechs: PatientCareTech[] = [
         { id: 'tech-1', name: 'PCT Alex', spectra: 'x5521', assignmentGroup: '', gridRow: 6, gridColumn: 2 },
         { id: 'tech-2', name: 'PCT Jordan', spectra: 'x5522', assignmentGroup: '', gridRow: 6, gridColumn: 3 },

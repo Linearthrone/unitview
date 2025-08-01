@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     Stethoscope, Lock, Unlock, Printer, Save, UserPlus, 
     HelpCircle, ListTodo, PlusSquare, TestTube, Users, 
-    ClipboardSignature, HeartHandshake, Ban, Droplet, Archive, LayoutGrid
+    ClipboardSignature, HeartHandshake, Ban, Droplet, Archive, LayoutGrid, PlusCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +37,7 @@ interface AppHeaderProps {
   onAddRoom: () => void;
   onInsertMockData: () => void;
   onSaveAssignments: () => void;
+  onCreateUnit: () => void;
   availableLayouts: LayoutName[];
   currentLayout: LayoutName | null;
   onSelectLayout: (layoutName: LayoutName) => void;
@@ -65,6 +66,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   onAddRoom,
   onInsertMockData,
   onSaveAssignments,
+  onCreateUnit,
   availableLayouts,
   currentLayout,
   onSelectLayout,
@@ -169,6 +171,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({
                 <DropdownMenuContent>
                   <DropdownMenuLabel>Dev & Admin Tools</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onCreateUnit}>
+                    <PlusCircle /> Create New Unit
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onAddRoom}>
                     <PlusSquare /> Create New Room
                   </DropdownMenuItem>

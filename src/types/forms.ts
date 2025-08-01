@@ -53,3 +53,16 @@ export const AddStaffMemberFormSchema = z.object({
 });
 
 export type AddStaffMemberFormValues = z.infer<typeof AddStaffMemberFormSchema>;
+
+// From create-unit-dialog.tsx
+export const CreateUnitFormSchema = (existingLayouts: string[]) => z.object({
+  designation: z.string()
+    .min(3, { message: "Designation must be at least 3 characters." })
+    .refine(val => !existingLayouts.map(l => l.toLowerCase()).includes(val.toLowerCase()), {
+      message: "A unit with this designation already exists.",
+    }),
+  roomCount: z.coerce.number().min(1, "Unit must have at least one room.").max(100, "Maximum of 100 rooms allowed."),
+  startNumber: z.coerce.number().min(1, "Starting room number must be at least 1."),
+});
+
+export type CreateUnitFormValues = z.infer<ReturnType<typeof CreateUnitFormSchema>>;
