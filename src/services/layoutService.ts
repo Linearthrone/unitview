@@ -16,12 +16,10 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
     try {
         const snapshot = await getDocs(layoutsCollectionRef);
         if (snapshot.empty) {
-            // If there are no layouts, create the default "Unit" one.
+            // If there are no layouts, create and fully seed the default "Unit" one.
+            // Awaiting this ensures all data (patients, nurses, etc.) is created
+            // before the application tries to load it, preventing a race condition.
             const defaultLayoutName = 'Unit';
-            // Explicitly create the layout document itself before seeding subcollections.
-            const layoutDocRef = doc(db, 'layouts', defaultLayoutName);
-            await setDoc(layoutDocRef, { name: defaultLayoutName, createdAt: new Date() });
-            // The getOrCreateLayout will handle seeding the rest of the data.
             await getOrCreateLayout(defaultLayoutName); 
             return [defaultLayoutName];
         }
@@ -37,6 +35,14 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
 
 
 export async function getOrCreateLayout(layoutName: LayoutName) {
+    // Explicitly create the layout document itself if it doesn't exist.
+    // This prevents trying to write to subcollections of a non-existent document.
+    const layoutDocRef = doc(db, 'layouts', layoutName);
+    const layoutDoc = await getDoc(layoutDocRef);
+    if (!layoutDoc.exists()) {
+        await setDoc(layoutDocRef, { name: layoutName, createdAt: new Date() });
+    }
+    
     const patients = await getPatients(layoutName);
     const nurses = await getNurses(layoutName);
     const techs = await getTechs(layoutName);
