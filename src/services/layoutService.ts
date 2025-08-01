@@ -18,13 +18,20 @@ export async function getAvailableLayouts(): Promise<LayoutName[]> {
         if (snapshot.empty) {
             // If there are no layouts, create the default "Unit" one.
             const defaultLayoutName = 'Unit';
-            await getOrCreateLayout(defaultLayoutName); // This will seed it
+            // Explicitly create the layout document itself before seeding subcollections.
+            const layoutDocRef = doc(db, 'layouts', defaultLayoutName);
+            await setDoc(layoutDocRef, { name: defaultLayoutName, createdAt: new Date() });
+            // The getOrCreateLayout will handle seeding the rest of the data.
+            await getOrCreateLayout(defaultLayoutName); 
             return [defaultLayoutName];
         }
-        return snapshot.docs.map(doc => doc.id);
+        return snapshot.docs.map(doc => doc.id as LayoutName);
     } catch (error) {
         console.error("Error fetching available layouts:", error);
-        return ['Unit']; // Fallback to default
+        // Fallback to ensure a default is always available, even on error.
+        const defaultLayoutName = 'Unit';
+        await getOrCreateLayout(defaultLayoutName).catch(console.error);
+        return [defaultLayoutName];
     }
 }
 
