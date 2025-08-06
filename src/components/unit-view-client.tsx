@@ -17,6 +17,8 @@ import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
+import ChargeNurseCard from '@/components/charge-nurse-card';
+import UnitClerkCard from '@/components/unit-clerk-card';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID } from '@/lib/grid-utils';
