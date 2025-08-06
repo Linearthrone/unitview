@@ -1,3 +1,4 @@
+
 "use server";
 
 import { db } from '@/lib/firebase';
@@ -265,4 +266,63 @@ export async function balanceNurseAssignments(nurses: Nurse[], patients: Patient
         return nurse;
     });
     return updatedNurses;
+}
+
+export async function calculateTechAssignments(
+    techs: PatientCareTech[],
+    patients: Patient[]
+): Promise<PatientCareTech[]> {
+    if (techs.length === 0) return [];
+
+    const patientsWithNurse = patients.filter(p => p.assignedNurse);
+    if (patientsWithNurse.length === 0) {
+        return techs.map(tech => ({ ...tech, assignmentGroup: "All Patients" }));
+    }
+
+    const patientsPerTech = Math.ceil(patientsWithNurse.length / techs.length);
+    const assignments: { [key: string]: string[] } = {}; // techId -> patientIds
+    const assignedPatientIds = new Set<string>();
+    
+    // Initialize assignments
+    techs.forEach(tech => assignments[tech.id] = []);
+
+    let currentTechIndex = 0;
+    for (const patient of patientsWithNurse) {
+        if (assignedPatientIds.has(patient.id)) continue;
+
+        assignments[techs[currentTechIndex].id].push(patient.id);
+        assignedPatientIds.add(patient.id);
+
+        // Move to the next tech
+        currentTechIndex = (currentTechIndex + 1) % techs.length;
+    }
+
+    const patientMap = new Map(patients.map(p => [p.id, p]));
+    const nurseToPatients = new Map<string, string[]>();
+
+    patientsWithNurse.forEach(p => {
+        if (p.assignedNurse) {
+            if (!nurseToPatients.has(p.assignedNurse)) {
+                nurseToPatients.set(p.assignedNurse, []);
+            }
+            nurseToPatients.get(p.assignedNurse)!.push(p.roomDesignation);
+        }
+    });
+
+    return techs.map(tech => {
+        const assignedNurses = new Set<string>();
+        const myPatientIds = assignments[tech.id];
+
+        myPatientIds.forEach(patientId => {
+            const patient = patientMap.get(patientId);
+            if (patient && patient.assignedNurse) {
+                assignedNurses.add(patient.assignedNurse);
+            }
+        });
+
+        const nurseNames = Array.from(assignedNurses).sort();
+        const assignmentGroup = nurseNames.length > 0 ? `Nurses: ${nurseNames.join(', ')}` : 'Unassigned';
+
+        return { ...tech, assignmentGroup };
+    });
 }
