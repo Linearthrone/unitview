@@ -142,7 +142,7 @@ function findEmptySlot(
 }
 
 // Utility to get available Spectra devices
-export function getAvailableSpectra(spectraPool: Spectra[], nurses: Nurse[], techs: PatientCareTech[]): Spectra[] {
+export async function getAvailableSpectra(spectraPool: Spectra[], nurses: Nurse[], techs: PatientCareTech[]): Promise<Spectra[]> {
     const assignedSpectraIds = new Set([
         ...nurses.map(n => n.spectra),
         ...techs.map(t => t.spectra)
@@ -173,12 +173,12 @@ export async function addStaffMember(
         const newNurses = nurses.map(n => n.role === role ? { ...n, name: formData.name } : n);
         return { newNurses };
     }
-    const availableSpectra = getAvailableSpectra(spectraPool, nurses, techs);
+    const availableSpectra = await getAvailableSpectra(spectraPool, nurses, techs);
     if ((isNurseRole || isTechRole) && availableSpectra.length === 0) {
         return { error: "No available Spectra devices. Please add or enable a Spectra device in the pool before adding staff." };
     }
     // Use compact grid placement
-    const position = findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
+    const position = await findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
     if (!position) {
         return { error: "Cannot add new staff member, the grid is full or fragmented. Try moving staff to free up space." };
     }
@@ -186,7 +186,7 @@ export async function addStaffMember(
         const newNurse: Nurse = {
             id: `nurse-${Date.now()}`,
             name: formData.name,
-            role: formData.role,
+            role: formData.role as StaffRole,
             relief: formData.relief || undefined,
             spectra: availableSpectra[0].id,
             assignedPatientIds: Array(6).fill(null),
@@ -210,13 +210,13 @@ export async function addStaffMember(
 }
 
 // Smarter grid placement: compact staff cards
-export function findCompactEmptySlot(
+export async function findCompactEmptySlot(
     patients: Patient[],
     nurses: Nurse[],
     techs: PatientCareTech[],
     cardHeight: number,
     cardWidth: number
-): { row: number; col: number } | null {
+): Promise<{ row: number; col: number } | null> {
     const occupiedCells = new Set<string>();
     patients.forEach(p => {
         if (p.gridRow > 0 && p.gridColumn > 0) occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
@@ -248,7 +248,7 @@ export function findCompactEmptySlot(
 }
 
 // Automatic nurse assignment balancing
-export function balanceNurseAssignments(nurses: Nurse[], patients: Patient[]): Nurse[] {
+export async function balanceNurseAssignments(nurses: Nurse[], patients: Patient[]): Promise<Nurse[]> {
     const activePatients = patients.filter(p => p.name !== 'Vacant' && !p.isBlocked);
     const staffNurses = nurses.filter(n => n.role === 'Staff Nurse' || n.role === 'Float Pool Nurse');
     if (staffNurses.length === 0 || activePatients.length === 0) return nurses;
