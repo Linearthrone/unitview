@@ -1,4 +1,3 @@
-"use server";
 
 import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 import type { Patient } from '@/types/patient';

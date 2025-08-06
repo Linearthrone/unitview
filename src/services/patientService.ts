@@ -94,6 +94,7 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
 
 
 export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
+    if (!layoutName) return [];
     const collectionRef = getCollectionRef(layoutName);
     try {
         // Query for just one doc to see if the collection exists and has data.
@@ -125,7 +126,7 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
 }
 
 export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
-    if (!patients) return; // Can be an empty array
+    if (!layoutName || !patients) return; // Can be an empty array
 
     const collectionRef = getCollectionRef(layoutName);
     const batch = writeBatch(db);

@@ -8,11 +8,13 @@ import type { Patient } from '@/types/patient';
 import type { AddStaffMemberFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
+import { findCompactEmptySlot, getAvailableSpectra } from './nurseHelpers';
 
 const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
 export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
+    if (!layoutName) return [];
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
@@ -50,6 +52,7 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
 }
 
 export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promise<void> {
+    if (!layoutName || !nurses) return;
     const collectionRef = getNurseCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
@@ -73,6 +76,7 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
 }
 
 export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[]> {
+    if (!layoutName) return [];
     const collectionRef = getTechCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
@@ -84,7 +88,7 @@ export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[
 }
 
 export async function saveTechs(layoutName: LayoutName, techs: PatientCareTech[]): Promise<void> {
-    if (!techs) return;
+    if (!layoutName || !techs) return;
     
     const collectionRef = getTechCollectionRef(layoutName);
     const batch = writeBatch(db);
@@ -100,55 +104,6 @@ export async function saveTechs(layoutName: LayoutName, techs: PatientCareTech[]
     } catch (error) {
         console.error(`Error saving techs for layout ${layoutName} to Firestore:`, error);
     }
-}
-
-
-function findEmptySlot(
-  patients: Patient[],
-  nurses: Nurse[],
-  techs: PatientCareTech[],
-  cardHeight: number,
-  cardWidth: number,
-): { row: number; col: number } | null {
-  const occupiedCells = new Set<string>();
-
-  patients.forEach(p => {
-    if (p.gridRow > 0 && p.gridColumn > 0) occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
-  });
-  nurses.forEach(n => {
-    const height = n.role === 'Staff Nurse' ? 3 : 1;
-    for (let i = 0; i < height; i++) occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
-  });
-   techs.forEach(t => {
-    occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
-  });
-
-  for (let c = 1; c <= NUM_COLS_GRID - cardWidth + 1; c++) {
-    for (let r = 1; r <= NUM_ROWS_GRID - cardHeight + 1; r++) {
-      let isSlotAvailable = true;
-      for (let h = 0; h < cardHeight; h++) {
-        for (let w = 0; w < cardWidth; w++) {
-          if (occupiedCells.has(`${r + h}-${c + w}`)) {
-            isSlotAvailable = false;
-            break;
-          }
-        }
-        if (!isSlotAvailable) break;
-      }
-      if (isSlotAvailable) return { row: r, col: c };
-    }
-  }
-
-  return null;
-}
-
-// Utility to get available Spectra devices
-export async function getAvailableSpectra(spectraPool: Spectra[], nurses: Nurse[], techs: PatientCareTech[]): Promise<Spectra[]> {
-    const assignedSpectraIds = new Set([
-        ...nurses.map(n => n.spectra),
-        ...techs.map(t => t.spectra)
-    ]);
-    return spectraPool.filter(s => s.inService && !assignedSpectraIds.has(s.id));
 }
 
 // Improved error handling in addStaffMember
@@ -174,12 +129,11 @@ export async function addStaffMember(
         const newNurses = nurses.map(n => n.role === role ? { ...n, name: formData.name } : n);
         return { newNurses };
     }
-    const availableSpectra = await getAvailableSpectra(spectraPool, nurses, techs);
-    if ((isNurseRole || isTechRole) && availableSpectra.length === 0) {
+    const availableSpectraList = getAvailableSpectra(spectraPool, nurses, techs);
+    if ((isNurseRole || isTechRole) && availableSpectraList.length === 0) {
         return { error: "No available Spectra devices. Please add or enable a Spectra device in the pool before adding staff." };
     }
-    // Use compact grid placement
-    const position = await findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
+    const position = findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
     if (!position) {
         return { error: "Cannot add new staff member, the grid is full or fragmented. Try moving staff to free up space." };
     }
@@ -187,9 +141,9 @@ export async function addStaffMember(
         const newNurse: Nurse = {
             id: `nurse-${Date.now()}`,
             name: formData.name,
-            role: formData.role as StaffRole,
+            role: formData.role,
             relief: formData.relief || undefined,
-            spectra: availableSpectra[0].id,
+            spectra: availableSpectraList[0].id,
             assignedPatientIds: Array(6).fill(null),
             gridRow: position.row,
             gridColumn: position.col,
@@ -200,7 +154,7 @@ export async function addStaffMember(
         const newTech: PatientCareTech = {
             id: `tech-${Date.now()}`,
             name: formData.name,
-            spectra: availableSpectra[0].id,
+            spectra: availableSpectraList[0].id,
             assignmentGroup: '',
             gridRow: position.row,
             gridColumn: position.col,
@@ -208,64 +162,6 @@ export async function addStaffMember(
         return { newTechs: [...techs, newTech] };
     }
     return { error: `Unhandled role: ${role}` };
-}
-
-// Smarter grid placement: compact staff cards
-export async function findCompactEmptySlot(
-    patients: Patient[],
-    nurses: Nurse[],
-    techs: PatientCareTech[],
-    cardHeight: number,
-    cardWidth: number
-): Promise<{ row: number; col: number } | null> {
-    const occupiedCells = new Set<string>();
-    patients.forEach(p => {
-        if (p.gridRow > 0 && p.gridColumn > 0) occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
-    });
-    nurses.forEach(n => {
-        const height = n.role === 'Staff Nurse' ? 3 : 1;
-        for (let i = 0; i < height; i++) occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
-    });
-    techs.forEach(t => {
-        occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
-    });
-    // Try to fill from top-left, compacting as much as possible
-    for (let r = 1; r <= NUM_ROWS_GRID - cardHeight + 1; r++) {
-        for (let c = 1; c <= NUM_COLS_GRID - cardWidth + 1; c++) {
-            let isSlotAvailable = true;
-            for (let h = 0; h < cardHeight; h++) {
-                for (let w = 0; w < cardWidth; w++) {
-                    if (occupiedCells.has(`${r + h}-${c + w}`)) {
-                        isSlotAvailable = false;
-                        break;
-                    }
-                }
-                if (!isSlotAvailable) break;
-            }
-            if (isSlotAvailable) return { row: r, col: c };
-        }
-    }
-    return null;
-}
-
-// Automatic nurse assignment balancing
-export async function balanceNurseAssignments(nurses: Nurse[], patients: Patient[]): Promise<Nurse[]> {
-    const activePatients = patients.filter(p => p.name !== 'Vacant' && !p.isBlocked);
-    const staffNurses = nurses.filter(n => n.role === 'Staff Nurse' || n.role === 'Float Pool Nurse');
-    if (staffNurses.length === 0 || activePatients.length === 0) return nurses;
-    const patientsPerNurse = Math.ceil(activePatients.length / staffNurses.length);
-    let patientIndex = 0;
-    const updatedNurses = nurses.map(nurse => {
-        if (nurse.role === 'Staff Nurse' || nurse.role === 'Float Pool Nurse') {
-            const assigned = [];
-            for (let i = 0; i < patientsPerNurse && patientIndex < activePatients.length; i++, patientIndex++) {
-                assigned.push(activePatients[patientIndex].id);
-            }
-            return { ...nurse, assignedPatientIds: assigned };
-        }
-        return nurse;
-    });
-    return updatedNurses;
 }
 
 export async function calculateTechAssignments(
@@ -283,7 +179,6 @@ export async function calculateTechAssignments(
     const assignments: { [key: string]: string[] } = {}; // techId -> patientIds
     const assignedPatientIds = new Set<string>();
     
-    // Initialize assignments
     techs.forEach(tech => assignments[tech.id] = []);
 
     let currentTechIndex = 0;
@@ -293,7 +188,6 @@ export async function calculateTechAssignments(
         assignments[techs[currentTechIndex].id].push(patient.id);
         assignedPatientIds.add(patient.id);
 
-        // Move to the next tech
         currentTechIndex = (currentTechIndex + 1) % techs.length;
     }
 
