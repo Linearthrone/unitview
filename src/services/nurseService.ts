@@ -1,4 +1,3 @@
-
 "use server";
 
 import { db } from '@/lib/firebase';
@@ -142,7 +141,16 @@ function findEmptySlot(
   return null;
 }
 
+// Utility to get available Spectra devices
+export function getAvailableSpectra(spectraPool: Spectra[], nurses: Nurse[], techs: PatientCareTech[]): Spectra[] {
+    const assignedSpectraIds = new Set([
+        ...nurses.map(n => n.spectra),
+        ...techs.map(t => t.spectra)
+    ]);
+    return spectraPool.filter(s => s.inService && !assignedSpectraIds.has(s.id));
+}
 
+// Improved error handling in addStaffMember
 export async function addStaffMember(
     formData: AddStaffMemberFormValues, 
     nurses: Nurse[], 
@@ -156,93 +164,105 @@ export async function addStaffMember(
     error?: string 
 }> {
     const { role } = formData;
-    
     if (role === 'Sitter') {
-        return { success: true }; // Sitters are tracked conceptually but don't have grid cards.
+        return { success: true };
     }
-
     const isNurseRole = ['Staff Nurse', 'Float Pool Nurse'].includes(role);
     const isTechRole = role === 'Patient Care Tech';
-
     if (role === 'Charge Nurse' || role === 'Unit Clerk') {
         const newNurses = nurses.map(n => n.role === role ? { ...n, name: formData.name } : n);
         return { newNurses };
     }
-
-
-    const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
-    const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));
-
-    if ((isNurseRole || isTechRole) && !assignedSpectra) {
-        return { error: "Could not add staff. Please add or enable a Spectra device in the pool." };
+    const availableSpectra = getAvailableSpectra(spectraPool, nurses, techs);
+    if ((isNurseRole || isTechRole) && availableSpectra.length === 0) {
+        return { error: "No available Spectra devices. Please add or enable a Spectra device in the pool before adding staff." };
     }
-    
+    // Use compact grid placement
+    const position = findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
+    if (!position) {
+        return { error: "Cannot add new staff member, the grid is full or fragmented. Try moving staff to free up space." };
+    }
     if (isNurseRole) {
-        const position = findEmptySlot(patients, nurses, techs, 3, 1);
-        if (!position) {
-            return { error: "Cannot add new staff member, the grid is full." };
-        }
         const newNurse: Nurse = {
             id: `nurse-${Date.now()}`,
             name: formData.name,
             role: formData.role,
             relief: formData.relief || undefined,
-            spectra: assignedSpectra!.id, // We've checked for this already
+            spectra: availableSpectra[0].id,
             assignedPatientIds: Array(6).fill(null),
             gridRow: position.row,
             gridColumn: position.col,
         };
         return { newNurses: [...nurses, newNurse] };
     }
-
     if (isTechRole) {
-        const position = findEmptySlot(patients, nurses, techs, 1, 1);
-         if (!position) {
-            return { error: "Cannot add new tech, the grid is full." };
-        }
         const newTech: PatientCareTech = {
             id: `tech-${Date.now()}`,
             name: formData.name,
-            spectra: assignedSpectra!.id, // We've checked for this already
+            spectra: availableSpectra[0].id,
             assignmentGroup: '',
             gridRow: position.row,
             gridColumn: position.col,
         };
         return { newTechs: [...techs, newTech] };
     }
-
-    // Should not be reached if all roles are handled
     return { error: `Unhandled role: ${role}` };
 }
 
-export async function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): Promise<PatientCareTech[]> {
-    const activePatients = patients
-        .filter(p => p.name !== 'Vacant' && !p.isBlocked)
-        .sort((a, b) => {
-            const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10) || 0;
-            return numA - numB;
-        });
-
-    if (techs.length === 0 || activePatients.length === 0) {
-        return techs.map(tech => ({ ...tech, assignmentGroup: 'N/A' }));
-    }
-
-    const patientsPerTech = Math.ceil(activePatients.length / techs.length);
-
-    return techs.map((tech, index) => {
-        const startIndex = index * patientsPerTech;
-        const endIndex = Math.min(startIndex + patientsPerTech - 1, activePatients.length - 1);
-        
-        if (startIndex >= activePatients.length) {
-            return { ...tech, assignmentGroup: 'N/A' };
-        }
-
-        const startRoom = activePatients[startIndex].roomDesignation;
-        const endRoom = activePatients[endIndex].roomDesignation;
-
-        const assignmentGroup = startRoom === endRoom ? startRoom : `${startRoom} - ${endRoom}`;
-
-        return { ...tech, assignmentGroup };
+// Smarter grid placement: compact staff cards
+export function findCompactEmptySlot(
+    patients: Patient[],
+    nurses: Nurse[],
+    techs: PatientCareTech[],
+    cardHeight: number,
+    cardWidth: number
+): { row: number; col: number } | null {
+    const occupiedCells = new Set<string>();
+    patients.forEach(p => {
+        if (p.gridRow > 0 && p.gridColumn > 0) occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
     });
+    nurses.forEach(n => {
+        const height = n.role === 'Staff Nurse' ? 3 : 1;
+        for (let i = 0; i < height; i++) occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
+    });
+    techs.forEach(t => {
+        occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
+    });
+    // Try to fill from top-left, compacting as much as possible
+    for (let r = 1; r <= NUM_ROWS_GRID - cardHeight + 1; r++) {
+        for (let c = 1; c <= NUM_COLS_GRID - cardWidth + 1; c++) {
+            let isSlotAvailable = true;
+            for (let h = 0; h < cardHeight; h++) {
+                for (let w = 0; w < cardWidth; w++) {
+                    if (occupiedCells.has(`${r + h}-${c + w}`)) {
+                        isSlotAvailable = false;
+                        break;
+                    }
+                }
+                if (!isSlotAvailable) break;
+            }
+            if (isSlotAvailable) return { row: r, col: c };
+        }
+    }
+    return null;
+}
+
+// Automatic nurse assignment balancing
+export function balanceNurseAssignments(nurses: Nurse[], patients: Patient[]): Nurse[] {
+    const activePatients = patients.filter(p => p.name !== 'Vacant' && !p.isBlocked);
+    const staffNurses = nurses.filter(n => n.role === 'Staff Nurse' || n.role === 'Float Pool Nurse');
+    if (staffNurses.length === 0 || activePatients.length === 0) return nurses;
+    const patientsPerNurse = Math.ceil(activePatients.length / staffNurses.length);
+    let patientIndex = 0;
+    const updatedNurses = nurses.map(nurse => {
+        if (nurse.role === 'Staff Nurse' || nurse.role === 'Float Pool Nurse') {
+            const assigned = [];
+            for (let i = 0; i < patientsPerNurse && patientIndex < activePatients.length; i++, patientIndex++) {
+                assigned.push(activePatients[patientIndex].id);
+            }
+            return { ...nurse, assignedPatientIds: assigned };
+        }
+        return nurse;
+    });
+    return updatedNurses;
 }

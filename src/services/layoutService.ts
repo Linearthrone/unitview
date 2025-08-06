@@ -1,4 +1,3 @@
-
 "use server";
 
 import { db } from '@/lib/firebase';
@@ -53,7 +52,6 @@ export async function saveNewLayout(layoutName: string, patients: Patient[], nur
     return updatedCustomLayouts;
 }
 
-
 export async function createNewUnitLayout(designation: string, numRooms: number): Promise<LayoutName[]> {
     const perimeterCells = getPerimeterCells();
     if (numRooms > perimeterCells.length) {
@@ -61,49 +59,66 @@ export async function createNewUnitLayout(designation: string, numRooms: number)
     }
 
     const newPatients: Patient[] = [];
+    
+    // Create room slots for the requested number of rooms
     for (let i = 0; i < numRooms; i++) {
-        const cell = perimeterCells[i];
+        const { row, col } = perimeterCells[i];
+        const roomNumber = (i + 1).toString().padStart(2, '0');
+        const roomDesignation = `${designation}${roomNumber}`;
         
-        const newRoom: Patient = {
-            id: `room-${designation.replace(/\s+/g, '-')}-${i}-${Math.random().toString(36).slice(2, 9)}`,
+        newPatients.push({
+            id: `room-${roomDesignation}-${Date.now()}-${i}`,
             bedNumber: i + 1,
-            roomDesignation: `${designation}-${String(i + 1).padStart(2, '0')}`,
+            roomDesignation,
             name: 'Vacant',
             age: 0,
             admitDate: new Date(),
             dischargeDate: new Date(),
-            chiefComplaint: 'N/A',
+            chiefComplaint: '',
             ldas: [],
-            diet: 'N/A',
-            mobility: 'Independent',
+            diet: 'NPO (Nothing by mouth)',
+            mobility: 'Bed Rest',
             codeStatus: 'Full Code',
-            orientationStatus: 'N/A',
+            orientationStatus: 'x4',
             isFallRisk: false,
             isSeizureRisk: false,
             isAspirationRisk: false,
             isIsolation: false,
             isInRestraints: false,
             isComfortCareDNR: false,
-            gridRow: cell.row,
-            gridColumn: cell.col,
-        };
-        newPatients.push(newRoom);
+            isBlocked: false,
+            gridRow: row,
+            gridColumn: col
+        });
     }
-    
-    const newNurses: Nurse[] = [];
-    const newTechs: PatientCareTech[] = [];
+
+    // Create default staff for the new unit
+    const defaultNurses: Nurse[] = [
+        {
+            id: `nurse-charge-${Date.now()}`,
+            name: 'Unassigned',
+            role: 'Charge Nurse',
+            assignedPatientIds: [],
+            gridRow: 1,
+            gridColumn: 1
+        },
+        {
+            id: `nurse-clerk-${Date.now()}`,
+            name: 'Unassigned',
+            role: 'Unit Clerk',
+            assignedPatientIds: [],
+            gridRow: 1,
+            gridColumn: 2
+        }
+    ];
+
+    // Save the new layout
     const layoutName = designation;
-    await savePatients(layoutName, newPatients);
-    await saveNurses(layoutName, newNurses);
-    await saveTechs(layoutName, newTechs);
+    await saveNewLayout(layoutName, newPatients, defaultNurses, []);
 
+    // Return updated list of layouts
     const config = await getAppConfig();
-    const customLayoutNames = config.customLayoutNames || [];
-    const updatedCustomLayouts = Array.from(new Set([...customLayoutNames, layoutName]));
-    
-    await setDoc(appConfigDocRef, { customLayoutNames: updatedCustomLayouts }, { merge: true });
-
-    return updatedCustomLayouts;
+    return Array.from(new Set([...(config.customLayoutNames || []), layoutName]));
 }
 
 interface UserPreferences {
