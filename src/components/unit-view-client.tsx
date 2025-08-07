@@ -816,6 +816,9 @@ export default function UnitViewClient({
         open={isAddStaffMemberDialogOpen}
         onOpenChange={setIsAddStaffMemberDialogOpen}
         onSave={handleSaveStaffMember}
+        spectraPool={spectraPool}
+        nurses={nurses}
+        techs={techs}
       />
        <AssignStaffDialog
         open={isAssignStaffDialogOpen}

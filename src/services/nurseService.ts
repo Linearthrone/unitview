@@ -113,21 +113,30 @@ export async function addStaffMember(
         const newNurses = nurses.map(n => n.role === role ? { ...n, name: formData.name } : n);
         return { newNurses };
     }
-    const availableSpectraList = getAvailableSpectra(spectraPool, nurses, techs);
-    if ((isNurseRole || isTechRole) && availableSpectraList.length === 0) {
-        return { error: "No available Spectra devices. Please add or enable a Spectra device in the pool before adding staff." };
+    
+    const assignedSpectraId = formData.spectra;
+
+    if ((isNurseRole || isTechRole) && !assignedSpectraId) {
+        return { error: "No Spectra device selected. Please select an available device." };
     }
+
+    const isSpectraAlreadyAssigned = [...nurses, ...techs].some(s => s.spectra === assignedSpectraId);
+    if (isSpectraAlreadyAssigned) {
+        return { error: "The selected Spectra device is already assigned to another staff member." };
+    }
+
     const position = findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
     if (!position) {
         return { error: "Cannot add new staff member, the grid is full or fragmented. Try moving staff to free up space." };
     }
+
     if (isNurseRole) {
         const newNurse: Nurse = {
             id: `nurse-${Date.now()}`,
             name: formData.name,
             role: formData.role,
             relief: formData.relief || undefined,
-            spectra: availableSpectraList[0].id,
+            spectra: assignedSpectraId,
             assignedPatientIds: Array(6).fill(null),
             gridRow: position.row,
             gridColumn: position.col,
@@ -138,7 +147,7 @@ export async function addStaffMember(
         const newTech: PatientCareTech = {
             id: `tech-${Date.now()}`,
             name: formData.name,
-            spectra: availableSpectraList[0].id,
+            spectra: assignedSpectraId as string,
             assignmentGroup: '',
             gridRow: position.row,
             gridColumn: position.col,
@@ -152,6 +161,7 @@ export async function calculateTechAssignments(
     techs: PatientCareTech[],
     patients: Patient[]
 ): Promise<PatientCareTech[]> {
+    if (!layoutName) return [];
     if (techs.length === 0) return [];
 
     const patientsWithNurse = patients.filter(p => p.assignedNurse);
