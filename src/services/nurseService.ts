@@ -27,22 +27,6 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
             }
             return data;
         });
-
-        // Ensure Charge Nurse and Unit Clerk exist
-        const requiredRoles = ['Charge Nurse', 'Unit Clerk'];
-        requiredRoles.forEach(role => {
-            if (!nurses.some(n => n.role === role)) {
-                nurses.push({
-                    id: `nurse-${role.toLowerCase().replace(' ', '-')}-${Date.now()}`,
-                    name: 'Unassigned',
-                    role: role as any,
-                    assignedPatientIds: [],
-                    gridRow: 1, // Default position, can be moved by user
-                    gridColumn: role === 'Charge Nurse' ? 1 : 2, // Default position
-                });
-            }
-        });
-
         return nurses;
 
     } catch (error) {
