@@ -161,7 +161,6 @@ export async function calculateTechAssignments(
     techs: PatientCareTech[],
     patients: Patient[]
 ): Promise<PatientCareTech[]> {
-    if (!layoutName) return [];
     if (techs.length === 0) return [];
 
     const patientsWithNurse = patients.filter(p => p.assignedNurse);
