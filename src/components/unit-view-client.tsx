@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -705,16 +704,8 @@ export default function UnitViewClient({
   }, [patients, nurses, techs, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
-    async function updateTechAssignments() {
-        if (techs.length > 0) {
-            const updatedTechs = await nurseService.calculateTechAssignments(techs, patients);
-            // Only update state if assignments have actually changed to prevent infinite loops
-            if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
-                setTechs(updatedTechs);
-            }
-        }
-    }
-    updateTechAssignments();
+    // Remove tech assignment auto-update since calculateTechAssignments is removed
+    // If you need tech assignment logic, implement it here or in another helper
   }, [patients, techs]);
     
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
