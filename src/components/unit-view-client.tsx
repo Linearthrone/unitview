@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -17,6 +16,8 @@ import ManageSpectraDialog from '@/components/manage-spectra-dialog';
 import AddRoomDialog from '@/components/add-room-dialog';
 import CreateUnitDialog from '@/components/create-unit-dialog';
 import EditRoomDesignationDialog from '@/components/edit-room-designation-dialog';
+import ChargeNurseCard from '@/components/charge-nurse-card';
+import UnitClerkCard from '@/components/unit-clerk-card';
 // Hooks and utils
 import { useToast } from "@/hooks/use-toast";
 import { NUM_ROWS_GRID } from '@/lib/grid-utils';
@@ -703,16 +704,8 @@ export default function UnitViewClient({
   }, [patients, nurses, techs, isInitialized, isLayoutLocked, handleAutoSave]);
 
   useEffect(() => {
-    async function updateTechAssignments() {
-        if (techs.length > 0) {
-            const updatedTechs = await nurseService.calculateTechAssignments(techs, patients);
-            // Only update state if assignments have actually changed to prevent infinite loops
-            if (JSON.stringify(updatedTechs) !== JSON.stringify(techs)) {
-                setTechs(updatedTechs);
-            }
-        }
-    }
-    updateTechAssignments();
+    // Remove tech assignment auto-update since calculateTechAssignments is removed
+    // If you need tech assignment logic, implement it here or in another helper
   }, [patients, techs]);
     
   const activePatientCount = patients.filter(p => p.name !== 'Vacant').length;
@@ -814,6 +807,9 @@ export default function UnitViewClient({
         open={isAddStaffMemberDialogOpen}
         onOpenChange={setIsAddStaffMemberDialogOpen}
         onSave={handleSaveStaffMember}
+        spectraPool={spectraPool}
+        nurses={nurses}
+        techs={techs}
       />
        <AssignStaffDialog
         open={isAssignStaffDialogOpen}
@@ -859,3 +855,5 @@ export default function UnitViewClient({
     </div>
   );
 }
+
+    

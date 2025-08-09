@@ -8,11 +8,13 @@ import type { Patient } from '@/types/patient';
 import type { AddStaffMemberFormValues } from '@/types/forms';
 import type { LayoutName } from '@/types/patient';
 import { NUM_COLS_GRID, NUM_ROWS_GRID } from '@/lib/grid-utils';
+import { findCompactEmptySlot, getAvailableSpectra } from './nurseHelpers';
 
 const getNurseCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'nurses');
 const getTechCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'techs');
 
 export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
+    if (!layoutName) return [];
     const collectionRef = getNurseCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
@@ -25,22 +27,6 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
             }
             return data;
         });
-
-        // Ensure Charge Nurse and Unit Clerk exist
-        const requiredRoles = ['Charge Nurse', 'Unit Clerk'];
-        requiredRoles.forEach(role => {
-            if (!nurses.some(n => n.role === role)) {
-                nurses.push({
-                    id: `nurse-${role.toLowerCase().replace(' ', '-')}-${Date.now()}`,
-                    name: 'Unassigned',
-                    role: role as any,
-                    assignedPatientIds: [],
-                    gridRow: 1, // Default position, can be moved by user
-                    gridColumn: role === 'Charge Nurse' ? 1 : 2, // Default position
-                });
-            }
-        });
-
         return nurses;
 
     } catch (error) {
@@ -50,6 +36,7 @@ export async function getNurses(layoutName: LayoutName): Promise<Nurse[]> {
 }
 
 export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promise<void> {
+    if (!layoutName || !nurses) return;
     const collectionRef = getNurseCollectionRef(layoutName);
     const batch = writeBatch(db);
     try {
@@ -73,6 +60,7 @@ export async function saveNurses(layoutName: LayoutName, nurses: Nurse[]): Promi
 }
 
 export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[]> {
+    if (!layoutName) return [];
     const collectionRef = getTechCollectionRef(layoutName);
     try {
         const snapshot = await getDocs(collectionRef);
@@ -84,7 +72,7 @@ export async function getTechs(layoutName: LayoutName): Promise<PatientCareTech[
 }
 
 export async function saveTechs(layoutName: LayoutName, techs: PatientCareTech[]): Promise<void> {
-    if (!techs) return;
+    if (!layoutName || !techs) return;
     
     const collectionRef = getTechCollectionRef(layoutName);
     const batch = writeBatch(db);
@@ -102,47 +90,7 @@ export async function saveTechs(layoutName: LayoutName, techs: PatientCareTech[]
     }
 }
 
-
-function findEmptySlot(
-  patients: Patient[],
-  nurses: Nurse[],
-  techs: PatientCareTech[],
-  cardHeight: number,
-  cardWidth: number,
-): { row: number; col: number } | null {
-  const occupiedCells = new Set<string>();
-
-  patients.forEach(p => {
-    if (p.gridRow > 0 && p.gridColumn > 0) occupiedCells.add(`${p.gridRow}-${p.gridColumn}`);
-  });
-  nurses.forEach(n => {
-    const height = n.role === 'Staff Nurse' ? 3 : 1;
-    for (let i = 0; i < height; i++) occupiedCells.add(`${n.gridRow + i}-${n.gridColumn}`);
-  });
-   techs.forEach(t => {
-    occupiedCells.add(`${t.gridRow}-${t.gridColumn}`);
-  });
-
-  for (let c = 1; c <= NUM_COLS_GRID - cardWidth + 1; c++) {
-    for (let r = 1; r <= NUM_ROWS_GRID - cardHeight + 1; r++) {
-      let isSlotAvailable = true;
-      for (let h = 0; h < cardHeight; h++) {
-        for (let w = 0; w < cardWidth; w++) {
-          if (occupiedCells.has(`${r + h}-${c + w}`)) {
-            isSlotAvailable = false;
-            break;
-          }
-        }
-        if (!isSlotAvailable) break;
-      }
-      if (isSlotAvailable) return { row: r, col: c };
-    }
-  }
-
-  return null;
-}
-
-
+// Improved error handling in addStaffMember
 export async function addStaffMember(
     formData: AddStaffMemberFormValues, 
     nurses: Nurse[], 
@@ -156,92 +104,111 @@ export async function addStaffMember(
     error?: string 
 }> {
     const { role } = formData;
-    
     if (role === 'Sitter') {
-        return { success: true }; // Sitters are tracked conceptually but don't have grid cards.
+        return { success: true };
     }
-
     const isNurseRole = ['Staff Nurse', 'Float Pool Nurse'].includes(role);
     const isTechRole = role === 'Patient Care Tech';
-
     if (role === 'Charge Nurse' || role === 'Unit Clerk') {
         const newNurses = nurses.map(n => n.role === role ? { ...n, name: formData.name } : n);
         return { newNurses };
     }
-
-
-    const allStaffSpectra = [...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)];
-    const assignedSpectra = spectraPool.find(s => s.inService && !allStaffSpectra.includes(s.id));
-
-    if ((isNurseRole || isTechRole) && !assignedSpectra) {
-        return { error: "Could not add staff. Please add or enable a Spectra device in the pool." };
-    }
     
+    const assignedSpectraId = formData.spectra;
+
+    if ((isNurseRole || isTechRole) && !assignedSpectraId) {
+        return { error: "No Spectra device selected. Please select an available device." };
+    }
+
+    const isSpectraAlreadyAssigned = [...nurses, ...techs].some(s => s.spectra === assignedSpectraId);
+    if (isSpectraAlreadyAssigned) {
+        return { error: "The selected Spectra device is already assigned to another staff member." };
+    }
+
+    const position = findCompactEmptySlot(patients, nurses, techs, isNurseRole ? 3 : 1, 1);
+    if (!position) {
+        return { error: "Cannot add new staff member, the grid is full or fragmented. Try moving staff to free up space." };
+    }
+
     if (isNurseRole) {
-        const position = findEmptySlot(patients, nurses, techs, 3, 1);
-        if (!position) {
-            return { error: "Cannot add new staff member, the grid is full." };
-        }
         const newNurse: Nurse = {
             id: `nurse-${Date.now()}`,
             name: formData.name,
             role: formData.role,
             relief: formData.relief || undefined,
-            spectra: assignedSpectra!.id, // We've checked for this already
+            spectra: assignedSpectraId,
             assignedPatientIds: Array(6).fill(null),
             gridRow: position.row,
             gridColumn: position.col,
         };
         return { newNurses: [...nurses, newNurse] };
     }
-
     if (isTechRole) {
-        const position = findEmptySlot(patients, nurses, techs, 1, 1);
-         if (!position) {
-            return { error: "Cannot add new tech, the grid is full." };
-        }
         const newTech: PatientCareTech = {
             id: `tech-${Date.now()}`,
             name: formData.name,
-            spectra: assignedSpectra!.id, // We've checked for this already
+            spectra: assignedSpectraId as string,
             assignmentGroup: '',
             gridRow: position.row,
             gridColumn: position.col,
         };
         return { newTechs: [...techs, newTech] };
     }
-
-    // Should not be reached if all roles are handled
     return { error: `Unhandled role: ${role}` };
 }
 
-export async function calculateTechAssignments(techs: PatientCareTech[], patients: Patient[]): Promise<PatientCareTech[]> {
-    const activePatients = patients
-        .filter(p => p.name !== 'Vacant' && !p.isBlocked)
-        .sort((a, b) => {
-            const numA = parseInt(a.roomDesignation.replace(/\D/g, ''), 10) || 0;
-            const numB = parseInt(b.roomDesignation.replace(/\D/g, ''), 10) || 0;
-            return numA - numB;
-        });
+export async function calculateTechAssignments(
+    techs: PatientCareTech[],
+    patients: Patient[]
+): Promise<PatientCareTech[]> {
+    if (techs.length === 0) return [];
 
-    if (techs.length === 0 || activePatients.length === 0) {
-        return techs.map(tech => ({ ...tech, assignmentGroup: 'N/A' }));
+    const patientsWithNurse = patients.filter(p => p.assignedNurse);
+    if (patientsWithNurse.length === 0) {
+        return techs.map(tech => ({ ...tech, assignmentGroup: "All Patients" }));
     }
 
-    const patientsPerTech = Math.ceil(activePatients.length / techs.length);
+    const patientsPerTech = Math.ceil(patientsWithNurse.length / techs.length);
+    const assignments: { [key: string]: string[] } = {}; // techId -> patientIds
+    const assignedPatientIds = new Set<string>();
+    
+    techs.forEach(tech => assignments[tech.id] = []);
 
-    return techs.map((tech, index) => {
-        const startIndex = index * patientsPerTech;
-        const endIndex = Math.min(startIndex + patientsPerTech - 1, activePatients.length - 1);
-        
-        if (startIndex >= activePatients.length) {
-            return { ...tech, assignmentGroup: 'N/A' };
+    let currentTechIndex = 0;
+    for (const patient of patientsWithNurse) {
+        if (assignedPatientIds.has(patient.id)) continue;
+
+        assignments[techs[currentTechIndex].id].push(patient.id);
+        assignedPatientIds.add(patient.id);
+
+        currentTechIndex = (currentTechIndex + 1) % techs.length;
+    }
+
+    const patientMap = new Map(patients.map(p => [p.id, p]));
+    const nurseToPatients = new Map<string, string[]>();
+
+    patientsWithNurse.forEach(p => {
+        if (p.assignedNurse) {
+            if (!nurseToPatients.has(p.assignedNurse)) {
+                nurseToPatients.set(p.assignedNurse, []);
+            }
+            nurseToPatients.get(p.assignedNurse)!.push(p.roomDesignation);
         }
+    });
 
-        const startRoom = activePatients[startIndex].roomDesignation;
-        const endRoom = activePatients[endIndex].roomDesignation;
+    return techs.map(tech => {
+        const assignedNurses = new Set<string>();
+        const myPatientIds = assignments[tech.id];
 
-        const assignmentGroup = startRoom === endRoom ? startRoom : `${startRoom} - ${endRoom}`;
+        myPatientIds.forEach(patientId => {
+            const patient = patientMap.get(patientId);
+            if (patient && patient.assignedNurse) {
+                assignedNurses.add(patient.assignedNurse);
+            }
+        });
+
+        const nurseNames = Array.from(assignedNurses).sort();
+        const assignmentGroup = nurseNames.length > 0 ? `Nurses: ${nurseNames.join(', ')}` : 'Unassigned';
 
         return { ...tech, assignmentGroup };
     });

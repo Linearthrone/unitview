@@ -1,11 +1,12 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UserPlus } from 'lucide-react';
 import { AddStaffMemberFormSchema, type AddStaffMemberFormValues, STAFF_ROLES } from '@/types/forms';
+import type { Nurse, PatientCareTech, Spectra } from '@/types/nurse';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,23 +32,36 @@ interface AddStaffMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: AddStaffMemberFormValues) => void;
+  spectraPool: Spectra[];
+  nurses: Nurse[];
+  techs: PatientCareTech[];
 }
 
-export default function AddStaffMemberDialog({ open, onOpenChange, onSave }: AddStaffMemberDialogProps) {
+export default function AddStaffMemberDialog({ open, onOpenChange, onSave, spectraPool, nurses, techs }: AddStaffMemberDialogProps) {
   const form = useForm<AddStaffMemberFormValues>({
     resolver: zodResolver(AddStaffMemberFormSchema),
     defaultValues: {
       name: '',
       relief: '',
       role: 'Staff Nurse',
+      spectra: '',
     },
   });
+
+  const role = form.watch('role');
+
+  const availableSpectra = useMemo(() => {
+    const assignedSpectra = new Set([...nurses.map(n => n.spectra), ...techs.map(t => t.spectra)]);
+    return spectraPool.filter(s => s.inService && !assignedSpectra.has(s.id));
+  }, [spectraPool, nurses, techs]);
 
   useEffect(() => {
     if (open) {
       form.reset();
     }
   }, [open, form]);
+  
+  const showSpectraField = ['Staff Nurse', 'Float Pool Nurse', 'Patient Care Tech'].includes(role);
 
   const onSubmit = (values: AddStaffMemberFormValues) => {
     onSave(values);
@@ -89,6 +103,30 @@ export default function AddStaffMemberDialog({ open, onOpenChange, onSave }: Add
                     <FormMessage />
                 </FormItem>
              )} />
+            {showSpectraField && (
+              <FormField control={form.control} name="spectra" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Spectra Assignment</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an available device" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableSpectra.length > 0 ? (
+                        availableSpectra.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.id}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No available Spectra devices</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
              <FormField control={form.control} name="relief" render={({ field }) => (
               <FormItem>
                 <FormLabel>Relief Staff (Optional)</FormLabel>
