@@ -50,6 +50,7 @@ export const AddStaffMemberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   role: z.enum(STAFF_ROLES),
   relief: z.string().optional(),
+  spectra: z.string().optional(),
 });
 
 export type AddStaffMemberFormValues = z.infer<typeof AddStaffMemberFormSchema>;

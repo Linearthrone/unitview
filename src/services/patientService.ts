@@ -8,7 +8,7 @@ import type { AdmitPatientFormValues } from '@/types/forms';
 import { mockPatientData } from '@/lib/mock-patients';
 import { NUM_COLS_GRID, NUM_ROWS_GRID, getPerimeterCells } from '@/lib/grid-utils';
 import type { Nurse, PatientCareTech } from '@/types/nurse';
-import { generateInitialNurses } from '@/lib/initial-nurses';
+import { saveNurses } from './nurseService';
 
 // Converts Firestore Timestamps to JS Dates in a patient object
 const patientFromFirestore = (data: any): Patient => {
@@ -35,7 +35,7 @@ const patientToFirestore = (patient: Patient): any => {
 const getCollectionRef = (layoutName: LayoutName) => collection(db, 'layouts', layoutName, 'patients');
 
 
-// This function seeds the predefined "North-South View" layout
+// This function seeds the predefined "North-South View" layout, including its default nurses
 async function seedNorthSouthLayout(): Promise<Patient[]> {
     const layoutName = 'North-South View';
     const layoutPatients: Patient[] = [];
@@ -60,6 +60,7 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
         isIsolation: false,
         isInRestraints: false,
         isComfortCareDNR: false,
+        isBlocked: false,
         gridRow: row,
         gridColumn: col,
     });
@@ -88,12 +89,33 @@ async function seedNorthSouthLayout(): Promise<Patient[]> {
        layoutPatients.push(createRoom(811 + i, i + 2, 17));
     }
 
+    const defaultNurses: Nurse[] = [
+        {
+            id: `nurse-charge-${Date.now()}`,
+            name: 'Unassigned',
+            role: 'Charge Nurse',
+            assignedPatientIds: [],
+            gridRow: 1,
+            gridColumn: 1
+        },
+        {
+            id: `nurse-clerk-${Date.now()}`,
+            name: 'Unassigned',
+            role: 'Unit Clerk',
+            assignedPatientIds: [],
+            gridRow: 1,
+            gridColumn: 2
+        }
+    ];
+
     await savePatients(layoutName, layoutPatients);
+    await saveNurses(layoutName, defaultNurses);
     return layoutPatients;
 }
 
 
 export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
+    if (!layoutName) return [];
     const collectionRef = getCollectionRef(layoutName);
     try {
         // Query for just one doc to see if the collection exists and has data.
@@ -125,7 +147,7 @@ export async function getPatients(layoutName: LayoutName): Promise<Patient[]> {
 }
 
 export async function savePatients(layoutName: LayoutName, patients: Patient[]): Promise<void> {
-    if (!patients) return; // Can be an empty array
+    if (!layoutName || !patients) return; // Can be an empty array
 
     const collectionRef = getCollectionRef(layoutName);
     const batch = writeBatch(db);
@@ -289,6 +311,7 @@ export async function createRoom(
     notes: undefined,
     gridRow: position.row,
     gridColumn: position.col,
+    isBlocked: false,
   };
 
   return { newPatients: [...patients, newRoom] };

@@ -12,6 +12,10 @@ export async function saveShiftAssignments(
     patients: Patient[],
     chargeNurseName: string,
 ): Promise<void> {
+    if (!layoutName) {
+        console.error("Cannot save assignments without a valid layout name.");
+        return;
+    }
     const now = new Date();
     const currentHour = now.getHours();
 
